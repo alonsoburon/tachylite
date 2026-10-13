@@ -41,6 +41,8 @@ export interface RenderContext {
   /** Optional extras (not required by the app model). */
   openTag?(tag: string): void;
   addChild?(child: ChildLike): void;
+  /** Render an embed of a non-markdown file type the host knows (e.g. `.base`) into `el`; return false to fall back to a link. */
+  renderFileEmbed?(el: HTMLElement, path: string, subpath: string, linktext: string, sourcePath: string): boolean | Promise<boolean>;
   /** When true a single newline is NOT a line break. Default false (Obsidian default). */
   strictLineBreaks?: boolean;
 }

@@ -28,6 +28,8 @@ export interface EditorHost {
   /** Render a note/media embed into `el`. If omitted, the built-in markdown renderer is used. */
   renderEmbed?(el: HTMLElement, linktext: string, sourcePath: string): void | Promise<void>;
   openTag?(tag: string): void;
+  /** See RenderContext.renderFileEmbed (embeds of file types such as `.base`). */
+  renderFileEmbed?(el: HTMLElement, path: string, subpath: string, linktext: string, sourcePath: string): boolean | Promise<boolean>;
   openExternal?(url: string): void;
   /** Languages of fenced blocks that plugins render themselves (code-block processors). */
   codeBlockLanguages?(): string[];

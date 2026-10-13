@@ -6,6 +6,7 @@ import { tags } from "./tags";
 import { outline } from "./outline";
 import { bookmarks } from "./bookmarks";
 import { graph } from "./graph";
+import { bases } from "../../bases";
 
 /** Core views installed on vault open (in ribbon order). */
-export const coreModules: CoreModule[] = [explorer, search, backlinks, outgoingLinks, tags, outline, bookmarks, graph];
+export const coreModules: CoreModule[] = [explorer, search, backlinks, outgoingLinks, tags, outline, bookmarks, graph, bases];

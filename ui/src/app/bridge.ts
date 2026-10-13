@@ -28,12 +28,32 @@ export function makeEditorHost(app: App): EditorHost {
     listTags: () => Object.keys(app.metadataCache.getTags()),
     listLinkTargets: (query, source) => linkTargets(app, query, source),
     codeBlockLanguages: () => MarkdownPreviewRenderer.getCodeBlockLanguages(),
+    renderFileEmbed: fileEmbedRenderer(app),
     renderCodeBlock: async (el, markdown, sourcePath) => {
       const comp = new Component();
       comp.load();
       await MarkdownRenderer.render(app, markdown, el, sourcePath, comp);
       return comp;
     },
+  };
+}
+
+/**
+ * Embeds of file types registered in app.embedRegistry beyond what the markdown renderer handles itself (`.base`, plugin
+ * types). The component is a child of `component` when given; otherwise it lives as long as its element (Live Preview).
+ */
+export function fileEmbedRenderer(app: App, component?: { addChild(c: any): any }) {
+  return (el: HTMLElement, path: string, subpath: string, linktext: string, sourcePath: string): boolean => {
+    const file = app.vault.getFileByPath(path);
+    const creator = file && file.extension !== "md" ? app.embedRegistry.getEmbedCreator(file) : null;
+    if (!file || !creator) return false;
+    el.addClass("is-loaded");
+    el.empty();
+    const child = creator({ app, containerEl: el, linktext, sourcePath, depth: 0 }, file, subpath);
+    component?.addChild(child);
+    // Render children of a component that is not loaded (the reading view) still need to run; they unload once detached.
+    if (!child._loaded) child.load();
+    return true;
   };
 }
 
@@ -88,6 +108,7 @@ export function makeRenderContext(app: App, sourcePath: string, component?: { ad
     },
     openTag: (tag) => { void openTagSearch(app, tag); },
     addChild: component ? (c) => component.addChild(c) : undefined,
+    renderFileEmbed: fileEmbedRenderer(app, component),
     strictLineBreaks: !!app.vault.getConfig("strictLineBreaks"),
   };
 }
