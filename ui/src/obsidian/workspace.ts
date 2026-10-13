@@ -1,7 +1,7 @@
 // Workspace layout model, decoupled from any shell. The model owns a plain DOM skeleton
 // (workspace-split / workspace-tabs / workspace-leaf) that a shell may mount, and calls
 // optional LayoutHost hooks for everything that is the shell's business.
-import { Events } from "./events";
+import { Component, Events } from "./events";
 import { TFile } from "./files";
 import { debounce, getLinkpath, parseLinktext, type Debouncer } from "./util";
 import { setIcon } from "./icons";
@@ -173,6 +173,12 @@ export class WorkspaceSplit extends WorkspaceParent {
 export abstract class WorkspaceContainer extends WorkspaceSplit {
   win: Window = window;
   doc: Document = document;
+  /** Lives as long as the window; plugins hang per-window components on it. */
+  component: Component = new Component();
+  constructor(app: App, direction: SplitDirection, cls: string) {
+    super(app, direction, cls);
+    this.component.load();
+  }
 }
 export class WorkspaceRoot extends WorkspaceContainer {
   constructor(app: App) { super(app, "vertical", "mod-root"); }
@@ -205,6 +211,7 @@ export class WorkspaceWindow extends WorkspaceContainer {
     this.closing = true;
     const ws = this.app.workspace;
     for (const l of this.leaves()) l.detach();
+    this.component.unload();
     ws.onWindowClosed(this);
   }
 }
@@ -467,6 +474,13 @@ export class Workspace extends Events {
     for (const cb of cbs) { try { cb(); } catch (e) { console.error(e); } }
   }
 
+  /** The layout changed in a way the model did not see (plugins moving leaves around): notify and save. */
+  onLayoutChange(): void {
+    this.trigger("layout-change");
+    this.host?.onLayoutChange?.();
+    this.requestSaveLayout();
+  }
+
   // ---- hooks used by leaves
   onLeafChanged(leaf: WorkspaceLeaf): void {
     this.trackFile(leaf);
@@ -515,6 +529,13 @@ export class Workspace extends Events {
   // ---- leaves
   iterateAllLeaves(callback: (leaf: WorkspaceLeaf) => any): void {
     for (const l of this.allLeaves()) callback(l);
+  }
+  /** Visit the leaves under `item` (a leaf or any parent); a callback returning true stops the walk (returns true). */
+  iterateLeaves(callback: (leaf: WorkspaceLeaf) => any, item: WorkspaceItem | WorkspaceItem[] = this.rootSplit): boolean {
+    if (Array.isArray(item)) return item.some((i) => this.iterateLeaves(callback, i));
+    if (item instanceof WorkspaceLeaf) return !!callback(item);
+    if (item instanceof WorkspaceParent) return item.children.some((c) => this.iterateLeaves(callback, c));
+    return false;
   }
   iterateRootLeaves(callback: (leaf: WorkspaceLeaf) => any): void {
     for (const l of this.rootLeaves()) callback(l);
@@ -747,8 +768,9 @@ export class Workspace extends Events {
     if (v instanceof FileView && v.file) return v.file;
     return this.recentFile && this.app.vault.getFileByPath(this.recentFile.path) ? this.recentFile : null;
   }
-  registerHoverLinkSource(id: string, info: { display: string; defaultMod: boolean }): void { this.hoverLinkSources[id] = info; }
-  unregisterHoverLinkSource(id: string): void { delete this.hoverLinkSources[id]; }
+  /** Declare an emitter of the `hover-link` event; it shows up in the Page preview settings. */
+  registerHoverLinkSource(id: string, info: { display: string; defaultMod: boolean }): void { this.hoverLinkSources[id] = info; this.trigger("hover-link-sources-changed"); }
+  unregisterHoverLinkSource(id: string): void { delete this.hoverLinkSources[id]; this.trigger("hover-link-sources-changed"); }
   /** Legacy CodeMirror 5 iteration; there are no CM5 editors any more, so the callback is never invoked. */
   iterateCodeMirrors(_callback: (cm: unknown) => any): void {}
   getLastOpenFiles(): string[] { return this.lastOpenFiles.slice(); }

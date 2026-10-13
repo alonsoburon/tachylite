@@ -180,6 +180,8 @@ export class GraphView extends PanelView {
   sim: SimState = createSimulation({ nodes: [], links: [] });
   view: Viewport = { k: 1, x: 0, y: 0 };
   hover = -1;
+  /** HoverParent: the page preview of the hovered node. */
+  hoverPopover: any = null;
   canvas!: HTMLCanvasElement;
   controlsEl!: HTMLElement;
   private width = 800;
@@ -213,7 +215,7 @@ export class GraphView extends PanelView {
     this.registerDomEvent(c, "pointerdown", (e) => this.onDown(e));
     this.registerDomEvent(c, "pointermove", (e) => this.onMove(e));
     this.registerDomEvent(c, "pointerup", (e) => this.onUp(e));
-    this.registerDomEvent(c, "pointerleave", () => { if (this.hover !== -1 && this.dragNode < 0) { this.hover = -1; this.draw(); } });
+    this.registerDomEvent(c, "pointerleave", (e) => { if (this.hover !== -1 && this.dragNode < 0) { this.hover = -1; this.draw(); this.onHoverChange(e); } });
     this.registerDomEvent(c, "wheel", (e) => this.onWheel(e), { passive: false });
     this.registerDomEvent(c, "contextmenu", (e) => this.onContext(e));
     const mc = this.app.metadataCache as any;
@@ -319,7 +321,15 @@ export class GraphView extends PanelView {
     }
     const w = this.toWorld(p.x, p.y);
     const h = hitTest(this.sim.nodes, w.x, w.y, 3 / this.view.k);
-    if (h !== this.hover) { this.hover = h; this.canvas.style.cursor = h >= 0 ? "pointer" : ""; this.draw(); }
+    if (h !== this.hover) { this.hover = h; this.canvas.style.cursor = h >= 0 ? "pointer" : ""; this.draw(); this.onHoverChange(e); }
+  }
+  /** Emit `hover-link` for the node under the pointer (page preview); release the preview when leaving it. */
+  private onHoverChange(e: MouseEvent): void {
+    const pop = this.hoverPopover;
+    if (pop) { pop.onTarget = false; pop.transition?.(); }
+    const n = this.sim.nodes[this.hover];
+    if (!n || n.kind === "unresolved") return;
+    this.app.workspace.trigger("hover-link", { event: e, source: "graph", hoverParent: this, targetEl: null, linktext: n.id, sourcePath: "" });
   }
   private onUp(e: PointerEvent): void {
     const dragged = this.dragNode;

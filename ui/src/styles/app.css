@@ -346,6 +346,12 @@ kbd, .setting-hotkey { padding: 1px 6px; border-radius: var(--hotkey-radius, var
 .notice { pointer-events: auto; max-width: var(--notice-max-width); padding: var(--notice-padding); border-radius: var(--notice-radius); background: var(--notice-background); color: var(--notice-color); font-size: var(--notice-font-size); box-shadow: var(--shadow-s); cursor: var(--cursor); }
 .tooltip { position: fixed; z-index: var(--layer-tooltip); padding: 4px 8px; border-radius: var(--radius-s); background: var(--background-modifier-message, var(--background-secondary-alt)); border: 1px solid var(--background-modifier-border); font-size: var(--font-ui-smaller); pointer-events: none; }
 .popover { position: absolute; z-index: var(--layer-popover); width: var(--popover-width); max-height: var(--popover-max-height); overflow: auto; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); box-shadow: var(--shadow-l); font-size: var(--popover-font-size); }
+/* page preview: the note fills the popover; the box scrolls, not the embed inside it */
+.popover.hover-popover { position: fixed; max-height: var(--popover-height); overflow: hidden; display: flex; flex-direction: column; padding: 0; }
+.popover.hover-popover > .markdown-embed { margin: 0; padding: var(--size-4-2) var(--size-4-4); border: none; background: transparent; overflow: auto; min-height: 0; flex: 1 1 auto; }
+.popover.hover-popover > .markdown-embed > .markdown-embed-content { max-height: none; overflow: visible; }
+.popover.hover-popover .markdown-preview-view { padding: 0; font-size: var(--popover-font-size); }
+.popover.hover-popover img { max-width: 100%; }
 
 /* generic tooltip for aria-label on ribbon / header icons, shown via a CSS-only hint */
 .side-dock-ribbon-action[aria-label]:hover::after {

@@ -32,7 +32,7 @@ export {
   Notice, Modal, Menu, MenuItem, MenuSeparator, PopoverSuggest, AbstractInputSuggest, SuggestModal, FuzzySuggestModal, HoverPopover, PopoverState,
   setTooltip, displayTooltip,
 } from "./ui";
-export type { FuzzyMatch, Instruction, TooltipOptions } from "./ui";
+export type { FuzzyMatch, Instruction, TooltipOptions, HoverParent } from "./ui";
 export { requestUrl, request } from "./net";
 export { MarkdownBaseView, MarkdownScrollableEditView, MarkdownEmbed, EmbedRegistry } from "./embeds";
 export type { RequestUrlParam, RequestUrlResponse, RequestUrlResponsePromise } from "./net";

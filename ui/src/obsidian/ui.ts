@@ -514,34 +514,153 @@ export abstract class FuzzySuggestModal<T> extends SuggestModal<FuzzyMatch<T>> {
 
 // ---------------------------------------------------------------- HoverPopover
 
+export interface HoverParent { hoverPopover: HoverPopover | null }
+
+/** True when the pointer moved from outside `el` into it (mouseover) or from it to outside (mouseout). */
+function crossesBoundary(evt: MouseEvent, el: HTMLElement): boolean {
+  const rel = evt.relatedTarget as Node | null;
+  return !rel || !(rel === el || el.contains(rel));
+}
+
+/** Popovers currently alive (showing or shown), oldest first. */
+const livePopovers: HoverPopover[] = [];
+let lastPointer: { x: number; y: number; doc: Document | null } = { x: 0, y: 0, doc: null };
+const globalsInstalled = new WeakSet<Document>();
+
+function installPopoverGlobals(doc: Document): void {
+  if (globalsInstalled.has(doc)) return;
+  globalsInstalled.add(doc);
+  doc.addEventListener("mousemove", (e) => { lastPointer = { x: e.clientX, y: e.clientY, doc }; }, true);
+  // A click anywhere outside a popover closes it (and its nested popovers); clicks inside keep the chain open.
+  doc.addEventListener("mousedown", (e) => {
+    const t = e.target as Node | null;
+    for (const p of livePopovers.slice()) if (!(t && p.containsNode(t))) p.hide();
+  }, true);
+  doc.addEventListener("keydown", (e) => { if (e.key === "Escape" && livePopovers.length) livePopovers[livePopovers.length - 1].hide(); }, true);
+}
+
+/**
+ * A floating box shown next to a link while the pointer is over the link or the box. It closes shortly after the pointer
+ * leaves both, unless a nested popover (one whose target lives inside this one) is still open.
+ */
 export class HoverPopover extends Component {
   hoverEl: HTMLElement;
   state = PopoverState.Showing;
-  constructor(public parent: { hoverPopover: HoverPopover | null }, public targetEl: HTMLElement | null, public waitTime = 300, public staticPos: { x: number; y: number } | null = null) {
+  /** Pointer currently over the target element / over the popover itself. */
+  onTarget: boolean;
+  onHover = false;
+  isPinned = false;
+  /** Delay before hiding once the pointer has left target and popover. */
+  hideDelay = 300;
+  timer: ReturnType<typeof setTimeout> | null = null;
+  private hideTimer: ReturnType<typeof setTimeout> | null = null;
+  private targetListeners: [string, (e: MouseEvent) => void][] = [];
+
+  constructor(public parent: HoverParent, public targetEl: HTMLElement | null, public waitTime = 300, public staticPos: { x: number; y: number } | null = null) {
     super();
-    this.hoverEl = createDiv({ cls: "popover hover-popover" });
-    this.parent.hoverPopover?.hide();
-    this.parent.hoverPopover = this;
+    const doc = targetEl?.ownerDocument ?? lastPointer.doc ?? (activeDoc() as Document);
+    installPopoverGlobals(doc);
+    this.hoverEl = doc.createElement("div");
+    this.hoverEl.className = "popover hover-popover";
+    this.onTarget = true;
+    if (parent.hoverPopover && parent.hoverPopover !== this) parent.hoverPopover.hide();
+    parent.hoverPopover = this;
+    if (targetEl) {
+      const enter = (e: MouseEvent) => { if (crossesBoundary(e, targetEl)) { this.onTarget = true; this.transition(); } };
+      const leave = (e: MouseEvent) => { if (crossesBoundary(e, targetEl)) { this.onTarget = false; this.transition(); } };
+      targetEl.addEventListener("mouseover", enter);
+      targetEl.addEventListener("mouseout", leave);
+      this.targetListeners = [["mouseover", enter], ["mouseout", leave]];
+    }
+    this.hoverEl.addEventListener("mouseover", (e) => { if (crossesBoundary(e, this.hoverEl)) { this.onHover = true; this.transition(); } });
+    this.hoverEl.addEventListener("mouseout", (e) => { if (crossesBoundary(e, this.hoverEl)) { this.onHover = false; this.transition(); } });
+    livePopovers.push(this);
     this.load();
-    setTimeout(() => {
-      if (this.state !== PopoverState.Showing) return;
-      document.body.appendChild(this.hoverEl);
-      const r = this.targetEl?.getBoundingClientRect();
-      const p = this.staticPos ?? (r ? { x: r.left, y: r.bottom } : { x: 0, y: 0 });
-      this.hoverEl.style.position = "absolute";
-      this.hoverEl.style.left = `${p.x}px`;
-      this.hoverEl.style.top = `${p.y}px`;
-      this.state = PopoverState.Shown;
-      this.onShow();
-    }, this.waitTime);
+    this.timer = setTimeout(() => { this.timer = null; this.show(); }, waitTime);
+  }
+
+  /** Whether `node` is inside this popover or inside a popover nested in it. */
+  containsNode(node: Node): boolean {
+    if (this.hoverEl.contains(node)) return true;
+    return this.childPopovers().some((c) => c.containsNode(node));
+  }
+  /** Popovers opened from links inside this one. */
+  childPopovers(): HoverPopover[] {
+    return livePopovers.filter((p) => p !== this && !!p.targetEl && this.hoverEl.contains(p.targetEl));
+  }
+  /** Whether the popover should stay (pointer on target or popover, pinned, or a nested popover still wants to stay). */
+  shouldShow(): boolean {
+    if (this.state === PopoverState.Hidden) return false;
+    if (this.isPinned || this.onTarget || this.onHover) return !this.targetEl || this.targetEl.isConnected || this.onHover;
+    return this.childPopovers().some((c) => c.shouldShow());
+  }
+  /** Re-evaluate after the pointer moved: cancel a pending show, or schedule/cancel hiding. */
+  transition(): void {
+    if (this.state === PopoverState.Hidden) return;
+    if (this.shouldShow()) {
+      if (this.hideTimer) { clearTimeout(this.hideTimer); this.hideTimer = null; }
+      if (this.state === PopoverState.Hiding) this.state = PopoverState.Shown;
+      return;
+    }
+    if (this.state === PopoverState.Showing) { this.hide(); return; }
+    if (this.hideTimer) return;
+    this.state = PopoverState.Hiding;
+    this.hideTimer = setTimeout(() => { this.hideTimer = null; if (!this.shouldShow()) this.hide(); else this.state = PopoverState.Shown; }, this.hideDelay);
+  }
+  show(): void {
+    if (this.state !== PopoverState.Showing) return;
+    if (this.targetEl && !this.targetEl.isConnected) { this.hide(); return; }
+    const doc = this.hoverEl.ownerDocument;
+    doc.body.appendChild(this.hoverEl);
+    this.state = PopoverState.Shown;
+    this.position();
+    try { this.onShow(); } catch (e) { console.error(e); }
+    // The pointer may already have left everything while we were waiting.
+    this.transition();
+  }
+  /** Place the popover under (or above, when there is no room) the target, or at the static/pointer position, inside the window. */
+  position(pos: { x: number; y: number } | null = this.staticPos): void {
+    const el = this.hoverEl;
+    const win = el.ownerDocument.defaultView ?? window;
+    const vw = win.innerWidth || 1024, vh = win.innerHeight || 768;
+    el.style.position = "fixed";
+    const w = el.offsetWidth || 450, h = el.offsetHeight || 300;
+    const gap = 8;
+    let x: number, y: number;
+    const r = !pos && this.targetEl ? this.targetEl.getBoundingClientRect() : null;
+    if (r) {
+      x = r.left;
+      y = r.bottom + gap;
+      if (y + h > vh && r.top - gap - h >= 0) y = r.top - gap - h;
+    } else {
+      const p = pos ?? { x: lastPointer.x, y: lastPointer.y };
+      x = p.x + gap; y = p.y + gap;
+      if (y + h > vh && p.y - gap - h >= 0) y = p.y - gap - h;
+    }
+    x = Math.max(gap, Math.min(x, vw - w - gap));
+    y = Math.max(gap, Math.min(y, vh - h - gap));
+    el.style.left = `${Math.round(x)}px`;
+    el.style.top = `${Math.round(y)}px`;
   }
   onShow(): void {}
   hide(): void {
+    if (this.state === PopoverState.Hidden) return;
     this.state = PopoverState.Hidden;
+    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+    if (this.hideTimer) { clearTimeout(this.hideTimer); this.hideTimer = null; }
+    for (const c of this.childPopovers()) c.hide();
+    const i = livePopovers.indexOf(this);
+    if (i >= 0) livePopovers.splice(i, 1);
+    for (const [t, fn] of this.targetListeners) this.targetEl?.removeEventListener(t, fn as EventListener);
+    this.targetListeners = [];
     this.hoverEl.detach();
     if (this.parent.hoverPopover === this) this.parent.hoverPopover = null;
     this.unload();
+    // A popover this one was nested in may have been kept open only for it.
+    for (const p of livePopovers.slice()) if (this.targetEl && p.hoverEl.contains(this.targetEl)) p.transition();
   }
+  /** Popovers alive right now (testing and plugins that close every preview). */
+  static getActive(): HoverPopover[] { return livePopovers.slice(); }
 }
 
 export type { Modifier };

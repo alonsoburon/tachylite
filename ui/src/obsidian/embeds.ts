@@ -24,6 +24,8 @@ export class EmbedRegistry {
 export class EmbedBase extends Component {
   app: App;
   containerEl: HTMLElement;
+  /** Embeds own the popovers of links inside them (HoverParent). */
+  hoverPopover: any = null;
   constructor(public ctx: EmbedContext, public file: TFile | null, public subpath: string) {
     super();
     this.app = ctx.app;

@@ -12,6 +12,8 @@ import { MarkdownPreviewRenderer } from "../src/obsidian/markdown";
 import { CACHE_DIR } from "../scripts/real-plugins.mjs";
 import { canvas as canvasCore } from "../src/app/core/canvas";
 import { nodeBridge } from "../src/obsidian/nodeBridge";
+import { pagePreview } from "../src/app/core/pagePreview";
+import { installBridge } from "../src/app/bridge";
 
 const ENABLED = process.env.TACHYLITE_REAL_PLUGINS === "1";
 const dirOf = (id: string) => path.join(CACHE_DIR, id);
@@ -210,4 +212,31 @@ describe.skipIf(!ENABLED || !fs.existsSync(path.join(gitDir, "main.js")))("real 
     expect(git(v.root, "show", "--stat", "--format=", "HEAD")).toContain("Note.md");
     plugin.gitManager.askpass = async () => {}; // see above: no retry after unload
   }, 60_000);
+});
+
+const heDir = dirOf("obsidian-hover-editor");
+describe.skipIf(!ENABLED || !fs.existsSync(path.join(heDir, "main.js")))("real plugin: obsidian-hover-editor on the page preview core plugin", () => {
+  it("replaces the page preview with an editable hover editor showing the linked note", async () => {
+    const read = (f: string) => fs.readFileSync(path.join(heDir, f), "utf8");
+    v = makeVault({ "Home.md": "See [[Note]]\n", "Note.md": "# Note\nhello from note" }, { plugins: { "obsidian-hover-editor": { manifest: JSON.parse(read("manifest.json")), main: read("main.js"), styles: read("styles.css") } }, enabled: ["obsidian-hover-editor"] });
+    const h: { undo?: () => void; off?: () => void } = {};
+    const errors: unknown[] = [];
+    const spy = vi.spyOn(console, "error").mockImplementation((...a) => { errors.push(a); });
+    try {
+      app = await makeApp(v, { onCoreReady: (a) => { h.undo = installBridge(a); h.off = pagePreview.install(a) || undefined; } });
+      document.body.appendChild(app.dom.appContainerEl);
+      expect(app.plugins.loadErrors["obsidian-hover-editor"]).toBeUndefined();
+      const leaf = app.workspace.getLeaf(false);
+      await leaf.openFile(app.vault.getFileByPath("Home.md")!, { active: true });
+      const view = leaf.view as any;
+      view.setMode("preview");
+      await view.previewMode.whenRendered();
+      view.previewEl.querySelector("a.internal-link")!.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+      await vi.waitFor(() => {
+        const pop = document.querySelector(".popover.hover-popover.hover-editor");
+        expect(pop?.textContent).toContain("hello from note");
+      }, { timeout: 5000 });
+      expect(errors.map((e) => String((e as any[])[0]))).toEqual([]);
+    } finally { spy.mockRestore(); h.off?.(); h.undo?.(); }
+  }, 30_000);
 });

@@ -17,7 +17,8 @@ import { wordCount } from "./wordCount";
 import { properties } from "../properties";
 import { fileRecovery } from "./fileRecovery";
 import { workspaces } from "./workspaces";
+import { pagePreview } from "./pagePreview";
 
 /** Core views installed on vault open (in ribbon order). */
 export const coreModules: CoreModule[] = [explorer, search, backlinks, outgoingLinks, tags, outline, bookmarks, graph, canvas, bases,
-  properties, fileRecovery, workspaces, dailyNotes, templates, noteComposer, randomNote, slashCommands, wordCount];
+  properties, fileRecovery, workspaces, pagePreview, dailyNotes, templates, noteComposer, randomNote, slashCommands, wordCount];
