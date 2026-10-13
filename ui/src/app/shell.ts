@@ -425,7 +425,7 @@ export class Shell implements LayoutHost {
 
   /** Flush pending editor saves and the layout when the window is hidden or closed. */
   flush(): void {
-    for (const l of this.app.workspace.allLeaves()) if (l.view instanceof TextFileView) l.view.requestSave.run();
+    for (const l of this.app.workspace.allLeaves()) if (l.view instanceof TextFileView) l.view.requestSave?.run?.();
     this.app.workspace.requestSaveLayout.run();
   }
   /** Await every pending note save and write the layout (used before the window closes). */

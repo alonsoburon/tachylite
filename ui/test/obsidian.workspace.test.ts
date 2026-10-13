@@ -248,3 +248,20 @@ describe("EditorSuggest", () => {
     p.unload(); expect(app.workspace.editorSuggestManager!.suggests).not.toContain(s);
   });
 });
+
+describe("plugin-tolerant internals", () => {
+  it("keymap.getRootScope returns the app scope; TextFileView survives a nulled requestSave", async () => {
+    const { makeApp, makeVault } = await import("./helpers/backend");
+    const { TextFileView } = await import("../src/obsidian/views");
+    const v = makeVault({ "a.md": "x" });
+    const app = await makeApp(v);
+    try {
+      expect(app.keymap.getRootScope()).toBe(app.scope);
+      class V extends TextFileView { data = ""; getViewType() { return "v"; } getViewData() { return this.data; } setViewData(d: string) { this.data = d; } clear() {} }
+      const leaf = app.workspace.getLeaf(true);
+      const view = new V(leaf);
+      (view as any).requestSave = null; // Excalidraw does this while closing
+      await expect((view as any).onClose()).resolves.toBeUndefined();
+    } finally { await app.stop(); v.cleanup(); }
+  });
+});

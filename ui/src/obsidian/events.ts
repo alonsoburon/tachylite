@@ -178,6 +178,8 @@ export class Keymap {
   rootScope: Scope;
   constructor(root = new Scope()) { this.rootScope = root; this.prevScopes = [root]; }
   get scope(): Scope { return this.prevScopes[this.prevScopes.length - 1]; }
+  /** The app-wide scope at the bottom of the stack (internal API read by plugins, e.g. Excalidraw). */
+  getRootScope(): Scope { return this.rootScope; }
   pushScope(scope: Scope): void { this.prevScopes.push(scope); }
   popScope(scope: Scope): void {
     const i = this.prevScopes.lastIndexOf(scope);

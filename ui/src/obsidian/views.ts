@@ -168,7 +168,7 @@ export abstract class TextFileView extends EditableFileView {
     }));
   }
   async onUnloadFile(file: TFile): Promise<void> {
-    this.requestSave.cancel();
+    this.requestSave?.cancel?.();
     if (this.dirty && file) await this.save();
     this.clear();
     this.data = "";
@@ -180,7 +180,7 @@ export abstract class TextFileView extends EditableFileView {
     this.setViewData(data, true);
   }
   async save(clear = false): Promise<void> {
-    this.requestSave.cancel();
+    this.requestSave?.cancel?.();
     const file = this.file;
     if (!file) return;
     const data = this.getViewData();
@@ -192,7 +192,8 @@ export abstract class TextFileView extends EditableFileView {
     if (clear) this.clear();
   }
   protected async onClose(): Promise<void> {
-    this.requestSave.cancel();
+    // Plugins replace (or null out, as Excalidraw does on close) requestSave; don't depend on it here.
+    this.requestSave?.cancel?.();
     if (this.dirty) await this.save();
     await super.onClose();
   }
