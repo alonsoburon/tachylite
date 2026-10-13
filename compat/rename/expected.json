@@ -1,0 +1,76 @@
+{
+  "description": "Link rewriting when files and folders are renamed or moved (with link updating on).",
+  "rename": [
+    {
+      "steps": [
+        [
+          "Old.md",
+          "New Name.md"
+        ]
+      ],
+      "files": {
+        "A.md": "[[New Name]] [[New Name|alias]] [[New Name#Sub]] ![[New Name]] [md](New%20Name.md) [[New Name]] [[Other]]\n",
+        "B/C.md": "[up](New%20Name.md) [[New Name]]\n",
+        "FM.md": "---\nup: \"[[New Name]]\"\nother: \"[[Other]]\"\n---\nbody\n",
+        "Old.md": null
+      },
+      "unresolvedLinks": {
+        "A.md": {},
+        "B/C.md": {},
+        "FM.md": {}
+      }
+    },
+    {
+      "steps": [
+        [
+          "Old.md",
+          "Deep/Old.md"
+        ]
+      ],
+      "files": {
+        "A.md": "[[Old]] [[Old|alias]] [[Old#Sub]] ![[Old]] [md](Old.md) [[Old]] [[Other]]\n"
+      },
+      "confidence": "medium",
+      "why": "a moved note that keeps a unique name keeps its shortest link text (links are regenerated, so [[old]] becomes [[Old]])"
+    },
+    {
+      "steps": [
+        [
+          "Folder",
+          "Renamed"
+        ]
+      ],
+      "files": {
+        "Linker.md": "[[In]] [[In]] [x](In.md)\n",
+        "Renamed/In.md": "# In\n"
+      },
+      "resolve": [
+        {
+          "link": "In",
+          "from": "Linker.md",
+          "to": "Renamed/In.md"
+        }
+      ]
+    },
+    {
+      "steps": [
+        [
+          "Rel/Src.md",
+          "Rel/Deeper/Src.md"
+        ]
+      ],
+      "files": {
+        "Rel/Deeper/Src.md": "[x](Target.md) [[Target]]\n"
+      },
+      "resolve": [
+        {
+          "link": "Target.md",
+          "from": "Rel/Deeper/Src.md",
+          "to": "Target.md"
+        }
+      ],
+      "confidence": "medium",
+      "why": "links inside the moved note that would break are regenerated"
+    }
+  ]
+}
