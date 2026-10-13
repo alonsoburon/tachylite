@@ -7,7 +7,6 @@ import { foldAll, toggleFold, unfoldAll } from "@codemirror/language";
 import type { EditorView } from "@codemirror/view";
 import { copyText, deleteWithPrompt, newNote, promptRename, revealInExplorer } from "./files";
 import type { History } from "./history";
-import { insertTemplate, openDailyNote, openRandomNote } from "./notes";
 import { coreEnabled, whileCoreEnabled } from "./core/util";
 import { TachyMarkdownView } from "./markdownView";
 
@@ -80,21 +79,6 @@ export function installCommands(app: App, history: History): () => void {
 
   const disposers: (() => void)[] = [
     // core plugins whose commands live here
-    whileCoreEnabled(app, "daily-notes", () => {
-      const c: Command = { id: "daily-notes", name: "Open today's daily note", callback: () => { void openDailyNote(app); } };
-      app.commands.addCommand(c);
-      const el = ws.leftRibbon.addRibbonItemButton("daily-notes", "lucide-calendar-check", "Open today's daily note", () => { void openDailyNote(app); });
-      return () => { app.commands.removeCommand("daily-notes"); ws.leftRibbon.removeRibbonItemButton(el); };
-    }),
-    whileCoreEnabled(app, "templates", () => {
-      const c: Command = { id: "insert-template", name: "Insert template", editorCallback: (e, v) => insertTemplate(app, e, v as MarkdownView) };
-      app.commands.addCommand({ ...c, id: "templates:insert-template" });
-      return () => app.commands.removeCommand("templates:insert-template");
-    }),
-    whileCoreEnabled(app, "random-note", () => {
-      app.commands.addCommand({ id: "random-note:open", name: "Open random note", callback: () => { void openRandomNote(app); } });
-      return () => app.commands.removeCommand("random-note:open");
-    }),
     whileCoreEnabled(app, "switcher", () => {
       const el = ws.leftRibbon.addRibbonItemButton("switcher", "lucide-navigation", "Open quick switcher", () => { app.commands.executeCommandById("switcher:open"); });
       return () => ws.leftRibbon.removeRibbonItemButton(el);

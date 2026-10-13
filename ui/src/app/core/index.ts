@@ -8,6 +8,13 @@ import { bookmarks } from "./bookmarks";
 import { graph } from "./graph";
 import { canvas } from "./canvas";
 import { bases } from "../../bases";
+import { templates } from "./templates";
+import { dailyNotes } from "./dailyNotes";
+import { noteComposer } from "./noteComposer";
+import { slashCommands } from "./slashCommands";
+import { randomNote } from "./randomNote";
+import { wordCount } from "./wordCount";
 
 /** Core views installed on vault open (in ribbon order). */
-export const coreModules: CoreModule[] = [explorer, search, backlinks, outgoingLinks, tags, outline, bookmarks, graph, canvas, bases];
+export const coreModules: CoreModule[] = [explorer, search, backlinks, outgoingLinks, tags, outline, bookmarks, graph, canvas, bases,
+  dailyNotes, templates, noteComposer, randomNote, slashCommands, wordCount];
