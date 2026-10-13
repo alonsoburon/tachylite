@@ -233,6 +233,7 @@
 .markdown-source-view .cm-table-widget th { font-weight: var(--table-header-weight); font-size: var(--table-header-size); background: var(--table-header-background); color: var(--table-header-color); text-align: start; }
 .markdown-source-view .cm-table-widget a { color: var(--link-color); }
 .markdown-source-view .cm-table-widget a.is-unresolved { opacity: var(--link-unresolved-opacity); }
+.markdown-source-view .cm-table-widget .is-editing { white-space: pre-wrap; word-break: break-word; font-family: var(--font-text); outline: 2px solid var(--interactive-accent); outline-offset: -2px; caret-color: var(--caret-color, var(--text-normal)); }
 
 /* ---- embeds & images ---- */
 .markdown-source-view .cm-embed-block { display: block; margin: var(--size-4-2) 0; text-indent: 0; }

@@ -4,7 +4,7 @@ import type { EditorView } from "@codemirror/view";
 import { createEditor, type EditorHandle, type EditorHost, type EditorMode, type LinkTarget } from "../editor";
 import { renderMarkdown, type RenderContext } from "../markdown";
 import { ipc } from "../ipc";
-import { Component, MarkdownPreviewRenderer, MarkdownRenderer, prepareFuzzySearch, type App } from "../obsidian";
+import { Component, MarkdownPreviewRenderer, MarkdownRenderer, Menu, prepareFuzzySearch, type App } from "../obsidian";
 import { setEditorFactory } from "../obsidian/editor";
 import { setMarkdownRenderer } from "../obsidian/markdown";
 
@@ -33,6 +33,16 @@ export function makeEditorHost(app: App): EditorHost {
       comp.load();
       await MarkdownRenderer.render(app, markdown, el, sourcePath, comp);
       return comp;
+    },
+    showMenu: (evt, items) => {
+      const menu = new Menu();
+      for (const it of items) {
+        menu.addItem((i) => {
+          i.setSection(it.section).setTitle(it.title).setIcon(it.icon).setDisabled(!!it.disabled).onClick(() => it.onClick());
+          if (it.checked) i.setChecked(true);
+        });
+      }
+      menu.showAtMouseEvent(evt);
     },
   };
 }
