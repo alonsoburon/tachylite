@@ -153,8 +153,9 @@ export function buildInline(
               }
               return true;
             }
-            const first = node.firstChild;
-            if (first) mark(first.from, first.to, `cm-header cm-header-${lvl}`);
+            // the whole text (all lines above the underline), not just the first inline child
+            const under = node.getChildren("HeaderMark").pop();
+            mark(from, under ? Math.max(from, doc.lineAt(under.from).from - 1) : to, `cm-header cm-header-${lvl}`);
             for (const m of node.getChildren("HeaderMark")) mark(m.from, m.to, `cm-formatting cm-formatting-header cm-header cm-header-${lvl}`);
             return true;
           }

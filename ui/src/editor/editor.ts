@@ -18,6 +18,7 @@ import { tags as t } from "@lezer/highlight";
 import type { EditorHandle, EditorMode, EditorOptions } from "./types";
 import { obsidianMarkdown } from "./parser";
 import { blockField, envFacet, inlinePlugin } from "./decorations";
+import { setextField } from "./setext";
 import {
   indentListLess, indentListMore, insertLink, markupInputHandler, toggleBold, toggleChecklist,
   toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough, toggleTask,
@@ -100,7 +101,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
   const extraC = new Compartment();
 
   const modeExt = (m: EditorMode): Extension =>
-    m === "live-preview" ? [inlinePlugin(true), blockField] : [inlinePlugin(false)];
+    m === "live-preview" ? [inlinePlugin(true), blockField, setextField] : [inlinePlugin(false)];
   const wrapExt = () => (cur.lineWrapping ? EditorView.lineWrapping : []);
   const tabExt = () => [
     EditorState.tabSize.of(cur.tabSize),

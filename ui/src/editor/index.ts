@@ -12,3 +12,4 @@ export {
   insertColumn, deleteColumn, setAlign, columnCount, TableWidget, type TableModel, type Align, type TableMenuItem,
 } from "./table";
 export { headingFold, listFold } from "./folding";
+export { buildSetext, setextField } from "./setext";
