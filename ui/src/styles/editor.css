@@ -246,6 +246,10 @@
 /* ---- embeds & images ---- */
 .markdown-source-view .cm-embed-block { display: block; margin: var(--size-4-2) 0; text-indent: 0; }
 .markdown-source-view .cm-embed-block .markdown-embed { margin: 0; }
+/* Embeds rendered in Live Preview sit in the text column: no page margins of their own, and wide content (tables,
+   bases) scrolls inside its box instead of widening the editor. */
+.markdown-source-view .cm-embed-block .markdown-preview-sizer { max-width: none; padding-inline: 0; }
+.markdown-source-view .cm-embed-block, .markdown-source-view .cm-preview-code-block { contain: inline-size; max-width: 100%; }
 .markdown-source-view .cm-image-widget { display: inline-block; max-width: 100%; text-indent: 0; }
 .markdown-source-view .cm-image-widget img, .markdown-source-view .cm-embed-block img { max-width: 100%; border-radius: var(--image-radius); vertical-align: middle; }
 .markdown-source-view .cm-embed-block audio { width: 100%; }
