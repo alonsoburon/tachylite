@@ -1,5 +1,6 @@
 import type { Extension } from "@codemirror/state";
 import type { EditorView, ViewUpdate } from "@codemirror/view";
+import type { RenderContext } from "../markdown/types";
 
 export type EditorMode = "source" | "live-preview";
 
@@ -28,6 +29,8 @@ export interface EditorHost {
   /** Render a note/media embed into `el`. If omitted, the built-in markdown renderer is used. */
   renderEmbed?(el: HTMLElement, linktext: string, sourcePath: string): void | Promise<void>;
   openTag?(tag: string): void;
+  /** See RenderContext.getEmbedRenderer (embeds of extensions registered in app.embedRegistry, e.g. canvas). */
+  getEmbedRenderer?: RenderContext["getEmbedRenderer"];
   openExternal?(url: string): void;
   /** Languages of fenced blocks that plugins render themselves (code-block processors). */
   codeBlockLanguages?(): string[];

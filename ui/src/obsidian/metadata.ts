@@ -82,6 +82,8 @@ export class MetadataCache extends Events {
 
   /** Called by Vault after a create/modify. */
   onFileChanged(file: TFile, _created: boolean, data?: string): Promise<void> {
+    // Canvases have no file cache but their cards count as links (resolvedLinks), computed by the core.
+    if (file.extension === "canvas") return this.enqueue(async () => { await this.refreshLinks(); this.trigger("resolved"); });
     if (file.extension !== "md") return Promise.resolve();
     return this.enqueue(async () => {
       const m = await ipc.metaGet(file.path);

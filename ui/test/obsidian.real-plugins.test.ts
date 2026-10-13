@@ -9,6 +9,7 @@ import { makeApp, makeVault, type FakeVault } from "./helpers/backend";
 import type { App } from "../src/obsidian/app";
 import { MarkdownPreviewRenderer } from "../src/obsidian/markdown";
 import { CACHE_DIR } from "../scripts/real-plugins.mjs";
+import { canvas as canvasCore } from "../src/app/core/canvas";
 
 const ENABLED = process.env.TACHYLITE_REAL_PLUGINS === "1";
 const dirOf = (id: string) => path.join(CACHE_DIR, id);
@@ -31,7 +32,7 @@ const PLUGINS: Spec[] = [
   { id: "calendar", dir: dirOf("calendar"), settingsTab: true, views: 1 },
   { id: "templater-obsidian", dir: dirOf("templater-obsidian"), minCommands: 1, settingsTab: true },
   { id: "obsidian-tasks-plugin", dir: dirOf("obsidian-tasks-plugin"), minCommands: 1, settingsTab: true, minPostProcessors: 1 },
-  { id: "obsidian-excalidraw-plugin", dir: dirOf("obsidian-excalidraw-plugin"), minCommands: 1, settingsTab: true, allowErrors: /reading .(document|canvas)./ /* iframe.contentWindow (happy-dom); core Canvas plugin not implemented */ },
+  { id: "obsidian-excalidraw-plugin", dir: dirOf("obsidian-excalidraw-plugin"), minCommands: 1, settingsTab: true, allowErrors: /reading .document./ /* iframe.contentWindow (happy-dom) */ },
   { id: "quickadd", dir: dirOf("quickadd"), minCommands: 1, settingsTab: true },
   { id: "obsidian-kanban", dir: dirOf("obsidian-kanban"), minCommands: 1, settingsTab: true, views: 1 },
   { id: "various-complements", dir: dirOf("various-complements"), minCommands: 1, settingsTab: true },
@@ -49,8 +50,8 @@ for (const id of ["nldates-obsidian", "obsidian-outliner", "obsidian-linter", "o
   PLUGINS.push({ id, dir: dirOf(id), ...(id === "obsidian-latex-suite" ? { allowErrors: /dynamic import callback/ /* node vm limitation; fine in a webview */ } : {}), ...(id === "obsidian-outliner" ? {} : {}) });
 }
 
-let v: FakeVault | undefined, app: App | undefined;
-afterEach(async () => { await app?.stop(); v?.cleanup(); document.body.innerHTML = ""; document.head.innerHTML = ""; v = app = undefined; });
+let v: FakeVault | undefined, app: App | undefined, offCanvas: (() => void) | undefined;
+afterEach(async () => { offCanvas?.(); offCanvas = undefined; await app?.stop(); v?.cleanup(); document.body.innerHTML = ""; document.head.innerHTML = ""; v = app = undefined; });
 
 for (const spec of PLUGINS) {
   const have = fs.existsSync(path.join(spec.dir, "main.js")) && fs.existsSync(path.join(spec.dir, "manifest.json"));
@@ -65,7 +66,8 @@ for (const spec of PLUGINS) {
         { "Home.md": "---\ntitle: Home\ntags: [a]\n---\n# Home\n- [ ] task one\nSee [[Note]]\n```dataview\nLIST\n```\n", "Note.md": "# Note\nhello #tag", "Daily/2024-01-01.md": "daily" },
         { plugins: { [spec.id]: { manifest: JSON.parse(read("manifest.json")!), main: read("main.js")!, styles: read("styles.css") } }, enabled: [spec.id] },
       );
-      app = await makeApp(v);
+      // The Canvas core plugin is installed as in the app (Excalidraw builds headless canvases through it).
+      app = await makeApp(v, { onCoreReady: (a) => { offCanvas = canvasCore.install(a) || undefined; } });
       document.body.appendChild(app.dom.appContainerEl); // the shell mounts this; plugins query .app-container
       const err = app.plugins.loadErrors[spec.id];
       const detail = app.plugins.loadErrorDetails[spec.id] as Error | undefined;

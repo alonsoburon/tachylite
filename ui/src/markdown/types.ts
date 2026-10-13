@@ -41,6 +41,11 @@ export interface RenderContext {
   /** Optional extras (not required by the app model). */
   openTag?(tag: string): void;
   addChild?(child: ChildLike): void;
+  /**
+   * Embed renderer for a file extension the renderer does not handle itself (e.g. `canvas`, or ones plugins register in
+   * app.embedRegistry). It fills `el`, the embed span (classes `internal-embed is-loaded` already set).
+   */
+  getEmbedRenderer?(ext: string): ((el: HTMLElement, target: string, subpath: string, alias: string) => void | Promise<void>) | null;
   /** When true a single newline is NOT a line break. Default false (Obsidian default). */
   strictLineBreaks?: boolean;
 }

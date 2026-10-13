@@ -396,6 +396,13 @@ async function renderEmbed(span: HTMLElement, ctx: RenderContext, st: Internal):
     span.replaceChildren(f);
     return;
   }
+  const custom = ext !== "md" && ext !== "" ? ctx.getEmbedRenderer?.(ext) : null;
+  if (custom) {
+    span.classList.add("is-loaded");
+    span.replaceChildren();
+    await custom(span, target, subpath, alias);
+    return;
+  }
   if (ext !== "md" && ext !== "") {
     // unknown attachment: link to it
     span.classList.add("is-loaded", "file-embed");

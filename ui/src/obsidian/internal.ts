@@ -21,7 +21,7 @@ export class QuickSwitcherModal extends SuggestModal<SwitcherItem> {
     const search = prepareFuzzySearch(query);
     const out: SwitcherItem[] = [];
     for (const file of this.app.vault.getFiles()) {
-      if (file.extension !== "md" && !this.app.vault.getConfig("showUnsupportedFiles")) continue;
+      if (file.extension !== "md" && file.extension !== "canvas" && !this.app.vault.getConfig("showUnsupportedFiles")) continue;
       const m = search(file.extension === "md" ? file.path.replace(/\.md$/, "") : file.path);
       if (m) out.push({ file, match: m });
     }

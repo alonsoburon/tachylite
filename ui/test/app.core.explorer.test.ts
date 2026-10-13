@@ -21,11 +21,12 @@ describe("file explorer", () => {
   it("renders folders first, hides unsupported files, shows extension badge on non-md", async () => {
     const v = await open();
     expect(v.getViewType()).toBe("file-explorer"); expect(v.getDisplayText()).toBe("Files"); expect(v.getIcon()).toBe("lucide-folder-closed");
-    expect(titles(v)).toEqual(["docs", "Alpha.md", "Beta.md", "img.png"]);
+    expect(titles(v)).toEqual(["docs", "Alpha.md", "Beta.md", "img.png", "z.canvas"]);
     expect(v.filesEl.querySelector(".tree-item.nav-folder.is-collapsed .nav-folder-title .collapse-icon svg")).not.toBeNull();
     expect(title(v, "Alpha.md").querySelector(".nav-file-title-content")!.textContent).toBe("Alpha");
     expect(title(v, "img.png").querySelector(".nav-file-tag")!.textContent).toBe("png");
     expect(title(v, "Alpha.md").querySelector(".nav-file-tag")).toBeNull();
+    expect(title(v, "z.canvas").querySelector(".nav-file-tag")!.textContent).toBe("canvas"); // the Canvas core plugin's view type
     expect(v.contentEl.querySelectorAll(".nav-header .nav-buttons-container .clickable-icon")).toHaveLength(4);
     // unsupported files appear with the setting
     c.app.vault.setConfig("showUnsupportedFiles", true); v.refresh();
@@ -69,7 +70,7 @@ describe("file explorer", () => {
   it("sort order menu persists and orders by name / mtime", async () => {
     const v = await open();
     v.setSortOrder("alphabeticalReverse");
-    expect(titles(v).filter((p) => !p!.includes("/")).slice(1)).toEqual(["img.png", "Beta.md", "Alpha.md"]);
+    expect(titles(v).filter((p) => !p!.includes("/")).slice(1)).toEqual(["z.canvas", "img.png", "Beta.md", "Alpha.md"]);
     expect(c.app.loadLocalStorage("file-explorer-sort")).toBe("alphabeticalReverse");
     const menu = v.sortMenu();
     expect(menu.items.filter((i: any) => i.titleEl).map((i: any) => i.titleEl.textContent)).toEqual(["File name (A to Z)", "File name (Z to A)", "Modified time (new to old)", "Modified time (old to new)", "Created time (new to old)", "Created time (old to new)"]);
@@ -87,7 +88,7 @@ describe("file explorer", () => {
     await v.setState({ expanded: ["docs", "docs/deep"], sortOrder: "alphabetical" });
     expect(titles(v)).toContain("docs/deep/Note.md");
     (v.contentEl.querySelector('[aria-label="Collapse all"]') as HTMLElement).click();
-    expect(titles(v)).toEqual(["docs", "Alpha.md", "Beta.md", "img.png"]);
+    expect(titles(v)).toEqual(["docs", "Alpha.md", "Beta.md", "img.png", "z.canvas"]);
     (v.contentEl.querySelector('[aria-label="Expand all"]') as HTMLElement).click();
     expect(titles(v)).toContain("docs/deep/Note.md");
   });

@@ -111,10 +111,12 @@ export class FileExplorerView extends PanelView {
     const f = this.entry(this.pathOf(e.target));
     if (f) { this.setFocus(f.path); buildFileMenu(this.app, f, "file-explorer").showAtMouseEvent(e); return; }
     const root = this.app.vault.getRoot();
-    new Menu()
-      .addItem((i) => i.setTitle("New note").setIcon("lucide-edit").onClick(() => { void newNote(this.app, { folder: root }); }))
-      .addItem((i) => i.setTitle("New folder").setIcon("lucide-folder-plus").onClick(() => { void newFolder(this.app, root); }))
-      .showAtMouseEvent(e);
+    const menu = new Menu()
+      .addItem((i) => i.setSection("action").setTitle("New note").setIcon("lucide-edit").onClick(() => { void newNote(this.app, { folder: root }); }))
+      .addItem((i) => i.setSection("action").setTitle("New folder").setIcon("lucide-folder-plus").onClick(() => { void newFolder(this.app, root); }));
+    // Core and community plugins add their entries for the vault root too ("New canvas", ...).
+    this.app.workspace.trigger("file-menu", menu, root, "file-explorer", this.leaf);
+    menu.showAtMouseEvent(e);
   }
 
   private onKey(e: KeyboardEvent): void {
