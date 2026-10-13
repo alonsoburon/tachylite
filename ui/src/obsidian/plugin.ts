@@ -8,6 +8,7 @@ import { MarkdownPreviewRenderer, type MarkdownPostProcessor, type MarkdownPostP
 import { MarkdownView, MediaFileView, type View, type ViewCreator } from "./views";
 import type { SettingTab } from "./setting";
 import { Notice } from "./ui";
+import type { BasesViewRegistration } from "../bases/api";
 
 export interface PluginManifest {
   dir?: string; id: string; name: string; author: string; version: string; minAppVersion: string;
@@ -214,7 +215,7 @@ export abstract class Plugin extends Component {
     const pp = MarkdownPreviewRenderer.createCodeBlockPostProcessor(language, handler) as MarkdownPostProcessor;
     return this.registerMarkdownPostProcessor(pp, sortOrder);
   }
-  registerBasesView(viewId: string, registration: unknown): boolean {
+  registerBasesView(viewId: string, registration: BasesViewRegistration): boolean {
     if (this.app.basesViews[viewId]) return false;
     this.app.basesViews[viewId] = registration;
     this.register(() => delete this.app.basesViews[viewId]);

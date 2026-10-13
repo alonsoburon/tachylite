@@ -15,6 +15,7 @@ import { EditorSuggestManager } from "./editorSuggest";
 import { EmbedRegistry, registerDefaultEmbeds } from "./embeds";
 import { RenderContext, SecretStorage } from "./values";
 import { Workspace, type LayoutHost } from "./workspace";
+import type { BasesViewRegistration } from "../bases/api";
 
 export interface AppOptions {
   info: VaultInfo;
@@ -52,7 +53,8 @@ export class App {
   dom: { appContainerEl: HTMLElement; horzSplitEl?: HTMLElement; rootEl?: HTMLElement };
   protocolHandlers: Record<string, (params: any) => any> = {};
   cliHandlers: Record<string, { description: string; flags: unknown; handler: (p: any) => any }> = {};
-  basesViews: Record<string, unknown> = {};
+  /** Bases view types by id: built-in (table, cards, list) and Plugin.registerBasesView. */
+  basesViews: Record<string, BasesViewRegistration> = {};
   /** Internal API read by some plugins (kanban, ...). */
   embedRegistry = new EmbedRegistry();
   appId: string;
