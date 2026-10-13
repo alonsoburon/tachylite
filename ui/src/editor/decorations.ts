@@ -488,7 +488,7 @@ export function buildBlocks(state: EditorState, env: WidgetEnv): DecorationSet {
     if (selectionTouches(state, f, t)) return false;
     const text = doc.sliceString(f, t);
     let widget;
-    if (name === "FencedCode") widget = new CodeBlockWidget(text, lang, env);
+    if (name === "FencedCode") widget = new CodeBlockWidget(text, lang, env, f);
     else if (name === "Table") widget = new TableWidget(text, env);
     else if (name === "Frontmatter") widget = new FrontmatterWidget(text, env);
     else widget = new MathWidget(text.trim().replace(/^\$\$/, "").replace(/\$\$$/, "").trim(), true);

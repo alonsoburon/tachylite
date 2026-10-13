@@ -21,7 +21,8 @@ const live = new WeakMap<HTMLElement, { handle: Rendered | void; dead: boolean }
 
 export class CodeBlockWidget extends WidgetType {
   readonly sourcePath: string;
-  constructor(readonly source: string, readonly lang: string, readonly env: WidgetEnv) {
+  /** `from`: document offset of the fence when the widget was built (section info before the DOM is attached). */
+  constructor(readonly source: string, readonly lang: string, readonly env: WidgetEnv, readonly from = -1) {
     super();
     this.sourcePath = env.getSourcePath();
   }
@@ -49,10 +50,10 @@ export class CodeBlockWidget extends WidgetType {
     const info: CodeBlockRenderInfo = {
       // Line numbers are 0-based and refer to the whole note (`text`), like Obsidian's section info.
       getSectionInfo: () => {
-        if (!el.isConnected) return null;
-        let pos: number;
-        try { pos = view.posAtDOM(el); } catch { return null; }
+        let pos = this.from;
+        if (el.isConnected) try { pos = view.posAtDOM(el); } catch { /* keep the build-time offset */ }
         const doc = view.state.doc;
+        if (pos < 0 || pos > doc.length) return null;
         const first = doc.lineAt(pos).number - 1;
         return { text: doc.toString(), lineStart: first, lineEnd: first + this.source.split("\n").length - 1 };
       },
