@@ -1,0 +1,16 @@
+[package]
+name = "tachylite-plugins"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Community plugin and theme catalog, install and enable logic compatible with Obsidian vaults"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+ureq.workspace = true
+tachylite-core = { path = "../tachylite-core" }
+
+[dev-dependencies]
+tempfile.workspace = true

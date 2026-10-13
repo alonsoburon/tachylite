@@ -1,0 +1,29 @@
+[package]
+name = "tachylite-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Tachylite desktop app (Tauri shell around tachylite-core)"
+default-run = "tachylite"
+
+[[bin]]
+name = "tachylite"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
+serde.workspace = true
+serde_json.workspace = true
+notify.workspace = true
+ureq.workspace = true
+tachylite-core = { path = "../tachylite-core" }
+tachylite-plugins = { path = "../tachylite-plugins" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Developer-only window snapshots (the `dev_screenshot` command) work without a visible display.
+webkit2gtk = "2.0.2"
+cairo-rs = { version = "0.18", features = ["png"] }

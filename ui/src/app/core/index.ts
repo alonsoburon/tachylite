@@ -1,0 +1,11 @@
+import type { CoreModule } from "./util";
+import { explorer } from "./explorer";
+import { search } from "./search";
+import { backlinks, outgoingLinks } from "./links";
+import { tags } from "./tags";
+import { outline } from "./outline";
+import { bookmarks } from "./bookmarks";
+import { graph } from "./graph";
+
+/** Core views installed on vault open (in ribbon order). */
+export const coreModules: CoreModule[] = [explorer, search, backlinks, outgoingLinks, tags, outline, bookmarks, graph];

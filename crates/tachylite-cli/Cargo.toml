@@ -1,0 +1,15 @@
+[package]
+name = "tachylite-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Headless Tachylite: inspect and operate on Obsidian-format vaults from the terminal"
+
+[[bin]]
+name = "tachy"
+path = "src/main.rs"
+
+[dependencies]
+serde_json.workspace = true
+tachylite-core = { path = "../tachylite-core" }
+tachylite-plugins = { path = "../tachylite-plugins" }

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Tachylite",
+  "version": "0.1.0",
+  "identifier": "app.tachylite.desktop",
+  "build": { "frontendDist": "../../ui/dist" },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [{ "title": "Tachylite", "width": 1280, "height": 800, "minWidth": 640, "minHeight": 400 }],
+    "security": { "csp": null, "assetProtocol": { "enable": true, "scope": [] } }
+  },
+  "bundle": { "active": true, "targets": "all", "icon": ["icons/icon.png"] }
+}

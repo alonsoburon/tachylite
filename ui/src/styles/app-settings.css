@@ -1,0 +1,84 @@
+/* Settings dialog widgets: hotkey chips, search bars, community plugin / theme browsers, update lists. */
+
+.setting-search-bar,
+.hotkey-search-container { margin-bottom: var(--size-4-3); }
+.setting-search-bar .search-input-container { width: 100%; }
+
+/* ---------- Installed plugins ---------- */
+.community-plugin-item .community-plugin-name { font-weight: 600; }
+.community-plugin-item .community-plugin-version { margin-left: var(--size-4-2); color: var(--text-faint); font-size: var(--font-smaller); }
+.community-plugin-item .community-plugin-author { color: var(--text-muted); font-size: var(--font-smaller); }
+.community-plugin-item .community-plugin-desc { margin-top: var(--size-2-1); }
+.community-plugin-error { color: var(--text-error); font-size: var(--font-smaller); margin-right: var(--size-4-2); }
+.community-plugins-updates { margin: var(--size-4-2) 0 var(--size-4-4); border-left: 2px solid var(--interactive-accent); padding-left: var(--size-4-3); }
+.setting-item.setting-item-note { border-top: none; color: var(--text-muted); }
+
+/* ---------- Hotkeys ---------- */
+.hotkey-list-container { display: flex; flex-direction: column; }
+.hotkey-list-item .setting-item-description.mod-warning { color: var(--text-warning); }
+.setting-command-hotkeys { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--size-2-2); max-width: 60%; }
+.setting-hotkey {
+  display: inline-flex; align-items: center; gap: var(--size-2-2);
+  padding: var(--size-2-1) var(--size-4-2);
+  background: var(--background-modifier-form-field);
+  border: var(--border-width) solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+.setting-hotkey.mod-empty { color: var(--text-faint); border-style: dashed; background: transparent; }
+.setting-hotkey.mod-capturing { color: var(--text-accent); border-color: var(--interactive-accent); animation: tachy-hotkey-pulse 1s ease-in-out infinite; }
+.setting-hotkey-icon { cursor: pointer; color: var(--text-muted); line-height: 1; }
+.setting-hotkey-icon:hover { color: var(--text-error); }
+.hotkey-empty-state { padding: var(--size-4-4); text-align: center; color: var(--text-muted); }
+@keyframes tachy-hotkey-pulse { 50% { opacity: 0.55; } }
+
+/* ---------- Browser modals ---------- */
+.modal.mod-community-modal { width: min(960px, 92vw); max-width: 92vw; height: min(720px, 86vh); display: flex; flex-direction: column; }
+.mod-community-modal .modal-content { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.mod-community-modal .community-modal-controls { display: flex; gap: var(--size-4-2); align-items: center; margin-bottom: var(--size-4-3); }
+.mod-community-modal .community-modal-search { flex: 1 1 auto; margin-bottom: var(--size-4-3); }
+.mod-community-modal .community-modal-controls .community-modal-search { margin-bottom: 0; }
+.mod-community-modal .community-modal-search .search-input-container { width: 100%; }
+.mod-community-modal .community-modal-search-results { flex: 1 1 auto; overflow-y: auto; min-height: 0; padding-right: var(--size-4-1); }
+.mod-community-modal .community-modal-search-summary { color: var(--text-muted); font-size: var(--font-smaller); margin-bottom: var(--size-4-2); }
+.mod-community-modal .community-modal-search-results-status,
+.mod-community-modal .community-modal-empty-state { padding: var(--size-4-8); text-align: center; color: var(--text-muted); }
+.mod-community-modal .community-modal-empty-state.mod-error { color: var(--text-error); display: flex; flex-direction: column; gap: var(--size-4-3); align-items: center; }
+.mod-community-modal .community-plugins-banner {
+  background: var(--background-modifier-message); border-radius: var(--radius-m);
+  padding: var(--size-4-2) var(--size-4-3); margin-bottom: var(--size-4-3); font-size: var(--font-smaller);
+}
+.mod-community-modal .community-modal-grid-button-container { display: flex; justify-content: center; padding: var(--size-4-4) 0; }
+
+.mod-community-plugin .community-item {
+  display: flex; align-items: center; gap: var(--size-4-4);
+  padding: var(--size-4-3) var(--size-4-2);
+  border-bottom: var(--border-width) solid var(--background-modifier-border);
+}
+.community-item-info { flex: 1 1 auto; min-width: 0; }
+.community-item-name { font-weight: 600; }
+.community-item-author { color: var(--text-muted); font-size: var(--font-smaller); }
+.community-item-desc { margin-top: var(--size-2-1); color: var(--text-normal); font-size: var(--font-small); }
+.community-item-repo { display: inline-block; margin-top: var(--size-2-1); color: var(--text-faint); font-size: var(--font-smallest); }
+.community-item-buttons { display: flex; align-items: center; gap: var(--size-4-2); flex: 0 0 auto; }
+.community-item-badge { color: var(--text-success); font-size: var(--font-smaller); }
+
+.mod-community-theme .community-modal-search-results.theme-list {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--size-4-4); align-content: start;
+}
+.mod-community-theme .theme-list > .community-modal-search-results-status,
+.mod-community-theme .theme-list > .community-modal-empty-state,
+.mod-community-theme .theme-list > .community-modal-grid-button-container { grid-column: 1 / -1; }
+.community-item.community-theme {
+  display: flex; flex-direction: column; gap: var(--size-4-2); padding: var(--size-4-2);
+  border: var(--border-width) solid var(--background-modifier-border); border-radius: var(--radius-m);
+  background: var(--background-primary-alt);
+}
+.community-theme .community-item-screenshot {
+  aspect-ratio: 16 / 10; overflow: hidden; border-radius: var(--radius-s);
+  background: var(--background-secondary); display: flex; align-items: center; justify-content: center;
+}
+.community-theme .community-item-screenshot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.community-theme .community-item-screenshot.is-missing::after { content: "No preview"; color: var(--text-faint); font-size: var(--font-smaller); }
+.community-theme .community-item-buttons { flex-wrap: wrap; }
