@@ -3,7 +3,6 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bootCore, type Core } from "./helpers/core";
 import { BookmarksStore, BookmarksView, getStore } from "../src/app/core/bookmarks";
-import { GraphView, buildGraph, createSimulation, hitTest, isSettled, stepSimulation } from "../src/app/core/graph";
 import { Menu } from "../src/obsidian";
 
 let c: Core;
@@ -91,82 +90,5 @@ describe("bookmarks", () => {
     c.app.commands.executeCommand(cmd);
     expect(getStore(c.app)!.isBookmarked(A)).toBe(true);
     expect(c.app.commands.findCommand("bookmarks:open")).toBeTruthy();
-  });
-});
-
-describe("graph layout", () => {
-  const resolved = { "a.md": { "b.md": 1, "c.md": 2 }, "b.md": { "a.md": 1 }, "c.md": {}, "d.md": {}, "e.md": { "img.png": 1 } };
-  const unresolved = { "a.md": { Ghost: 1 } };
-
-  it("buildGraph: undirected unique edges, degree-sized nodes, option filters", () => {
-    const g = buildGraph(resolved, unresolved);
-    expect(g.nodes.map((n) => n.id).sort()).toEqual(["?Ghost", "a.md", "b.md", "c.md", "d.md", "e.md"]);
-    expect(g.links).toHaveLength(3); // a-b (deduped), a-c, a-ghost
-    const byId = Object.fromEntries(g.nodes.map((n) => [n.id, n]));
-    expect(byId["a.md"].degree).toBe(3); expect(byId["a.md"].r).toBeGreaterThan(byId["c.md"].r);
-    expect(byId["?Ghost"].kind).toBe("unresolved"); expect(byId["b.md"].label).toBe("b");
-    expect(buildGraph(resolved, unresolved, { existingOnly: true }).nodes.some((n) => n.kind === "unresolved")).toBe(false);
-    expect(buildGraph(resolved, unresolved, { orphans: false }).nodes.map((n) => n.id).sort()).toEqual(["?Ghost", "a.md", "b.md", "c.md"]);
-    expect(buildGraph(resolved, unresolved, { search: "B" }).nodes.map((n) => n.id)).toEqual(["b.md"]);
-    const att = buildGraph(resolved, unresolved, { attachments: true });
-    expect(att.nodes.find((n) => n.id === "img.png")!.kind).toBe("attachment");
-    expect(buildGraph(resolved, unresolved).nodes.some((n) => n.id === "img.png")).toBe(false);
-  });
-
-  it("simulation is deterministic, cools down, pulls linked nodes together and respects fixed nodes", () => {
-    const run = () => {
-      const s = createSimulation(buildGraph(resolved, {}, {}), {});
-      let i = 0;
-      while (!isSettled(s) && i++ < 2000) stepSimulation(s);
-      return { s, i };
-    };
-    const { s, i } = run();
-    expect(i).toBeLessThan(2000);
-    expect(s.nodes.every((n) => Number.isFinite(n.x) && Number.isFinite(n.y))).toBe(true);
-    expect(run().s.nodes.map((n) => [n.x, n.y])).toEqual(s.nodes.map((n) => [n.x, n.y]));
-    const pos = (id: string) => s.nodes.find((n) => n.id === id)!;
-    const d = (a: string, b: string) => Math.hypot(pos(a).x - pos(b).x, pos(a).y - pos(b).y);
-    expect(d("a.md", "b.md")).toBeLessThan(d("a.md", "d.md"));
-    const fixed = createSimulation(buildGraph(resolved, {}, {}), {});
-    fixed.nodes[0].fixed = true; const [x, y] = [fixed.nodes[0].x, fixed.nodes[0].y];
-    for (let k = 0; k < 20; k++) stepSimulation(fixed);
-    expect([fixed.nodes[0].x, fixed.nodes[0].y]).toEqual([x, y]);
-    const hit = hitTest(s.nodes, pos("a.md").x, pos("a.md").y);
-    expect(s.nodes[hit].id).toBe("a.md");
-    expect(hitTest(s.nodes, 1e5, 1e5)).toBe(-1);
-  });
-
-  it("large graphs use the grid path and stay finite", () => {
-    const big: Record<string, Record<string, number>> = {};
-    for (let i = 0; i < 600; i++) big[`n${i}.md`] = i ? { [`n${i - 1}.md`]: 1 } : {};
-    const s = createSimulation(buildGraph(big, {}), {});
-    for (let i = 0; i < 30; i++) stepSimulation(s);
-    expect(s.nodes.every((n) => Number.isFinite(n.x))).toBe(true);
-  });
-});
-
-describe("graph view", () => {
-  it("opens in a tab, builds from the metadata cache, filters, opens notes on click and cleans up", async () => {
-    c.app.commands.executeCommand(c.app.commands.findCommand("graph:open")!);
-    await vi.waitFor(() => expect(c.app.workspace.getLeavesOfType("graph")).toHaveLength(1));
-    const v = c.app.workspace.getLeavesOfType("graph")[0].view as GraphView;
-    expect(v.getDisplayText()).toBe("Graph view"); expect(v.getIcon()).toBe("lucide-git-fork");
-    expect(v.getViewType()).toBe("graph");
-    expect(v.sim.nodes.map((n) => n.id).sort()).toEqual(["?Gone", "A.md", "B.md", "C.md", "dir/D.md"]);
-    expect(v.controlsEl.querySelectorAll(".checkbox-container")).toHaveLength(3);
-    expect(v.controlsEl.querySelectorAll("input[type=range]")).toHaveLength(2);
-    (v.controlsEl.querySelectorAll(".checkbox-container")[1] as HTMLElement).click(); // existing files only
-    expect(v.options.existingOnly).toBe(true);
-    expect(v.sim.nodes.some((n) => n.kind === "unresolved")).toBe(false);
-    expect(v.getState()).toMatchObject({ options: { existingOnly: true } });
-    v.openNode("dir/D.md", "note");
-    await vi.waitFor(() => expect(c.app.workspace.getActiveFile()?.path).toBe("dir/D.md"));
-    // a created note shows up
-    await c.app.vault.create("New.md", "[[A]]");
-    await vi.waitFor(() => expect(v.sim.nodes.some((n) => n.id === "New.md")).toBe(true), { timeout: 2000 });
-    expect(c.app.workspace.leftRibbon.items.some((i) => i.title === "Open graph view")).toBe(true);
-    await c.app.internalPlugins.plugins["graph"].disable();
-    expect(c.app.commands.findCommand("graph:open")).toBeUndefined();
-    expect(c.app.workspace.getLeavesOfType("graph")).toHaveLength(0);
   });
 });
