@@ -41,7 +41,7 @@ const PLUGINS: Spec[] = [
   { id: "obsidian-kanban", dir: dirOf("obsidian-kanban"), minCommands: 1, settingsTab: true, views: 1 },
   { id: "various-complements", dir: dirOf("various-complements"), minCommands: 1, settingsTab: true },
   { id: "obsidian-style-settings", dir: dirOf("obsidian-style-settings"), settingsTab: true },
-  { id: "omnisearch", dir: dirOf("omnisearch"), settingsTab: true, allowErrors: /apiHttpServer|reading .close./ /* node http server not available */ },
+  { id: "omnisearch", dir: dirOf("omnisearch"), settingsTab: true },
   { id: "periodic-notes", dir: dirOf("periodic-notes"), settingsTab: true },
   { id: "table-editor-obsidian", dir: dirOf("table-editor-obsidian"), minCommands: 1, settingsTab: true },
   { id: "obsidian-completr", dir: dirOf("obsidian-completr"), settingsTab: true },

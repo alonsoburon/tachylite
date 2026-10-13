@@ -1,3 +1,4 @@
+import { createRequire } from "../src/obsidian/pluginLoader";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
@@ -203,6 +204,19 @@ describe("plugin loader with a hand-written CommonJS fixture", () => {
       existsSync: true, process: "string", buffer: "6869",
     });
     expect(G.__env.cpThrows).toMatch(/not supported/);
+  });
+
+  it("http/https: createServer returns a server whose listen reports an error event; clients throw", async () => {
+    const req = createRequire({} as any);
+    for (const id of ["http", "node:https"]) {
+      const http = req(id);
+      expect(Object.keys(http)).toContain("createServer"); // survives bundlers' namespace interop
+      const server = http.createServer(() => {});
+      const err = await new Promise<any>((res) => { server.on("error", res); server.listen(27123, "127.0.0.1"); });
+      expect(err.code).toBe("ERR_NOT_SUPPORTED");
+      await new Promise<void>((res) => server.close(() => res()));
+      expect(() => http.request("http://x")).toThrow(/not supported/);
+    }
   });
   it("vault events reach plugin handlers (registerEvent) and file-open fires", async () => {
     await boot();

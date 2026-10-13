@@ -31,6 +31,37 @@ export function unsupportedModule(name: string, overrides: Record<string, unknow
   });
 }
 
+/**
+ * `http` / `https`: there is no socket server in the webview. `createServer` still returns a server object so plugins
+ * that build one at load time (Omnisearch's local API) keep working; `listen` reports an `error` event instead.
+ */
+export function httpModule(name: string): any {
+  const createServer = (..._args: unknown[]) => {
+    const server: any = new EventEmitter();
+    server.listening = false;
+    server.listen = (...args: unknown[]) => {
+      const cb = args.find((a) => typeof a === "function") as (() => void) | undefined;
+      void cb;
+      setTimeout(() => {
+        const e: any = new Error(`${name}.Server.listen is not supported in Tachylite (no Node.js runtime in the webview)`);
+        e.code = "ERR_NOT_SUPPORTED";
+        if (server.listenerCount("error")) server.emit("error", e); else console.warn(e.message);
+      }, 0);
+      return server;
+    };
+    server.close = (cb?: (err?: Error) => void) => { setTimeout(() => cb?.()); server.emit("close"); return server; };
+    server.address = () => null;
+    server.setTimeout = () => server;
+    server.ref = server.unref = () => server;
+    return server;
+  };
+  const fail = (m: string) => () => notSupported(name, m);
+  return unsupportedModule(name, {
+    createServer, Server: function Server() { return createServer(); }, STATUS_CODES: {}, METHODS: ["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    request: fail("request"), get: fail("get"), Agent: function Agent() { /* no sockets */ }, globalAgent: {},
+  });
+}
+
 // ------------------------------------------------------------------ process
 const uaPlatform = () => ({ macos: "darwin", windows: "win32", linux: "linux" } as const)[detectOS()];
 /** Platform, env, cwd and pid come from the Node bridge while it is active (see nodeBridge.ts), else browser guesses. */

@@ -130,6 +130,7 @@ export function createRequire(app: App): RequireFn {
     if (cache.has(id)) return cache.get(id);
     let mod: unknown;
     if (factories[id]) mod = factories[id]();
+    else if (id === "http" || id === "https") mod = shims.httpModule(id);
     else if (BUILTIN_EMPTY.includes(id)) mod = shims.unsupportedModule(id, id === "perf_hooks" ? { performance } : id === "constants" ? {} : {});
     else {
       const err: any = new Error(`Cannot find module '${raw}'`);
