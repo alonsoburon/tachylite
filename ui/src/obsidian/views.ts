@@ -7,6 +7,7 @@ import { setIcon } from "./icons";
 import { type Menu } from "./ui";
 import { debounce, resolveSubpath, type Debouncer } from "./util";
 import { CMEditor, Editor, editorEditorField, editorInfoField, editorLivePreviewField, getEditorFactory, setEditorInfo, setEditorView } from "./editor";
+import { installPreviewTaskToggle } from "./previewTasks";
 import { MarkdownRenderer } from "./markdown";
 import type { App } from "./app";
 import type { WorkspaceLeaf } from "./workspace";
@@ -250,6 +251,7 @@ export class MarkdownPreviewView extends MarkdownRenderer {
   constructor(public view: MarkdownView) {
     super(view.previewEl);
     this.app = view.app;
+    installPreviewTaskToggle(view);
   }
   get file(): TFile { return this.view.file as TFile; }
   private text = "";

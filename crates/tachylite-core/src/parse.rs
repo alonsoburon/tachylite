@@ -11,6 +11,9 @@ use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
+mod footnotes;
+pub use footnotes::{FootnoteCache, FootnoteRefCache};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct Loc {
     pub line: usize,
@@ -105,6 +108,10 @@ pub struct CachedMetadata {
     pub frontmatter_position: Option<Pos>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub frontmatter_links: Vec<FrontmatterLinkCache>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub footnotes: Vec<FootnoteCache>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub footnote_refs: Vec<FootnoteRefCache>,
 }
 
 /// Maps byte offsets of the source text to (line, utf16 col, utf16 offset).
@@ -552,6 +559,8 @@ pub fn parse(text: &str) -> CachedMetadata {
             "table"
         } else if t.trim_start().starts_with('<') && !(cur_kind == Some("paragraph") && !prev_blank) {
             "html"
+        } else if footnotes::is_definition(t) {
+            "footnoteDefinition"
         } else {
             "paragraph"
         };
@@ -563,6 +572,7 @@ pub fn parse(text: &str) -> CachedMetadata {
             Some(k) if is_quote_kind(k) => quote || kind == "paragraph",
             Some("table") => !quote && !table_here,
             Some("html") => true,
+            Some("footnoteDefinition") => kind == "paragraph",
             _ => false,
         };
         if continues {
@@ -612,6 +622,7 @@ pub fn parse(text: &str) -> CachedMetadata {
         meta.sections.push(SectionCache { id: s.id, kind: s.kind.into(), position });
     }
     meta.sections.sort_by_key(|s| s.position.start.offset);
+    footnotes::collect(text, body_from, &idx, &mut meta);
     meta
 }
 

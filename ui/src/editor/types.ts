@@ -33,6 +33,8 @@ export interface EditorHost {
   codeBlockLanguages?(): string[];
   /** Render a whole fenced block (```lang ... ```) through the plugins' processors; the handle is unloaded with the widget. */
   renderCodeBlock?(el: HTMLElement, markdown: string, sourcePath: string): { unload(): void } | void | Promise<{ unload(): void } | void>;
+  /** Show a context menu (Live Preview table cells). Without it, the table widget has no context menu. */
+  showMenu?(evt: MouseEvent, items: { title: string; icon: string; section: string; checked?: boolean; disabled?: boolean; onClick(): void }[]): void;
 }
 
 export interface EditorOptions {

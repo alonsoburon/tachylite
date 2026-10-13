@@ -181,6 +181,7 @@
 .markdown-source-view .cm-callout-title-empty::after { content: attr(data-callout-title); }
 .markdown-source-view .cm-callout-icon { display: inline-flex; vertical-align: middle; margin-inline-end: var(--size-4-1); color: rgb(var(--callout-color)); }
 .markdown-source-view .cm-callout-icon .svg-icon { width: 1.1em; height: 1.1em; }
+.markdown-source-view .cm-callout-fold { display: inline-flex; vertical-align: middle; margin-inline-start: var(--size-4-1); cursor: var(--cursor); color: rgb(var(--callout-color)); }
 
 /* ---- code blocks ---- */
 .markdown-source-view .HyperMD-codeblock {
@@ -217,6 +218,8 @@
 .markdown-source-view .cm-math-widget.math-block { text-align: center; padding: var(--size-4-2) 0; overflow-x: auto; }
 .markdown-source-view .cm-math-widget .katex-display { margin: 0; }
 .markdown-source-view .HyperMD-footnote { color: var(--text-muted); font-size: var(--footnote-size); }
+.markdown-source-view .cm-inline-footnote:not(.cm-formatting) { color: var(--text-muted); }
+.markdown-source-view .cm-inline-footnote-widget { font-size: var(--font-smallest); line-height: 0; color: var(--text-accent); cursor: text; }
 
 /* ---- tables ---- */
 .markdown-source-view .HyperMD-table-row { font-family: var(--font-monospace); font-size: var(--font-smaller); background: var(--background-secondary); padding-inline: var(--size-4-2); }
@@ -233,6 +236,7 @@
 .markdown-source-view .cm-table-widget th { font-weight: var(--table-header-weight); font-size: var(--table-header-size); background: var(--table-header-background); color: var(--table-header-color); text-align: start; }
 .markdown-source-view .cm-table-widget a { color: var(--link-color); }
 .markdown-source-view .cm-table-widget a.is-unresolved { opacity: var(--link-unresolved-opacity); }
+.markdown-source-view .cm-table-widget .is-editing { white-space: pre-wrap; word-break: break-word; font-family: var(--font-text); outline: 2px solid var(--interactive-accent); outline-offset: -2px; caret-color: var(--caret-color, var(--text-normal)); }
 
 /* ---- embeds & images ---- */
 .markdown-source-view .cm-embed-block { display: block; margin: var(--size-4-2) 0; text-indent: 0; }
