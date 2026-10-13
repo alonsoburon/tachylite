@@ -61,8 +61,11 @@ export class CorePluginsSettingTab extends SettingTab {
     for (const p of plugins) {
       const desc = DESCRIPTIONS[p.id] ?? "";
       if (this.query && !(p.name.toLowerCase().includes(this.query) || desc.toLowerCase().includes(this.query))) continue;
-      new Setting(list).setName(p.name).setDesc(desc).setClass("core-plugin-item").addToggle((t) =>
-        t.setValue(p.enabled).onChange((v) => { void (v ? p.enable() : p.disable()); }));
+      const row = new Setting(list).setName(p.name).setDesc(desc).setClass("core-plugin-item");
+      // Enabled plugins with an options tab get a cog that opens it (as in Obsidian).
+      const tab = p.enabled && this.app.setting.settingTabs.find((t) => (t as any).corePluginId === p.id);
+      if (tab) row.addExtraButton((b) => b.setIcon("lucide-settings").setTooltip("Options").onClick(() => this.app.setting.openTab(tab)));
+      row.addToggle((t) => t.setValue(p.enabled).onChange(async (v) => { await (v ? p.enable() : p.disable()); this.renderList(); }));
       list.lastElementChild?.setAttribute("data-plugin-id", p.id);
       shown++;
     }
