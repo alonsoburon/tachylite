@@ -144,6 +144,36 @@ describe("Bases (fake backend)", () => {
     expect(saved.views[2].filters).toBe('status == "reading"');
   });
 
+  it("resizes columns, toggles the YAML source and writes embed toolbar changes to the .base file", async () => {
+    const s = await boot();
+    const view = await openBase(s);
+    const th = q(".bases-table-header[data-property='note.author']")!;
+    q(".bases-table-header-resizer", th)!.dispatchEvent(new MouseEvent("mousedown", { clientX: 100, bubbles: true }));
+    document.dispatchEvent(new MouseEvent("mousemove", { clientX: 250, bubbles: true }));
+    document.dispatchEvent(new MouseEvent("mouseup", { clientX: 250, bubbles: true }));
+    expect(view.controller.config.views[0].columnSize["note.author"]).toBeGreaterThanOrEqual(150);
+    view.toggleSource();
+    const ta = q<HTMLTextAreaElement>(".bases-source-editor")!;
+    expect(ta.value).toContain("columnSize:");
+    ta.value = ta.value.replace("name: Books", "name: Renamed");
+    ta.dispatchEvent(new Event("input"));
+    view.toggleSource();
+    await vi.waitFor(() => expect(q(".workspace-split.mod-root .bases-toolbar-views-menu")?.textContent).toBe("Renamed"));
+    await view.save();
+    expect(read("Library.base")).toContain("name: Renamed");
+    // An embed's toolbar edits go to the base file.
+    await s.app.workspace.openLinkText("Home", "", "tab");
+    await vi.waitFor(() => expect(q(".markdown-source-view .bases-embed .bases-cards-item")).toBeTruthy());
+    const embed = q(".markdown-source-view .internal-embed.bases-embed, .markdown-source-view .bases-embed")!;
+    const before = read("Library.base");
+    q(".bases-toolbar-sort-menu", embed)!.click();
+    const sortModal = q(".bases-sort-modal")!;
+    qa("button", sortModal).find((b) => b.textContent === "Add sort")!.click();
+    await vi.waitFor(() => expect(read("Library.base")).not.toBe(before));
+    const saved = yaml.load(read("Library.base")) as any;
+    expect(saved.views[1].sort).toEqual([{ property: "file.name", direction: "ASC" }]);
+  });
+
   it("edits a cell and persists it to the note's frontmatter", async () => {
     const s = await boot();
     await openBase(s);
@@ -260,7 +290,6 @@ describe("Bases (fake backend)", () => {
     await vi.waitFor(() => expect(q(".count-view-out")?.textContent).toBe("rows=2 props=file.name|note.price label=hello first=12"));
     const view = s.app.workspace.activeLeaf!.view as any;
     // the plugin's options show in View settings
-    view.controller.viewsMenu?.();
     const { ViewSettingsModal } = await import("../src/bases/toolbar");
     const m = new ViewSettingsModal(s.app, view.controller, 0);
     m.open();

@@ -119,3 +119,15 @@
 .bases-filter-error { color: var(--text-error); font-size: var(--font-ui-smaller); white-space: pre-wrap; }
 .bases-formula-input { font-family: var(--font-monospace); min-width: 18em; }
 .bases-view-settings-group { margin-top: 12px; font-weight: var(--font-semibold, 600); color: var(--text-muted); }
+
+/* Inside notes (embeds, code blocks) the reading-view table and list styles must not leak into the base. */
+.bases-view table.bases-table { margin: 0; font-size: var(--font-ui-small); border: none; }
+.bases-view .bases-table th, .bases-view .bases-table td {
+  padding: 0; font-size: inherit; font-weight: inherit; color: inherit; background: none; min-width: 0; max-width: none; white-space: normal; vertical-align: top;
+  border: none; border-bottom: var(--border-width, 1px) solid var(--background-modifier-border); border-inline-end: var(--border-width, 1px) solid var(--background-modifier-border);
+}
+.bases-view .bases-table th { color: var(--text-muted); font-weight: var(--font-medium, 500); }
+.bases-view table.bases-table { background: none; color: inherit; line-height: inherit; }
+.bases-view .bases-table .bases-table-summary-cell, .bases-view .bases-table .bases-group-row td { padding: 4px 8px; }
+.bases-view .bases-table .bases-group-row td { padding-top: 10px; }
+.bases-view .bases-thead .bases-tr { background: var(--background-primary); }
