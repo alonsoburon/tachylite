@@ -180,9 +180,19 @@ async function renderInternal(md: string, el: HTMLElement, ctx: RenderContext, s
   attachHandlers(el, ctx);
 
   const frontmatter = split.frontmatter ?? ctx.getFrontmatter?.(ctx.sourcePath) ?? null;
-  if (split.raw !== null && !st.hideFrontmatter) {
+  const fmMode = ctx.propertiesInDocument ?? "visible";
+  if (split.raw !== null && !st.hideFrontmatter && fmMode !== "hidden") {
     const inl = (s: string) => mdIt.renderInline(s, env);
-    sizer.appendChild(renderFrontmatter(split, inl));
+    if (fmMode === "source") {
+      const pre = sizer.appendChild(document.createElement("pre"));
+      pre.className = "frontmatter language-yaml";
+      pre.appendChild(document.createElement("code")).textContent = split.raw;
+    } else {
+      const holder = document.createElement("div");
+      holder.className = "mod-frontmatter mod-ui";
+      if (split.frontmatter && ctx.renderProperties?.(holder, split.frontmatter, ctx.sourcePath)) sizer.appendChild(holder);
+      else sizer.appendChild(renderFrontmatter(split, inl));
+    }
   }
 
   // group top-level tokens into sections

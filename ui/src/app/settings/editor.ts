@@ -26,7 +26,9 @@ export class EditorSettingTab extends SettingTab {
     this.toggle("Readable line length", "Limit the width of lines in notes to make them easier to read.", "readableLineLength");
     this.toggle("Strict line breaks", "Treat single line breaks as hard breaks, as in the editor, instead of joining the lines.", "strictLineBreaks");
     this.toggle("Show inline title", "Show the note title above the content.", "showInlineTitle");
-    this.toggle("Properties in document", "Show the frontmatter properties at the top of notes.", "showFrontmatter");
+    new Setting(el).setName("Properties in document").setDesc("Choose how properties are displayed at the top of notes. Select \"source\" to show properties as raw YAML.").addDropdown((d) =>
+      d.addOptions({ visible: "Visible", hidden: "Hidden", source: "Source" }).setValue(app.vault.getConfig("propertiesInDocument") ?? "visible")
+        .onChange((v) => commitConfig(app, "propertiesInDocument", v)));
     this.toggle("Spellcheck", "Underline misspelled words while typing.", "spellcheck");
 
     heading(el, "Display");

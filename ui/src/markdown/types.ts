@@ -43,6 +43,10 @@ export interface RenderContext {
   addChild?(child: ChildLike): void;
   /** Render an embed of a non-markdown file type the host knows (registered in app.embedRegistry: `.canvas`, `.base`, plugin types) into `el`; return false to fall back to a link. */
   renderFileEmbed?(el: HTMLElement, path: string, subpath: string, linktext: string, sourcePath: string): boolean | Promise<boolean>;
+  /** app.json `propertiesInDocument` (default "visible"; "source" shows the YAML, "hidden" nothing). */
+  propertiesInDocument?: "visible" | "hidden" | "source";
+  /** Draw the editable Properties table into `el`; return false to use the read-only block. */
+  renderProperties?(el: HTMLElement, frontmatter: Record<string, unknown>, sourcePath: string): boolean;
   /** When true a single newline is NOT a line break. Default false (Obsidian default). */
   strictLineBreaks?: boolean;
 }

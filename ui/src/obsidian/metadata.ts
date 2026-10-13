@@ -263,22 +263,21 @@ export class FileManager {
     lt += sub;
     return `${embed}[[${lt}${alias ? "|" + alias : ""}]]`;
   }
+  /**
+   * Edit the frontmatter as an object. When the note is open in an editor the change is applied to the editor (only the
+   * frontmatter range, so the caret and unsaved body edits survive) and saved right away; otherwise the file is rewritten.
+   */
   async processFrontMatter(file: TFile, fn: (frontmatter: any) => void, _o?: { ctime?: number; mtime?: number }): Promise<void> {
-    const text = await this.app.vault.read(file);
-    const info = getFrontMatterInfo(text);
-    const fm = info.exists ? parseYaml(info.frontmatter) ?? {} : {};
-    if (typeof fm !== "object" || Array.isArray(fm)) throw new Error("Frontmatter is not a YAML mapping");
-    fn(fm);
-    const empty = Object.keys(fm).length === 0;
-    let out: string;
-    if (info.exists) {
-      const body = text.slice(info.contentStart);
-      out = empty ? body : `---\n${stringifyYaml(fm)}---\n${body}`;
-    } else {
-      if (empty) return;
-      out = `---\n${stringifyYaml(fm)}---\n${text}`;
-    }
-    if (out !== text) await this.app.vault.modify(file, out);
+    const view = this.app.workspace.getLeavesOfType("markdown").map((l) => l.view as any).find((v) => v?.file?.path === file.path && v.editor && typeof v.save === "function");
+    const text = view ? view.editor.getValue() as string : await this.app.vault.read(file);
+    const out = applyFrontMatter(text, fn);
+    if (out === text) return;
+    if (!view) { await this.app.vault.modify(file, out); return; }
+    const oldEnd = getFrontMatterInfo(text).contentStart, newEnd = getFrontMatterInfo(out).contentStart;
+    const cm = view.editor.cm;
+    if (cm && text.slice(oldEnd) === out.slice(newEnd)) cm.dispatch({ changes: { from: 0, to: oldEnd, insert: out.slice(0, newEnd) } });
+    else view.editor.setValue(out);
+    await view.save();
   }
   async getAvailablePathForAttachment(filename: string, sourcePath?: string): Promise<string> {
     const v = this.app.vault;
@@ -299,6 +298,20 @@ export class FileManager {
   }
 }
 
+/** Run `fn` on the parsed frontmatter of `text` and return the rewritten note (an emptied block is removed). */
+export function applyFrontMatter(text: string, fn: (frontmatter: any) => void): string {
+  const info = getFrontMatterInfo(text);
+  const fm = info.exists ? parseYaml(info.frontmatter) ?? {} : {};
+  if (typeof fm !== "object" || Array.isArray(fm)) throw new Error("Frontmatter is not a YAML mapping");
+  fn(fm);
+  const empty = Object.keys(fm).length === 0;
+  if (info.exists) {
+    const body = text.slice(info.contentStart);
+    return empty ? body : `---\n${stringifyYaml(fm)}---\n${body}`;
+  }
+  return empty ? text : `---\n${stringifyYaml(fm)}---\n${text}`;
+}
+
 function relPath(from: string, to: string): string {
   const a = dirOf(from).split("/").filter(Boolean), b = to.split("/");
   let i = 0;
@@ -306,41 +319,4 @@ function relPath(from: string, to: string): string {
   return [...Array(a.length - i).fill(".."), ...b.slice(i)].join("/");
 }
 
-/** app.metadataTypeManager: property (frontmatter) types, persisted in .obsidian/types.json. */
-export class MetadataTypeManager extends Events {
-  types: Record<string, string> = {};
-  constructor(public app: App) { super(); }
-  async load(): Promise<void> {
-    try {
-      const v = await ipc.configRead("types.json");
-      this.types = v && typeof v === "object" && v.types ? { ...v.types } : {};
-    } catch { this.types = {}; }
-  }
-  private async save(): Promise<void> { await ipc.configWrite("types.json", { types: this.types }); }
-  /** Lowercased property name -> info, from every note's frontmatter plus explicit types. */
-  getAllProperties(): Record<string, { name: string; type: string; occurrences: number }> {
-    const out: Record<string, { name: string; type: string; occurrences: number }> = {};
-    for (const f of this.app.vault.getMarkdownFiles()) {
-      const fm = this.app.metadataCache.getFileCache(f)?.frontmatter;
-      for (const k of Object.keys(fm ?? {})) {
-        const key = k.toLowerCase();
-        (out[key] ??= { name: k, type: this.getAssignedWidget(k), occurrences: 0 }).occurrences++;
-      }
-    }
-    for (const [k, t] of Object.entries(this.types)) out[k] ??= { name: k, type: t, occurrences: 0 };
-    return out;
-  }
-  getPropertyInfo(name: string): { name: string; type: string; occurrences: number } | undefined { return this.getAllProperties()[name.toLowerCase()]; }
-  getAssignedWidget(name: string): string {
-    const t = this.types[name.toLowerCase()];
-    if (t) return t;
-    return name.toLowerCase() === "tags" ? "tags" : name.toLowerCase() === "aliases" ? "aliases" : "text";
-  }
-  getTypeInfo(name: string): { type: string } { return { type: this.getAssignedWidget(name) }; }
-  async setType(name: string, type: string): Promise<void> {
-    this.types[name.toLowerCase()] = type;
-    await this.save();
-    this.trigger("changed", name.toLowerCase());
-  }
-  async unsetType(name: string): Promise<void> { delete this.types[name.toLowerCase()]; await this.save(); this.trigger("changed", name.toLowerCase()); }
-}
+export { MetadataTypeManager } from "./properties";

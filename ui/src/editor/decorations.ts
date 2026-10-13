@@ -1,7 +1,7 @@
 import {
   Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate,
 } from "@codemirror/view";
-import { EditorState, Facet, StateField, type Range, type Text } from "@codemirror/state";
+import { EditorState, Facet, StateEffect, StateField, type Range, type Text } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
 import type { SyntaxNode } from "@lezer/common";
 import {
@@ -10,6 +10,7 @@ import {
 } from "./widgets";
 import { fileExt, fullTree, selectionTouches, selectionTouchesLines, splitLink } from "./util";
 import { InlineFootnoteWidget, footnoteNumber } from "./footnotes";
+import { splitFrontmatter } from "../markdown";
 
 /** Environment (host + source path) shared by decorations, widgets, autocomplete. */
 export const envFacet = Facet.define<WidgetEnv, WidgetEnv>({
@@ -498,12 +499,21 @@ export function buildBlocks(state: EditorState, env: WidgetEnv): DecorationSet {
       lang = /^\s*(?:`{3,}|~{3,})\s*([\w+-]+)/.exec(doc.lineAt(from).text)?.[1] ?? "";
       if (!lang || !env.host.renderCodeBlock || !env.host.codeBlockLanguages?.().includes(lang)) return false;
     }
-    if (selectionTouches(state, f, t)) return false;
     const text = doc.sliceString(f, t);
+    if (name === "Frontmatter") {
+      const mode = env.host.propertiesInDocument?.() ?? "visible";
+      if (mode === "source") return false;
+      if (mode === "hidden") { out.push(Decoration.replace({ block: true }).range(f, t)); return false; }
+      // The editable table stays in place while the caret is elsewhere in the note; raw YAML only when it does not parse.
+      const table = !!env.host.renderProperties && splitFrontmatter(text + "\n").frontmatter !== null;
+      if (!table && selectionTouches(state, f, t)) return false;
+      out.push(Decoration.replace({ widget: new FrontmatterWidget(text, env), block: true }).range(f, t));
+      return false;
+    }
+    if (selectionTouches(state, f, t)) return false;
     let widget;
     if (name === "FencedCode") widget = new CodeBlockWidget(text, lang, env, f);
     else if (name === "Table") widget = new TableWidget(text, env);
-    else if (name === "Frontmatter") widget = new FrontmatterWidget(text, env);
     else widget = new MathWidget(text.trim().replace(/^\$\$/, "").replace(/\$\$$/, "").trim(), true);
     out.push(Decoration.replace({ widget, block: true }).range(f, t));
     return false;
@@ -517,10 +527,13 @@ function fullTreeIterate(state: EditorState, cb: (name: string, from: number, to
   });
 }
 
+/** Rebuild the block widgets (e.g. after `propertiesInDocument` changed). */
+export const refreshBlocks = StateEffect.define<null>();
+
 export const blockField = StateField.define<DecorationSet>({
   create: (state) => buildBlocks(state, state.facet(envFacet)),
   update(value, tr) {
-    if (tr.docChanged || tr.selection || syntaxTree(tr.state) !== syntaxTree(tr.startState)) {
+    if (tr.docChanged || tr.selection || syntaxTree(tr.state) !== syntaxTree(tr.startState) || tr.effects.some((e) => e.is(refreshBlocks))) {
       return buildBlocks(tr.state, tr.state.facet(envFacet));
     }
     return value;

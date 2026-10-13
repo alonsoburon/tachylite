@@ -20,14 +20,14 @@ export interface FrontmatterSplit {
 }
 
 export function splitFrontmatter(md: string): FrontmatterSplit {
-  const m = /^---[ \t]*\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/.exec(md);
+  const m = /^---[ \t]*\r?\n(?:([\s\S]*?)\r?\n)?(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/.exec(md);
   if (!m) return { frontmatter: null, raw: null, body: md, lines: 0 };
-  const raw = m[1];
+  const raw = m[1] ?? "";
   const lines = m[0].split("\n").length - (m[0].endsWith("\n") ? 1 : 0);
   let fm: Record<string, unknown> | null = null;
   let error: string | undefined;
   try {
-    const v = yaml.load(raw);
+    const v = raw.split("\n").every((l) => /^\s*(#.*)?$/.test(l)) ? null : yaml.load(raw);
     fm = v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
   } catch (e) {
     error = String((e as Error).message ?? e);

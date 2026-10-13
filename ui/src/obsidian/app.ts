@@ -162,6 +162,7 @@ export class App {
       if (f === "app.json") void this.vault.loadConfig().then(() => this.workspace.trigger("config-changed"));
       else if (f === "hotkeys.json") void this.hotkeyManager.load();
       else if (f === "appearance.json") void this.customCss.load();
+      else if (f === "types.json") void this.metadataTypeManager.onConfigFileChange();
       else if (f === "data.json") void this.plugins.handleConfigChanged(ev.path);
       return;
     }
