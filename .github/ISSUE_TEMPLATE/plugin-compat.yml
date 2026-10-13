@@ -1,0 +1,53 @@
+name: "Community plugin doesn't work"
+description: A community plugin fails to load, errors, or behaves differently than in Obsidian.
+title: "[plugin] <plugin id>: <what goes wrong>"
+labels: ["compat", "plugin"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please check the plugin is enabled (Settings > Community plugins, restricted mode off)
+        and that it is not desktop-only behavior we document as unsupported in the README "Known gaps".
+  - type: input
+    id: plugin
+    attributes:
+      label: Plugin id and version
+      description: From the plugin's `manifest.json` (`id` and `version`), e.g. `dataview 0.5.68`.
+    validations:
+      required: true
+  - type: input
+    id: tachylite
+    attributes:
+      label: Tachylite version / commit and OS
+      placeholder: "0.1.0 (abc1234), Arch Linux, WebKitGTK 2.48"
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What happens?
+      options:
+        - It fails to load (error notice or in the console)
+        - It loads but a feature is missing or broken
+        - It renders differently than in Obsidian
+        - It is slow or freezes the app
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the smallest note/vault content that shows the problem, and the plugin settings if they matter.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What Obsidian does
+      description: Black-box behavior only (what you see). Please do not paste Obsidian source code.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Errors
+      description: Console output. On Linux the frontend log is at `/tmp/tachylite-frontend.log` (or `$TACHYLITE_LOG`).
+      render: text

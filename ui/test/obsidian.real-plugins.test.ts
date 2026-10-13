@@ -1,6 +1,6 @@
-// Smoke tests against real community plugin bundles downloaded outside the repo.
-//   dataview:  /tmp/vault/.obsidian/plugins/dataview/main.js
-//   others:    /tmp/plugins/<id>/{main.js,manifest.json,styles.css}   (see PLUGINS below; skipped when missing)
+// Smoke tests against real community plugin bundles. Opt-in: `TACHYLITE_REAL_PLUGINS=1 npx vitest run` downloads the
+// releases pinned in scripts/real-plugins.mjs into ui/.cache/real-plugins/ (test/setup/realPlugins.ts) and runs these;
+// without the variable they are skipped.
 import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
@@ -8,6 +8,10 @@ import path from "node:path";
 import { makeApp, makeVault, type FakeVault } from "./helpers/backend";
 import type { App } from "../src/obsidian/app";
 import { MarkdownPreviewRenderer } from "../src/obsidian/markdown";
+import { CACHE_DIR } from "../scripts/real-plugins.mjs";
+
+const ENABLED = process.env.TACHYLITE_REAL_PLUGINS === "1";
+const dirOf = (id: string) => path.join(CACHE_DIR, id);
 
 // happy-dom has no Worker; the real webview does. Plugins that spawn workers only need the constructor to succeed.
 (globalThis as any).Worker ??= class { onmessage: unknown = null; onerror: unknown = null; postMessage() {} terminate() {} addEventListener() {} removeEventListener() {} };
@@ -22,27 +26,27 @@ if (!(document.styleSheets as any).item) Object.defineProperty(document, "styleS
 
 interface Spec { id: string; dir: string; minCommands?: number; settingsTab?: boolean; views?: number; openViews?: string[]; minPostProcessors?: number; /** errors that are inherent to a webview (no Node runtime) */ allowErrors?: RegExp }
 const PLUGINS: Spec[] = [
-  { id: "dataview", dir: "/tmp/vault/.obsidian/plugins/dataview", minCommands: 3, settingsTab: true, minPostProcessors: 1 },
-  { id: "obsidian-git", dir: "/tmp/plugins/obsidian-git", settingsTab: true, openViews: ["git-view"], allowErrors: /child_process\.\w+ is not supported/ },
-  { id: "calendar", dir: "/tmp/plugins/calendar", settingsTab: true, views: 1 },
-  { id: "templater-obsidian", dir: "/tmp/plugins/templater-obsidian", minCommands: 1, settingsTab: true },
-  { id: "obsidian-tasks-plugin", dir: "/tmp/plugins/obsidian-tasks-plugin", minCommands: 1, settingsTab: true, minPostProcessors: 1 },
-  { id: "obsidian-excalidraw-plugin", dir: "/tmp/plugins/obsidian-excalidraw-plugin", minCommands: 1, settingsTab: true, allowErrors: /reading .(document|canvas)./ /* iframe.contentWindow (happy-dom); core Canvas plugin not implemented */ },
-  { id: "quickadd", dir: "/tmp/plugins/quickadd", minCommands: 1, settingsTab: true },
-  { id: "obsidian-kanban", dir: "/tmp/plugins/obsidian-kanban", minCommands: 1, settingsTab: true, views: 1 },
-  { id: "various-complements", dir: "/tmp/plugins/various-complements", minCommands: 1, settingsTab: true },
-  { id: "obsidian-style-settings", dir: "/tmp/plugins/obsidian-style-settings", settingsTab: true },
-  { id: "omnisearch", dir: "/tmp/plugins/omnisearch", settingsTab: true, allowErrors: /apiHttpServer|reading .close./ /* node http server not available */ },
-  { id: "periodic-notes", dir: "/tmp/plugins/periodic-notes", settingsTab: true },
-  { id: "table-editor-obsidian", dir: "/tmp/plugins/table-editor-obsidian", minCommands: 1, settingsTab: true },
-  { id: "obsidian-completr", dir: "/tmp/plugins/obsidian-completr", settingsTab: true },
-  { id: "buttons", dir: "/tmp/plugins/buttons", settingsTab: false },
-  { id: "obsidian-banners", dir: "/tmp/plugins/obsidian-banners", settingsTab: true },
+  { id: "dataview", dir: dirOf("dataview"), minCommands: 3, settingsTab: true, minPostProcessors: 1 },
+  { id: "obsidian-git", dir: dirOf("obsidian-git"), settingsTab: true, openViews: ["git-view"], allowErrors: /child_process\.\w+ is not supported/ },
+  { id: "calendar", dir: dirOf("calendar"), settingsTab: true, views: 1 },
+  { id: "templater-obsidian", dir: dirOf("templater-obsidian"), minCommands: 1, settingsTab: true },
+  { id: "obsidian-tasks-plugin", dir: dirOf("obsidian-tasks-plugin"), minCommands: 1, settingsTab: true, minPostProcessors: 1 },
+  { id: "obsidian-excalidraw-plugin", dir: dirOf("obsidian-excalidraw-plugin"), minCommands: 1, settingsTab: true, allowErrors: /reading .(document|canvas)./ /* iframe.contentWindow (happy-dom); core Canvas plugin not implemented */ },
+  { id: "quickadd", dir: dirOf("quickadd"), minCommands: 1, settingsTab: true },
+  { id: "obsidian-kanban", dir: dirOf("obsidian-kanban"), minCommands: 1, settingsTab: true, views: 1 },
+  { id: "various-complements", dir: dirOf("various-complements"), minCommands: 1, settingsTab: true },
+  { id: "obsidian-style-settings", dir: dirOf("obsidian-style-settings"), settingsTab: true },
+  { id: "omnisearch", dir: dirOf("omnisearch"), settingsTab: true, allowErrors: /apiHttpServer|reading .close./ /* node http server not available */ },
+  { id: "periodic-notes", dir: dirOf("periodic-notes"), settingsTab: true },
+  { id: "table-editor-obsidian", dir: dirOf("table-editor-obsidian"), minCommands: 1, settingsTab: true },
+  { id: "obsidian-completr", dir: dirOf("obsidian-completr"), settingsTab: true },
+  { id: "buttons", dir: dirOf("buttons"), settingsTab: false },
+  { id: "obsidian-banners", dir: dirOf("obsidian-banners"), settingsTab: true },
 ];
 
 // More plugins: only "loads, renders its settings, unloads, no console errors" is asserted.
 for (const id of ["nldates-obsidian", "obsidian-outliner", "obsidian-linter", "obsidian-latex-suite", "tag-wrangler", "obsidian-emoji-toolbar", "recent-files-obsidian", "cmdr", "obsidian-day-planner", "better-word-count", "obsidian-folder-note-plugin", "obsidian-minimal-settings", "mysnippets-plugin", "obsidian42-brat", "obsidian-hover-editor", "text-extractor", "obsidian-codemirror-options"]) {
-  PLUGINS.push({ id, dir: `/tmp/plugins/${id}`, ...(id === "obsidian-latex-suite" ? { allowErrors: /dynamic import callback/ /* node vm limitation; fine in a webview */ } : {}), ...(id === "obsidian-outliner" ? {} : {}) });
+  PLUGINS.push({ id, dir: dirOf(id), ...(id === "obsidian-latex-suite" ? { allowErrors: /dynamic import callback/ /* node vm limitation; fine in a webview */ } : {}), ...(id === "obsidian-outliner" ? {} : {}) });
 }
 
 let v: FakeVault | undefined, app: App | undefined;
@@ -50,7 +54,7 @@ afterEach(async () => { await app?.stop(); v?.cleanup(); document.body.innerHTML
 
 for (const spec of PLUGINS) {
   const have = fs.existsSync(path.join(spec.dir, "main.js")) && fs.existsSync(path.join(spec.dir, "manifest.json"));
-  describe.skipIf(!have)(`real plugin: ${spec.id}`, () => {
+  describe.skipIf(!ENABLED || !have)(`real plugin: ${spec.id}`, () => {
     it("loads through the real loader, registers its surface, and unloads cleanly", async () => {
       const read = (f: string) => (fs.existsSync(path.join(spec.dir, f)) ? fs.readFileSync(path.join(spec.dir, f), "utf8") : undefined);
       const errors: unknown[] = [];
