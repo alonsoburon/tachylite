@@ -17,6 +17,7 @@ export interface CatalogPlugin { [k: string]: unknown }
 export interface CatalogTheme { [k: string]: unknown }
 export interface HttpReq { url: string; method?: string; headers?: Record<string, string>; body?: number[] | null }
 export interface HttpResp { status: number; headers: Record<string, string>; body: number[] }
+export type TrashMode = "system" | "local" | "permanent";
 export type VaultEventKind = "create" | "modify" | "delete" | "config-changed";
 export interface VaultEvent { kind: VaultEventKind; path: string }
 
@@ -80,11 +81,12 @@ export const ipc = {
   fsWriteBinary: (path: string, data: ArrayBuffer | ArrayBufferView) => call<VaultFileInfo>("fs_write_binary", { path, data: bytes(data) }),
   fsCreate: (path: string, data: string) => call<VaultFileInfo>("fs_create", { path, data }),
   fsMkdir: (path: string) => call<void>("fs_mkdir", { path }),
-  fsDelete: (path: string) => call<void>("fs_delete", { path }),
+  /** Delete following the vault's trashOption (OS trash falls back to .trash); returns where the file went. */
+  fsDelete: (path: string) => call<TrashMode>("fs_delete", { path }),
   /** Returns the paths of notes whose links were rewritten. */
   fsRename: (from: string, to: string, updateLinks?: boolean) => call<string[]>("fs_rename", updateLinks === undefined ? { from, to } : { from, to, updateLinks }),
-  /** mode: "permanent" | "local" | "system" (the last two go to the vault's .trash); omitted = follow the vault setting. */
-  fsTrash: (path: string, mode?: string) => call<void>("fs_trash", mode === undefined ? { path } : { path, mode }),
+  /** mode: "system" (OS trash; rejects if unavailable) | "local" (the vault's .trash) | "permanent"; omitted = follow the vault setting. */
+  fsTrash: (path: string, mode?: TrashMode) => call<TrashMode>("fs_trash", mode === undefined ? { path } : { path, mode }),
   // adapter (raw, includes dot folders)
   adapterExists: (path: string) => call<boolean>("adapter_exists", { path }),
   adapterRead: (path: string) => call<string>("adapter_read", { path }),

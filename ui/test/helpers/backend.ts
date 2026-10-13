@@ -5,7 +5,7 @@ import path from "node:path";
 import * as yaml from "js-yaml";
 import { setBackend, setListenBackend } from "../../src/ipc";
 
-export interface FakeVault { root: string; calls: { cmd: string; args: any }[]; emit(ev: { kind: string; path: string }): void; cleanup(): void; write(rel: string, data: string): void; backend: (cmd: string, args?: any) => Promise<unknown> }
+export interface FakeVault { root: string; /** where "system" trash moves files; set `systemTrashFails` to simulate an unavailable OS trash */ systemTrash: string; systemTrashFails: boolean; calls: { cmd: string; args: any }[]; emit(ev: { kind: string; path: string }): void; cleanup(): void; write(rel: string, data: string): void; backend: (cmd: string, args?: any) => Promise<unknown> }
 
 function walk(root: string, rel = "", out: { files: any[]; folders: string[] } = { files: [], folders: [] }) {
   for (const ent of fs.readdirSync(path.join(root, rel), { withFileTypes: true })) {
@@ -105,7 +105,23 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
       case "fs_write_binary": write(a.path, bytes(a.data)); return info(a.path);
       case "fs_create": if (fs.existsSync(abs(a.path))) throw new Error("exists"); write(a.path, a.data); return info(a.path);
       case "fs_mkdir": fs.mkdirSync(abs(a.path), { recursive: true }); return null;
-      case "fs_delete": fs.rmSync(abs(a.path), { recursive: true }); return null;
+      case "fs_delete": case "fs_trash": {
+        const opt = a.mode ?? (fs.existsSync(abs(".obsidian/app.json")) ? JSON.parse(fs.readFileSync(abs(".obsidian/app.json"), "utf8")).trashOption : undefined) ?? "system";
+        const mode = opt === "none" || opt === "permanent" ? "permanent" : opt === "local" || opt === "trash" ? "local" : "system";
+        if (!fs.existsSync(abs(a.path))) throw new Error(`${a.path}: not found`);
+        const moveTo = (dir: string) => {
+          fs.mkdirSync(dir, { recursive: true });
+          const name = path.basename(a.path), dot = name.lastIndexOf(".");
+          let dest = path.join(dir, name);
+          for (let n = 2; fs.existsSync(dest); n++) dest = path.join(dir, dot > 0 ? `${name.slice(0, dot)} ${n}${name.slice(dot)}` : `${name} ${n}`);
+          fs.renameSync(abs(a.path), dest);
+        };
+        if (mode === "permanent") { fs.rmSync(abs(a.path), { recursive: true }); return "permanent"; }
+        if (mode === "system" && !fake.systemTrashFails) { moveTo(fake.systemTrash); return "system"; }
+        if (mode === "system" && a.mode) throw new Error("could not move to the system trash: unavailable");
+        moveTo(abs(".trash"));
+        return "local";
+      }
       case "fs_rename": fs.mkdirSync(path.dirname(abs(a.to)), { recursive: true }); fs.renameSync(abs(a.from), abs(a.to)); return [];
       case "adapter_exists": return fs.existsSync(abs(a.path));
       case "adapter_read": return fs.readFileSync(abs(a.path), "utf8");
@@ -163,11 +179,13 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
   };
   setBackend(backend);
   setListenBackend(async (_e, cb) => { listeners.add(cb); return () => listeners.delete(cb); });
-  return {
-    root, calls, backend, write,
+  const systemTrash = fs.mkdtempSync(path.join(os.tmpdir(), "tachy-trash-"));
+  const fake: FakeVault = {
+    root, calls, backend, write, systemTrash, systemTrashFails: false,
     emit: (ev) => listeners.forEach((l) => l(ev)),
-    cleanup: () => fs.rmSync(root, { recursive: true, force: true }),
+    cleanup: () => { fs.rmSync(root, { recursive: true, force: true }); fs.rmSync(systemTrash, { recursive: true, force: true }); },
   };
+  return fake;
 }
 
 export async function makeApp(v: FakeVault, opts: { start?: boolean } = {}) {

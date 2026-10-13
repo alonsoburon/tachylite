@@ -100,8 +100,21 @@ export class FileSystemAdapter {
     this.known.delete(p);
     this.vault.scheduleSync();
   }
-  async trashSystem(p: string): Promise<boolean> { await this.remove(p); return true; }
-  async trashLocal(p: string): Promise<void> { await this.remove(p); }
+  /** Move to the OS trash; `false` (nothing moved) when the system trash is unavailable or fails. */
+  async trashSystem(p: string): Promise<boolean> {
+    p = normalizePath(p);
+    try { await ipc.fsTrash(p, "system"); } catch (e) { console.warn(`system trash failed for ${p}`, e); return false; }
+    this.known.delete(p);
+    this.vault.scheduleSync();
+    return true;
+  }
+  /** Move into the vault's `.trash` folder. */
+  async trashLocal(p: string): Promise<void> {
+    p = normalizePath(p);
+    await ipc.fsTrash(p, "local");
+    this.known.delete(p);
+    this.vault.scheduleSync();
+  }
   async copy(from: string, to: string): Promise<void> {
     from = normalizePath(from); to = normalizePath(to);
     const st = await this.stat(from);
@@ -343,14 +356,25 @@ export class Vault extends Events {
     await this.modify(file, out, o);
     return out;
   }
+  /** Permanently delete (the plugin API's `Vault.delete`). */
   async delete(file: TAbstractFile, _force?: boolean): Promise<void> {
-    await ipc.fsDelete(file.path);
+    await ipc.fsTrash(file.path, "permanent");
     this.fireDelete(file);
   }
-  async trash(file: TAbstractFile, _system: boolean): Promise<void> {
-    await ipc.fsDelete(file.path); // the Rust core honours the vault's trashOption (.trash or permanent)
+  /** Move to the OS trash (`system`), falling back to the vault's `.trash` when that fails, or to `.trash` directly.
+   *  Resolves to where the file went. */
+  async trash(file: TAbstractFile, system: boolean): Promise<"system" | "local"> {
+    let where: "system" | "local" = "local";
+    if (system) {
+      try { await ipc.fsTrash(file.path, "system"); where = "system"; }
+      catch (e) { console.warn(`system trash failed for ${file.path}; using .trash`, e); this.lastTrashError = String((e as Error)?.message ?? e); }
+    }
+    if (where === "local") await ipc.fsTrash(file.path, "local");
     this.fireDelete(file);
+    return where;
   }
+  /** Why the last `trash(file, true)` had to fall back to `.trash` (shown to the user by `FileManager.trashFile`). */
+  lastTrashError: string | null = null;
   /** Permanently remove a file, whatever the vault's trash option says. */
   async deletePermanently(file: TAbstractFile): Promise<void> {
     await ipc.fsTrash(file.path, "permanent");

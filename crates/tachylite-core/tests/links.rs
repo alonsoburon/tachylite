@@ -1,5 +1,5 @@
 use std::fs;
-use tachylite_core::Workspace;
+use tachylite_core::{TrashMode, Workspace};
 
 fn vault(files: &[(&str, &str)]) -> (tempfile::TempDir, Workspace) {
     let d = tempfile::tempdir().unwrap();
@@ -78,10 +78,39 @@ fn rename_opt_can_skip_or_force_link_rewriting() {
 #[test]
 fn delete_mode_moves_to_trash_or_removes_for_good() {
     let (d, mut ws) = vault(&[("keep.md", "k"), ("gone.md", "g")]);
-    ws.delete_mode("keep.md", false).unwrap();
+    ws.delete_mode("keep.md", TrashMode::Local).unwrap();
     assert!(!d.path().join("keep.md").exists());
     assert!(d.path().join(".trash/keep.md").exists());
-    ws.delete_mode("gone.md", true).unwrap();
+    ws.delete_mode("gone.md", TrashMode::Permanent).unwrap();
     assert!(!d.path().join("gone.md").exists());
     assert!(!d.path().join(".trash/gone.md").exists());
+}
+
+/// The OS trash on Linux follows the freedesktop spec under `$XDG_DATA_HOME/Trash` when the file is on the
+/// same device; point it at a temp dir so the test does not touch the user's trash.
+#[cfg(all(unix, not(target_os = "macos")))]
+#[test]
+fn system_trash_and_trash_option() {
+    let home = tempfile::tempdir().unwrap();
+    std::env::set_var("XDG_DATA_HOME", home.path().join("data"));
+    fs::create_dir_all(home.path().join("data")).unwrap();
+    let root = home.path().join("vault");
+    for (p, c) in [("a.md", "a"), ("b.md", "b"), ("c.md", "c")] {
+        fs::create_dir_all(&root).unwrap();
+        fs::write(root.join(p), c).unwrap();
+    }
+    let mut ws = Workspace::open(&root).unwrap();
+    // Default trashOption is "system".
+    assert_eq!(ws.delete("a.md").unwrap(), TrashMode::System);
+    assert!(!root.join("a.md").exists());
+    assert!(home.path().join("data/Trash/files/a.md").exists());
+    assert!(home.path().join("data/Trash/info/a.md.trashinfo").exists());
+    assert!(ws.vault.get("a.md").is_none());
+    ws.vault.config.file.set("trashOption", "local".into());
+    assert_eq!(ws.delete("b.md").unwrap(), TrashMode::Local);
+    assert!(root.join(".trash/b.md").exists());
+    ws.vault.config.file.set("trashOption", "none".into());
+    assert_eq!(ws.delete("c.md").unwrap(), TrashMode::Permanent);
+    assert!(!root.join("c.md").exists() && !root.join(".trash/c.md").exists());
+    assert!(matches!(ws.delete("missing.md"), Err(tachylite_core::VaultError::NotFound(_))));
 }

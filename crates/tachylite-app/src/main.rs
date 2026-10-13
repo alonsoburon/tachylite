@@ -16,7 +16,7 @@ use tachylite_core::{
     config::{core_plugin_state, CONFIG_DIR},
     path::normalize,
     search::{search, SearchHit},
-    VaultFile, Workspace,
+    TrashMode, VaultFile, Workspace,
 };
 use tauri::{ipc::Response, AppHandle, Emitter, Manager, State};
 
@@ -197,7 +197,7 @@ fn fs_mkdir(state: State<App>, path: String) -> Res<()> {
 }
 
 #[tauri::command]
-fn fs_delete(state: State<App>, path: String) -> Res<()> {
+fn fs_delete(state: State<App>, path: String) -> Res<TrashMode> {
     state.with(|ws| ws.delete(&path).map_err(e))
 }
 
@@ -208,14 +208,15 @@ fn fs_rename(state: State<App>, from: String, to: String, update_links: Option<b
     state.with(|ws| ws.rename_opt(&from, &to, update_links).map_err(e))
 }
 
-/// Delete with an explicit mode: `"permanent"`/`"none"` removes for good, anything else moves to `.trash`.
-/// `None` follows the vault's `trashOption` (like `fs_delete`).
+/// Delete with an explicit mode: `"system"` (OS trash; an error if it is unavailable), `"local"` (the vault's
+/// `.trash`) or `"permanent"`/`"none"`. `None` follows the vault's `trashOption`, falling back from the OS
+/// trash to `.trash` (like `fs_delete`). Returns where the file went.
 #[tauri::command]
-fn fs_trash(state: State<App>, path: String, mode: Option<String>) -> Res<()> {
+fn fs_trash(state: State<App>, path: String, mode: Option<String>) -> Res<TrashMode> {
     state.with(|ws| {
         match mode.as_deref() {
             None => ws.delete(&path),
-            Some(m) => ws.delete_mode(&path, matches!(m, "permanent" | "none")),
+            Some(m) => ws.delete_mode(&path, TrashMode::from_option(m)),
         }
         .map_err(e)
     })

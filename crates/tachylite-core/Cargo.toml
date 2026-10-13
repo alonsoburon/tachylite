@@ -13,6 +13,8 @@ thiserror.workspace = true
 walkdir.workspace = true
 regex.workspace = true
 notify.workspace = true
+# MIT. Moves deleted notes to the OS trash (freedesktop trash, macOS Finder, Windows Recycle Bin).
+trash = "5"
 
 [dev-dependencies]
 tempfile.workspace = true

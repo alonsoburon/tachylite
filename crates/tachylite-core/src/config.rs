@@ -116,7 +116,7 @@ impl AppConfig {
     pub fn attachment_folder_path(&self) -> String {
         self.str("attachmentFolderPath", "/")
     }
-    /// `local`/`trash` (vault `.trash`), `system` (OS trash, default) or `none`/`permanent`.
+    /// `local` (vault `.trash`), `system` (OS trash, default) or `none` (permanent); see `TrashMode`.
     pub fn trash_option(&self) -> String {
         self.str("trashOption", "system")
     }

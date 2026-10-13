@@ -10,5 +10,5 @@ pub mod workspace;
 
 pub use metadata::MetadataCache;
 pub use parse::CachedMetadata;
-pub use vault::{Vault, VaultError, VaultFile};
+pub use vault::{TrashMode, Vault, VaultError, VaultFile};
 pub use workspace::Workspace;

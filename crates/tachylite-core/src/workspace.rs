@@ -3,7 +3,7 @@
 
 use crate::metadata::{split_subpath, MetadataCache};
 use crate::path::{extension, normalize};
-use crate::vault::{Result, Vault, VaultFile};
+use crate::vault::{Result, TrashMode, Vault, VaultFile};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
@@ -31,17 +31,18 @@ impl Workspace {
         Ok(f)
     }
 
-    pub fn delete(&mut self, path: &str) -> Result<()> {
-        self.vault.delete(path)?;
+    /// Delete following the vault's `trashOption`; returns where the file went.
+    pub fn delete(&mut self, path: &str) -> Result<TrashMode> {
+        let m = self.vault.delete(path)?;
         self.meta = MetadataCache::build(&self.vault);
-        Ok(())
+        Ok(m)
     }
 
-    /// Delete into `.trash` (`permanent == false`) or for good, ignoring the vault's `trashOption`.
-    pub fn delete_mode(&mut self, path: &str, permanent: bool) -> Result<()> {
-        self.vault.delete_mode(path, permanent)?;
+    /// Delete with an explicit mode, ignoring the vault's `trashOption`.
+    pub fn delete_mode(&mut self, path: &str, mode: TrashMode) -> Result<TrashMode> {
+        let m = self.vault.delete_mode(path, mode)?;
         self.meta = MetadataCache::build(&self.vault);
-        Ok(())
+        Ok(m)
     }
 
     /// Rename or move a file, rewriting links in other notes when `alwaysUpdateLinks` is on

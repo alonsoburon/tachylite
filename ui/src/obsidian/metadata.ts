@@ -1,4 +1,5 @@
 // MetadataCache (cache shape computed by the Rust core) and FileManager.
+import { Notice } from "./ui";
 import { ipc } from "../ipc";
 import { Events } from "./events";
 import { TAbstractFile, TFile, TFolder } from "./files";
@@ -224,8 +225,15 @@ export class FileManager {
   async renameFile(file: TAbstractFile, newPath: string): Promise<void> {
     await this.app.vault.rename(file, newPath);
   }
+  /** Delete the way the user chose in Settings > Files and links (`trashOption`): OS trash (falling back to
+   *  `.trash` with a notice), the vault's `.trash`, or permanently. Errors propagate to the caller. */
   async trashFile(file: TAbstractFile): Promise<void> {
-    await this.app.vault.trash(file, true);
+    const opt = this.app.vault.getConfig("trashOption");
+    if (opt === "none") { await this.app.vault.delete(file, true); return; }
+    const v = this.app.vault;
+    v.lastTrashError = null;
+    const where = await v.trash(file, opt !== "local");
+    if (opt !== "local" && where === "local") new Notice(`Couldn't move "${file.name}" to the system trash, so it was moved to the vault's .trash folder.${v.lastTrashError ? `\n${v.lastTrashError}` : ""}`, 8000);
   }
   async promptForDeletion(file: TAbstractFile): Promise<boolean> {
     if (this.app.vault.getConfig("promptDelete") && typeof confirm === "function" && !confirm(`Are you sure you want to delete '${file.name}'?`)) return false;

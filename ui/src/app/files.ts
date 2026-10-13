@@ -79,7 +79,8 @@ export async function deleteWithPrompt(app: App, file: TAbstractFile): Promise<b
     const ok = await confirmDialog(app, { title: `Delete ${file instanceof TFolder ? "folder" : "file"}`, message: `Are you sure you want to delete ${what}?`, cta: "Delete", warning: true });
     if (!ok) return false;
   }
-  await app.fileManager.trashFile(file);
+  try { await app.fileManager.trashFile(file); }
+  catch (e) { new Notice(`Couldn't delete "${file.name}": ${(e as Error)?.message ?? e}`); return false; }
   return true;
 }
 

@@ -19,8 +19,33 @@ pub enum VaultError {
     Exists(String),
     #[error("invalid path: {0}")]
     InvalidPath(String),
+    #[error("could not move to the system trash: {0}")]
+    Trash(String),
     #[error(transparent)]
     Io(#[from] io::Error),
+}
+
+/// Where deleted files go (`trashOption` in `app.json`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TrashMode {
+    /// The operating system's trash / recycle bin.
+    System,
+    /// The vault's `.trash` folder.
+    Local,
+    /// Removed for good.
+    Permanent,
+}
+
+impl TrashMode {
+    /// `system` (default), `local`/`trash`, `none`/`permanent`.
+    pub fn from_option(v: &str) -> Self {
+        match v {
+            "local" | "trash" => TrashMode::Local,
+            "none" | "permanent" => TrashMode::Permanent,
+            _ => TrashMode::System,
+        }
+    }
 }
 
 pub type Result<T> = std::result::Result<T, VaultError>;
@@ -203,40 +228,49 @@ impl Vault {
         self.reindex()
     }
 
-    /// Delete following the vault's `trashOption`: `.trash` folder or permanent removal.
-    /// (`system` falls back to `.trash`, since moving to the OS trash needs platform glue.)
-    pub fn delete(&mut self, rel: &str) -> Result<()> {
-        let permanent = matches!(self.config.trash_option().as_str(), "permanent" | "none");
-        self.delete_mode(rel, permanent)
+    /// Delete following the vault's `trashOption`: OS trash (`system`, the default), the vault's `.trash`
+    /// folder (`local`), or permanent removal (`none`). When the OS trash is unavailable or fails, the file
+    /// goes to `.trash` instead, as the app does. Returns where the file went.
+    pub fn delete(&mut self, rel: &str) -> Result<TrashMode> {
+        let mode = TrashMode::from_option(&self.config.trash_option());
+        match self.delete_mode(rel, mode) {
+            Err(VaultError::Trash(_)) if mode == TrashMode::System => self.delete_mode(rel, TrashMode::Local),
+            r => r,
+        }
     }
 
-    /// Delete `rel`: permanently, or into the vault's `.trash` folder.
-    pub fn delete_mode(&mut self, rel: &str, permanent: bool) -> Result<()> {
+    /// Delete `rel` with an explicit mode (no fallback: a failing OS trash is an error).
+    pub fn delete_mode(&mut self, rel: &str, mode: TrashMode) -> Result<TrashMode> {
         let rel = normalize(rel);
         let abs = self.abs(&rel)?;
         if !abs.exists() {
             return Err(VaultError::NotFound(rel));
         }
-        if permanent {
-            if abs.is_dir() {
-                fs::remove_dir_all(&abs)?
-            } else {
-                fs::remove_file(&abs)?
+        match mode {
+            TrashMode::Permanent => {
+                if abs.is_dir() {
+                    fs::remove_dir_all(&abs)?
+                } else {
+                    fs::remove_file(&abs)?
+                }
             }
-        } else {
-            let mut dest = self.root.join(".trash").join(path::basename(&rel));
-            let mut n = 1;
-            while dest.exists() {
-                n += 1;
-                let stem = path::stem(&rel);
-                let ext = extension(&rel);
-                let name = if ext.is_empty() { format!("{stem} {n}") } else { format!("{stem} {n}.{ext}") };
-                dest = self.root.join(".trash").join(name);
+            TrashMode::System => trash::delete(&abs).map_err(|e| VaultError::Trash(e.to_string()))?,
+            TrashMode::Local => {
+                let mut dest = self.root.join(".trash").join(path::basename(&rel));
+                let mut n = 1;
+                while dest.exists() {
+                    n += 1;
+                    let stem = path::stem(&rel);
+                    let ext = extension(&rel);
+                    let name = if ext.is_empty() { format!("{stem} {n}") } else { format!("{stem} {n}.{ext}") };
+                    dest = self.root.join(".trash").join(name);
+                }
+                fs::create_dir_all(dest.parent().unwrap())?;
+                fs::rename(&abs, &dest)?;
             }
-            fs::create_dir_all(dest.parent().unwrap())?;
-            fs::rename(&abs, &dest)?;
         }
-        self.reindex()
+        self.reindex()?;
+        Ok(mode)
     }
 
     /// Re-stat a single file after an external change. Returns `None` if it vanished.
