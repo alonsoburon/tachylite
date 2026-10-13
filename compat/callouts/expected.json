@@ -1,0 +1,62 @@
+{
+  "description": "Callouts and quotes are one section each (body lines, lazy continuations and nested quotes included).",
+  "metadata": {
+    "Callouts.md": {
+      "sections": [
+        {
+          "type": "callout",
+          "position": {
+            "start": {
+              "line": 0
+            },
+            "end": {
+              "line": 3
+            }
+          }
+        },
+        {
+          "type": "blockquote",
+          "position": {
+            "start": {
+              "line": 5
+            },
+            "end": {
+              "line": 6
+            }
+          }
+        },
+        {
+          "type": "callout",
+          "position": {
+            "start": {
+              "line": 8
+            },
+            "end": {
+              "line": 9
+            }
+          }
+        }
+      ],
+      "links": [
+        {
+          "link": "Link"
+        },
+        {
+          "link": "Inside"
+        }
+      ],
+      "listItems": [
+        {
+          "position": {
+            "start": {
+              "line": 2,
+              "col": 2
+            }
+          },
+          "parent": -2,
+          "task": " "
+        }
+      ]
+    }
+  }
+}

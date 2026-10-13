@@ -1,0 +1,55 @@
+{
+  "description": "Block ids: keys are lowercased, ids keep their case; an id on its own line after a quote or table names that block.",
+  "metadata": {
+    "Blocks.md": {
+      "blocks": {
+        "para1": {
+          "id": "para1",
+          "position": {
+            "start": {
+              "line": 0,
+              "col": 0
+            }
+          }
+        },
+        "para2": {
+          "id": "Para2",
+          "position": {
+            "start": {
+              "line": 2,
+              "col": 0
+            }
+          }
+        },
+        "quoteid": {
+          "id": "quoteid",
+          "position": {
+            "start": {
+              "line": 5,
+              "col": 0
+            }
+          }
+        },
+        "tableid": {
+          "id": "tableid",
+          "position": {
+            "start": {
+              "line": 9,
+              "col": 0
+            }
+          }
+        },
+        "dash-id-1": {
+          "id": "dash-id-1",
+          "position": {
+            "start": {
+              "line": 17,
+              "col": 0
+            }
+          }
+        },
+        "bad_id": null
+      }
+    }
+  }
+}

@@ -152,7 +152,7 @@ fn re(cell: &'static OnceLock<Regex>, pat: &str) -> &'static Regex {
 
 fn re_list() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
-    re(&R, r"^([ \t]*)([-*+]|\d{1,9}[.)])[ \t]+(?:\[(.)\][ \t]+)?")
+    re(&R, r"^([ \t]*)([-*+]|\d{1,9}[.)])(?:[ \t]+|$)(?:\[(.)\](?:[ \t]+|$))?")
 }
 fn re_atx() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
@@ -194,6 +194,121 @@ fn split_frontmatter(text: &str) -> Option<(usize, usize, &str)> {
     None
 }
 
+/// One body line: byte offset of its start and its text without the line break.
+struct Line<'a> {
+    start: usize,
+    text: &'a str,
+}
+
+/// Leading indentation in columns (tabs advance to the next multiple of 4).
+fn indent_width(t: &str) -> usize {
+    let mut w = 0;
+    for c in t.chars() {
+        match c {
+            ' ' => w += 1,
+            '\t' => w += 4 - w % 4,
+            _ => break,
+        }
+    }
+    w
+}
+
+/// `-`/`*`/`+` for bullets, the delimiter (`.` or `)`) for ordered lists.
+fn list_marker(m: &str) -> char {
+    m.chars().last().unwrap_or('-')
+}
+
+/// Strip `>` quote markers: returns (prefix length in bytes, inner text).
+fn strip_quote(t: &str) -> (usize, &str) {
+    let mut rest = t;
+    loop {
+        let trimmed = rest.trim_start_matches(' ');
+        if rest.len() - trimmed.len() > 3 || !trimmed.starts_with('>') {
+            break;
+        }
+        rest = &trimmed[1..];
+        rest = rest.strip_prefix(' ').unwrap_or(rest);
+    }
+    (t.len() - rest.len(), rest)
+}
+
+fn re_lone_block_id() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    re(&R, r"^[ \t]*\^([A-Za-z0-9-]+)[ \t]*$")
+}
+fn re_table_delim() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    re(&R, r"^ {0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$")
+}
+
+/// Unescaped `|`-separated cell count of a table row.
+fn table_cells(t: &str) -> usize {
+    let t = t.trim();
+    let t = t.strip_prefix('|').unwrap_or(t);
+    let t = if t.ends_with('|') && !t.ends_with("\\|") { &t[..t.len() - 1] } else { t };
+    let b = t.as_bytes();
+    let mut n = 1;
+    let mut i = 0;
+    while i < b.len() {
+        match b[i] {
+            b'\\' => i += 1,
+            b'|' => n += 1,
+            _ => {}
+        }
+        i += 1;
+    }
+    n
+}
+
+/// A GFM table starts at line `i`: a header row with pipes followed by a delimiter row with as many cells.
+fn is_table_start(lines: &[Line], i: usize) -> bool {
+    let (Some(h), Some(d)) = (lines.get(i), lines.get(i + 1)) else { return false };
+    (h.text.contains('|') || d.text.contains('|')) && re_table_delim().is_match(d.text) && d.text.contains('-') && table_cells(h.text) == table_cells(d.text)
+}
+
+/// Nesting state of one list: (indent, line) of open items, first line of the list, marker kind.
+#[derive(Default)]
+struct ListState {
+    stack: Vec<(usize, usize)>,
+    first_line: usize,
+    marker: Option<char>,
+    /// Columns a continuation line needs to belong to the list (content column of the last root item).
+    content_indent: usize,
+}
+
+impl ListState {
+    #[allow(clippy::too_many_arguments)]
+    fn push_item(
+        &mut self,
+        meta: &mut CachedMetadata,
+        idx: &Index,
+        c: &regex::Captures,
+        line_no: usize,
+        line_start: usize,
+        prefix: usize,
+        t: &str,
+        root: bool,
+    ) {
+        let indent = indent_width(&c[1]);
+        while self.stack.last().is_some_and(|(i, _)| *i >= indent) {
+            self.stack.pop();
+        }
+        let parent = self.stack.last().map_or(-(self.first_line as i64), |(_, l)| *l as i64);
+        self.stack.push((indent, line_no));
+        if root {
+            let after = &t[c.get(2).unwrap().end()..];
+            let spaces = (after.len() - after.trim_start_matches([' ', '\t']).len()).clamp(1, 4);
+            self.content_indent = indent + c[2].len() + spaces;
+        }
+        let id = re_block_id().captures(t).map(|b| b[1].to_string());
+        let position = idx.pos(line_start + prefix + c[1].len(), line_start + prefix + t.len());
+        if let Some(id) = &id {
+            meta.blocks.insert(id.to_lowercase(), BlockCache { id: id.clone(), position });
+        }
+        meta.list_items.push(ListItemCache { id, position, parent, task: c.get(3).map(|m| m.as_str().to_string()) });
+    }
+}
+
 pub fn parse(text: &str) -> CachedMetadata {
     let idx = Index::new(text);
     let mut meta = CachedMetadata::default();
@@ -212,11 +327,7 @@ pub fn parse(text: &str) -> CachedMetadata {
         body_from = end;
     }
 
-    // Walk lines of the body, tracking fenced code and math blocks.
-    struct Line<'a> {
-        start: usize,
-        text: &'a str,
-    }
+    // Walk lines of the body, tracking fenced/indented code and math blocks.
     let mut lines: Vec<Line> = Vec::new();
     let mut off = body_from;
     for raw in text[body_from..].split_inclusive('\n') {
@@ -229,15 +340,16 @@ pub fn parse(text: &str) -> CachedMetadata {
         lines.remove(0);
     }
 
-    #[derive(PartialEq)]
+    #[derive(PartialEq, Clone, Copy)]
     enum Mode {
         Normal,
         Fence(char, usize),
         Math,
+        Indented,
     }
     let mut mode = Mode::Normal;
 
-    // Section assembly state.
+    // Section assembly state. `end` is the end of the last non-blank line of the section.
     struct Sec {
         kind: &'static str,
         start: usize,
@@ -251,13 +363,16 @@ pub fn parse(text: &str) -> CachedMetadata {
             sections.push(s);
         }
     };
+    let is_quote_kind = |k: &str| k == "blockquote" || k == "callout";
 
-    // List tracking: stack of (indent, line number).
-    let mut list_stack: Vec<(usize, usize)> = Vec::new();
-    let mut list_first_line: usize = 0;
+    // Lists at document level and inside the current quote/callout.
+    let mut doc_list = ListState::default();
+    let mut quote_list = ListState::default();
     let mut prev_blank = true;
 
-    for (n, ln) in lines.iter().enumerate() {
+    let mut i = 0;
+    while i < lines.len() {
+        let ln = &lines[i];
         let line_no = idx.loc(ln.start).line;
         let t = ln.text;
         let end = ln.start + t.len();
@@ -274,6 +389,7 @@ pub fn parse(text: &str) -> CachedMetadata {
                 if let Some(s) = cur.as_mut() {
                     s.end = end;
                 }
+                i += 1;
                 continue;
             }
             Mode::Math => {
@@ -283,35 +399,78 @@ pub fn parse(text: &str) -> CachedMetadata {
                 if let Some(s) = cur.as_mut() {
                     s.end = end;
                 }
+                i += 1;
                 continue;
+            }
+            Mode::Indented => {
+                if blank {
+                    i += 1;
+                    continue;
+                }
+                if indent_width(t) >= 4 {
+                    if let Some(s) = cur.as_mut() {
+                        s.end = end;
+                    }
+                    i += 1;
+                    continue;
+                }
+                // The indented block ended; handle this line normally.
+                mode = Mode::Normal;
+                flush(&mut cur, &mut sections);
             }
             Mode::Normal => {}
         }
 
         if blank {
-            flush(&mut cur, &mut sections);
+            // A blank line ends every block except a list (another item or an indented line may continue it).
+            if !cur.as_ref().is_some_and(|s| s.kind == "list") {
+                flush(&mut cur, &mut sections);
+            }
             prev_blank = true;
+            i += 1;
             continue;
         }
 
-        // Fence open.
+        let indent = indent_width(t);
+        let item = re_list().captures(t);
+        if cur.as_ref().is_some_and(|s| s.kind == "list") && prev_blank && item.is_none() && indent < doc_list.content_indent {
+            flush(&mut cur, &mut sections);
+        }
+        let in_list = cur.as_ref().is_some_and(|s| s.kind == "list");
+
+        // Indented code: 4+ columns where no paragraph or list can continue.
+        if indent >= 4 && cur.is_none() {
+            cur = Some(Sec { kind: "code", start: ln.start, end, id: None });
+            mode = Mode::Indented;
+            prev_blank = false;
+            i += 1;
+            continue;
+        }
+
+        // Fence open (inside a list item an indented fence stays part of the list).
         if let Some(c) = re_fence().captures(t) {
             let f = &c[1];
             let ch = f.chars().next().unwrap();
             if !(ch == '`' && t[c.get(0).unwrap().end()..].contains('`')) {
-                flush(&mut cur, &mut sections);
-                cur = Some(Sec { kind: "code", start: ln.start, end, id: None });
+                if !(in_list && indent > 0) {
+                    flush(&mut cur, &mut sections);
+                    cur = Some(Sec { kind: "code", start: ln.start, end, id: None });
+                }
                 mode = Mode::Fence(ch, f.len());
                 prev_blank = false;
+                i += 1;
                 continue;
             }
         }
         // Math block open: line starting with $$ and not closed on the same line.
         if t.trim_start().starts_with("$$") && t.matches("$$").count() == 1 {
-            flush(&mut cur, &mut sections);
-            cur = Some(Sec { kind: "math", start: ln.start, end, id: None });
+            if !(in_list && indent > 0) {
+                flush(&mut cur, &mut sections);
+                cur = Some(Sec { kind: "math", start: ln.start, end, id: None });
+            }
             mode = Mode::Math;
             prev_blank = false;
+            i += 1;
             continue;
         }
 
@@ -324,96 +483,131 @@ pub fn parse(text: &str) -> CachedMetadata {
             sections.push(Sec { kind: "heading", start: ln.start, end, id: None });
             scan_inline(&idx, t, ln.start, &mut meta, false);
             prev_blank = false;
-            list_stack.clear();
+            i += 1;
             continue;
         }
         // Setext underline converts the paragraph above into a heading.
         if let (Some(c), Some(s)) = (re_setext().captures(t), cur.as_ref()) {
-            if s.kind == "paragraph" && (!t.trim_start().starts_with('-') || !re_list().is_match(t)) {
+            if s.kind == "paragraph" && !prev_blank && (!t.trim_start().starts_with('-') || !re_list().is_match(t)) {
                 let level = if c[1].starts_with('=') { 1 } else { 2 };
                 let s = cur.take().unwrap();
-                let heading = text[s.start..s.end].lines().last().unwrap_or("").trim().to_string();
+                let heading = text[s.start..s.end].lines().map(str::trim).collect::<Vec<_>>().join(" ");
                 meta.headings.push(HeadingCache { heading, level, position: idx.pos(s.start, end) });
                 sections.push(Sec { kind: "heading", start: s.start, end, id: None });
+                prev_blank = false;
+                i += 1;
                 continue;
             }
         }
         if re_hr().is_match(t) {
             flush(&mut cur, &mut sections);
-            sections.push(Sec { kind: "thematic-break", start: ln.start, end, id: None });
+            sections.push(Sec { kind: "thematicBreak", start: ln.start, end, id: None });
             prev_blank = false;
+            i += 1;
             continue;
         }
 
-        // List items.
-        if let Some(c) = re_list().captures(t) {
-            let indent = c[1].replace('\t', "    ").len();
-            let task = c.get(3).map(|m| m.as_str().to_string());
-            let in_list = cur.as_ref().is_some_and(|s| s.kind == "list");
-            if !in_list {
+        // List items. A different bullet character or ordered delimiter at the top level starts a new list.
+        if let Some(c) = item {
+            let marker = list_marker(&c[2]);
+            let root = doc_list.stack.iter().all(|(ind, _)| *ind >= indent);
+            if !in_list || (root && doc_list.marker != Some(marker)) {
                 flush(&mut cur, &mut sections);
-                list_stack.clear();
-                list_first_line = line_no;
+                doc_list = ListState { first_line: line_no, marker: Some(marker), ..Default::default() };
                 cur = Some(Sec { kind: "list", start: ln.start, end, id: None });
             }
-            while list_stack.last().is_some_and(|(i, _)| *i >= indent) {
-                list_stack.pop();
-            }
-            let parent = list_stack.last().map_or(-(list_first_line as i64), |(_, l)| *l as i64);
-            list_stack.push((indent, line_no));
-            let id = re_block_id().captures(t).map(|b| b[1].to_string());
-            let marker_start = ln.start + c[1].len();
-            meta.list_items.push(ListItemCache { id: id.clone(), position: idx.pos(marker_start, end), parent, task });
-            if let (Some(id), Some(s)) = (id, cur.as_mut()) {
-                s.id = Some(id);
-            }
+            doc_list.push_item(&mut meta, &idx, &c, line_no, ln.start, 0, t, root);
             if let Some(s) = cur.as_mut() {
                 s.end = end;
             }
             scan_inline(&idx, t, ln.start, &mut meta, false);
             prev_blank = false;
+            i += 1;
             continue;
         }
 
-        // Continuation or new block.
-        let kind = if t.trim_start().starts_with('>') {
-            if t.trim_start().trim_start_matches('>').trim_start().starts_with("[!") {
-                "callout"
-            } else {
-                "blockquote"
+        // Block id alone on its own line names the quote, callout, table or list just above it.
+        if cur.is_none() && prev_blank {
+            if let Some(b) = re_lone_block_id().captures(t) {
+                if let Some(last) = sections.last_mut().filter(|l| matches!(l.kind, "blockquote" | "callout" | "table" | "list")) {
+                    last.id = Some(b[1].to_string());
+                    prev_blank = false;
+                    i += 1;
+                    continue;
+                }
             }
-        } else if t.trim_start().starts_with('|') {
+        }
+
+        // Continuation or new block.
+        let quote = t.trim_start().starts_with('>');
+        let cur_kind = cur.as_ref().map(|s| s.kind);
+        let table_here = !quote && is_table_start(&lines, i);
+        let kind = if quote {
+            match cur_kind {
+                Some(k) if is_quote_kind(k) && !prev_blank => k,
+                _ if t.trim_start().trim_start_matches('>').trim_start().starts_with("[!") => "callout",
+                _ => "blockquote",
+            }
+        } else if table_here {
             "table"
-        } else if t.trim_start().starts_with('<') {
+        } else if t.trim_start().starts_with('<') && !(cur_kind == Some("paragraph") && !prev_blank) {
             "html"
         } else {
             "paragraph"
         };
-        let continues = cur.as_ref().is_some_and(|s| s.kind == kind || (s.kind == "list" && !prev_blank) || (s.kind == "blockquote" && kind == "paragraph"))
-            && !(prev_blank && cur.as_ref().is_some_and(|s| s.kind != "list"));
+        let continues = match cur_kind {
+            None => false,
+            Some("list") => !quote && !table_here,
+            Some(_) if prev_blank => false,
+            Some("paragraph") => kind == "paragraph",
+            Some(k) if is_quote_kind(k) => quote || kind == "paragraph",
+            Some("table") => !quote && !table_here,
+            Some("html") => true,
+            _ => false,
+        };
         if continues {
-            let s = cur.as_mut().unwrap();
-            s.end = end;
+            cur.as_mut().unwrap().end = end;
         } else {
             flush(&mut cur, &mut sections);
-            list_stack.clear();
+            doc_list = ListState::default();
+            if quote {
+                quote_list = ListState::default();
+            }
             cur = Some(Sec { kind, start: ln.start, end, id: None });
         }
+        let kind = cur.as_ref().map_or(kind, |s| s.kind);
+        // Lists inside quotes and callouts.
+        if is_quote_kind(kind) && quote {
+            let (prefix, inner) = strip_quote(t);
+            if let Some(c) = re_list().captures(inner) {
+                let ind = indent_width(inner);
+                let root = quote_list.stack.iter().all(|(x, _)| *x >= ind);
+                if quote_list.marker.is_none() || (root && quote_list.marker != Some(list_marker(&c[2]))) {
+                    quote_list = ListState { first_line: line_no, marker: Some(list_marker(&c[2])), ..Default::default() };
+                }
+                quote_list.push_item(&mut meta, &idx, &c, line_no, ln.start, prefix, inner, root);
+            } else if !inner.trim().is_empty() && indent_width(inner) == 0 {
+                quote_list = ListState::default();
+            }
+        }
         if let Some(s) = cur.as_mut() {
-            if let Some(b) = re_block_id().captures(t) {
+            if s.kind == "paragraph" {
+                // Only an id at the end of the paragraph's last line counts.
+                s.id = re_block_id().captures(t).map(|b| b[1].to_string());
+            } else if let Some(b) = re_block_id().captures(t) {
                 s.id = Some(b[1].to_string());
             }
         }
         scan_inline(&idx, t, ln.start, &mut meta, kind == "table");
         prev_blank = false;
-        let _ = n;
+        i += 1;
     }
     flush(&mut cur, &mut sections);
 
     for s in sections {
         let position = idx.pos(s.start, s.end);
         if let Some(id) = &s.id {
-            meta.blocks.insert(id.clone(), BlockCache { id: id.clone(), position });
+            meta.blocks.insert(id.to_lowercase(), BlockCache { id: id.clone(), position });
         }
         meta.sections.push(SectionCache { id: s.id, kind: s.kind.into(), position });
     }
@@ -421,19 +615,39 @@ pub fn parse(text: &str) -> CachedMetadata {
     meta
 }
 
+/// Links in frontmatter: string values that are one whole `[[wikilink]]` or `[text](markdown link)`
+/// (text around a link, as in `see [[X]]`, is not a link). Keys of nested values are dotted: `list.0`, `obj.key`.
 fn collect_frontmatter_links(m: &Map<String, Value>, out: &mut Vec<FrontmatterLinkCache>) {
     fn walk(key: &str, v: &Value, out: &mut Vec<FrontmatterLinkCache>) {
         match v {
             Value::String(s) => {
-                static R: OnceLock<Regex> = OnceLock::new();
-                let r = re(&R, r"\[\[([^\[\]|]+?)(?:\|([^\[\]]*?))?\]\]");
-                for c in r.captures_iter(s) {
+                if let Some(inner) = s.strip_prefix("[[").and_then(|x| x.strip_suffix("]]")) {
+                    let (link, alias) = match inner.split_once('|') {
+                        Some((l, a)) => (l.trim(), Some(a)),
+                        None => (inner.trim(), None),
+                    };
                     out.push(FrontmatterLinkCache {
                         key: key.to_string(),
-                        link: c[1].trim().to_string(),
-                        original: c[0].to_string(),
-                        display_text: c.get(2).map(|d| d.as_str().to_string()),
+                        link: link.to_string(),
+                        original: s.clone(),
+                        display_text: Some(alias.unwrap_or(link).to_string()),
                     });
+                } else if s.starts_with('[') && s.ends_with(')') {
+                    static R: OnceLock<Regex> = OnceLock::new();
+                    if let Some(c) = re(&R, r"^\[([^\]]*)\]\((.*)\)$").captures(s) {
+                        let mut dest = c[2].trim();
+                        if let Some(d) = dest.strip_prefix('<').and_then(|d| d.strip_suffix('>')) {
+                            dest = d.trim();
+                        }
+                        if !dest.is_empty() && !has_scheme(dest) {
+                            out.push(FrontmatterLinkCache {
+                                key: key.to_string(),
+                                link: percent_decode(dest),
+                                original: s.clone(),
+                                display_text: Some(c[1].to_string()),
+                            });
+                        }
+                    }
                 }
             }
             Value::Array(a) => a.iter().enumerate().for_each(|(i, x)| walk(&format!("{key}.{i}"), x, out)),
@@ -444,6 +658,60 @@ fn collect_frontmatter_links(m: &Map<String, Value>, out: &mut Vec<FrontmatterLi
     for (k, v) in m {
         walk(k, v, out);
     }
+}
+
+/// Byte ranges of inline math (`$x$`, `$$x$$`) outside code spans. `$` must not be followed by a space
+/// when opening, nor preceded by a space or followed by a digit when closing (so `$5 and $6` is text).
+fn math_spans(line: &str, code: &[(usize, usize)]) -> Vec<(usize, usize)> {
+    let b = line.as_bytes();
+    let in_code = |i: usize| code.iter().any(|(s, e)| i >= *s && i < *e);
+    let mut spans = Vec::new();
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'\\' {
+            i += 2;
+            continue;
+        }
+        if b[i] != b'$' || in_code(i) {
+            i += 1;
+            continue;
+        }
+        let display = b.get(i + 1) == Some(&b'$');
+        let open = if display { 2 } else { 1 };
+        let first = b.get(i + open).copied();
+        if first.is_none() || (!display && (first == Some(b' ') || first == Some(b'\t') || first == Some(b'$'))) {
+            i += open;
+            continue;
+        }
+        let mut j = i + open;
+        let mut found = None;
+        while j < b.len() {
+            if b[j] == b'\\' {
+                j += 2;
+                continue;
+            }
+            if b[j] == b'$' {
+                if display {
+                    if b.get(j + 1) == Some(&b'$') {
+                        found = Some(j + 2);
+                        break;
+                    }
+                } else if !matches!(b[j - 1], b' ' | b'\t') && !b.get(j + 1).is_some_and(u8::is_ascii_digit) {
+                    found = Some(j + 1);
+                    break;
+                }
+            }
+            j += 1;
+        }
+        match found {
+            Some(e) if e > i + 2 * open => {
+                spans.push((i, e));
+                i = e;
+            }
+            _ => i += open,
+        }
+    }
+    spans
 }
 
 /// Byte ranges of inline code spans in a line (backtick runs must match in length).
@@ -518,7 +786,8 @@ fn is_tag_char(c: char) -> bool {
 
 /// Find links, embeds and tags in one line of body text.
 fn scan_inline(idx: &Index, line: &str, line_start: usize, meta: &mut CachedMetadata, in_table: bool) {
-    let spans = code_spans(line);
+    let mut spans = code_spans(line);
+    spans.extend(math_spans(line, &spans));
     let in_code = |i: usize| spans.iter().any(|(s, e)| i >= *s && i < *e);
     let b = line.as_bytes();
     let mut i = 0;

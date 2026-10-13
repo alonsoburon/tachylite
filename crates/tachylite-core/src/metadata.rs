@@ -125,7 +125,7 @@ impl MetadataCache {
         let mut name = basename(&target).to_string();
         let mut found: Option<&Vec<String>> = None;
         if name.contains('.') {
-            found = self.lookup.get(&name);
+            found = self.lookup.get(&name).filter(|c| !c.is_empty());
         }
         if found.is_none() {
             target = format!("{linkpath}.md").to_lowercase();
@@ -167,12 +167,13 @@ impl MetadataCache {
         if linkpath.starts_with('/') {
             return vec![];
         }
-        let dir_prefix = if src_dir.is_empty() { String::new() } else { format!("{src_dir}/") };
+        // Suffix and folder tests are plain string prefix/suffix checks, not segment-aware: `older/Note`
+        // matches `Folder/Note.md`, and a source in `a` counts `ab/x.md` as near (observed app behaviour).
         let (mut near, mut far): (Vec<String>, Vec<String>) = (vec![], vec![]);
         for c in cands {
             let lc = c.to_lowercase();
             if lc.ends_with(&target) {
-                if lc.starts_with(&dir_prefix) {
+                if lc.starts_with(&src_dir) {
                     near.push(c.clone())
                 } else {
                     far.push(c.clone())
@@ -256,4 +257,50 @@ pub fn all_tags(meta: &CachedMetadata) -> Vec<String> {
         }
     }
     out
+}
+
+/// Heading text as compared by subpath lookups: punctuation folded to spaces, whitespace collapsed
+/// (the same rule as `stripHeading` in ui/src/obsidian/util.ts).
+pub fn strip_heading(h: &str) -> String {
+    let folded: String = h.chars().map(|c| if c.is_ascii_punctuation() && c != '_' && c != '-' && c != '\'' { ' ' } else { c }).collect();
+    folded.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Result of resolving `#Heading#Sub` / `#^block` against a note, shaped like the plugin API's `resolveSubpath`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum SubpathResult {
+    Heading { current: crate::parse::HeadingCache, next: Option<crate::parse::HeadingCache>, start: crate::parse::Loc, end: Option<crate::parse::Loc> },
+    Block { block: crate::parse::BlockCache, start: crate::parse::Loc, end: crate::parse::Loc },
+}
+
+/// Resolve a link subpath. Block ids match case-insensitively; heading chains (`#A#B`) match each part
+/// case-insensitively inside the section of the previous part.
+pub fn resolve_subpath(meta: &CachedMetadata, subpath: &str) -> Option<SubpathResult> {
+    let sp = subpath.strip_prefix('#').unwrap_or(subpath);
+    if let Some(id) = sp.strip_prefix('^') {
+        let b = meta.blocks.get(&id.to_lowercase())?;
+        return Some(SubpathResult::Block { block: b.clone(), start: b.position.start, end: b.position.end });
+    }
+    let parts: Vec<String> = sp.split('#').map(|p| strip_heading(p).to_lowercase()).filter(|p| !p.is_empty()).collect();
+    let hs = &meta.headings;
+    let (mut from, mut cur): (usize, Option<usize>) = (0, None);
+    for part in parts {
+        let mut found = None;
+        for (i, h) in hs.iter().enumerate().skip(from) {
+            if cur.is_some_and(|c| h.level <= hs[c].level) {
+                break;
+            }
+            if strip_heading(&h.heading).to_lowercase() == part {
+                found = Some(i);
+                break;
+            }
+        }
+        let f = found?;
+        cur = Some(f);
+        from = f + 1;
+    }
+    let c = cur?;
+    let next = hs[c + 1..].iter().find(|h| h.level <= hs[c].level).cloned();
+    Some(SubpathResult::Heading { current: hs[c].clone(), start: hs[c].position.start, end: next.as_ref().map(|n| n.position.start), next })
 }

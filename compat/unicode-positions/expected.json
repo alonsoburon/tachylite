@@ -1,0 +1,77 @@
+{
+  "description": "Positions are UTF-16 code units (what JavaScript sees), for astral emoji and CJK.",
+  "metadata": {
+    "Unicode.md": {
+      "links": [
+        {
+          "link": "Emoji",
+          "position": {
+            "start": {
+              "line": 0,
+              "col": 3,
+              "offset": 3
+            },
+            "end": {
+              "line": 0,
+              "col": 12,
+              "offset": 12
+            }
+          }
+        },
+        {
+          "link": "Accent",
+          "position": {
+            "start": {
+              "line": 0,
+              "col": 18,
+              "offset": 18
+            }
+          }
+        },
+        {
+          "link": "日本語",
+          "position": {
+            "start": {
+              "line": 1,
+              "col": 9,
+              "offset": 38
+            },
+            "end": {
+              "line": 1,
+              "col": 16,
+              "offset": 45
+            }
+          }
+        }
+      ],
+      "tags": [
+        {
+          "tag": "#タグ",
+          "position": {
+            "start": {
+              "line": 1,
+              "col": 17,
+              "offset": 46
+            },
+            "end": {
+              "line": 1,
+              "col": 20,
+              "offset": 49
+            }
+          }
+        }
+      ]
+    }
+  },
+  "resolvedLinks": {
+    "Unicode.md": {
+      "Emoji.md": 1,
+      "日本語.md": 1
+    }
+  },
+  "unresolvedLinks": {
+    "Unicode.md": {
+      "Accent": 1
+    }
+  }
+}

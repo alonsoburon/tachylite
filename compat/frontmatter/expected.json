@@ -1,0 +1,158 @@
+{
+  "description": "YAML frontmatter values, position, and links in frontmatter (whole-value wikilinks and markdown links only).",
+  "metadata": {
+    "FM.md": {
+      "frontmatter": {
+        "title": "Hello",
+        "count": 3,
+        "done": true,
+        "date": "2024-01-15",
+        "tags": [
+          "one",
+          "two/three"
+        ],
+        "aliases": [
+          "Alt Name"
+        ],
+        "up": "[[Parent]]",
+        "inline": "see [[Not A Link]] here"
+      },
+      "frontmatterPosition": {
+        "start": {
+          "line": 0,
+          "col": 0
+        },
+        "end": {
+          "line": 17,
+          "col": 3
+        }
+      },
+      "frontmatterLinks": [
+        {
+          "key": "up",
+          "link": "Parent",
+          "displayText": "Parent",
+          "original": "[[Parent]]"
+        },
+        {
+          "key": "related.0",
+          "link": "One",
+          "displayText": "One",
+          "original": "[[One]]"
+        },
+        {
+          "key": "related.1",
+          "link": "Two",
+          "displayText": "second",
+          "original": "[[Two|second]]"
+        },
+        {
+          "key": "mdlink",
+          "link": "Target.md",
+          "displayText": "text",
+          "original": "[text](Target.md)"
+        },
+        {
+          "key": "nested.key",
+          "link": "Deep",
+          "displayText": "Deep",
+          "original": "[[Deep]]"
+        }
+      ],
+      "links": [
+        {
+          "link": "Body Link",
+          "position": {
+            "start": {
+              "line": 18,
+              "col": 5
+            }
+          }
+        }
+      ]
+    },
+    "NotFM.md": {
+      "frontmatter": null,
+      "headings": [
+        {
+          "heading": "a: 1",
+          "level": 2,
+          "position": {
+            "start": {
+              "line": 2,
+              "col": 0
+            }
+          }
+        }
+      ],
+      "sections": [
+        {
+          "type": "thematicBreak",
+          "position": {
+            "start": {
+              "line": 1
+            },
+            "end": {
+              "line": 1
+            }
+          }
+        },
+        {
+          "type": "heading",
+          "position": {
+            "start": {
+              "line": 2
+            },
+            "end": {
+              "line": 3
+            }
+          }
+        }
+      ]
+    },
+    "CRLF.md": {
+      "frontmatter": {
+        "a": 1
+      },
+      "links": [
+        {
+          "link": "X",
+          "position": {
+            "start": {
+              "line": 3,
+              "col": 0
+            },
+            "end": {
+              "line": 3,
+              "col": 5
+            }
+          }
+        }
+      ]
+    },
+    "Invalid.md": {
+      "frontmatter": null,
+      "links": [
+        {
+          "link": "After",
+          "position": {
+            "start": {
+              "line": 3,
+              "col": 0
+            }
+          }
+        }
+      ]
+    }
+  },
+  "unresolvedLinks": {
+    "FM.md": {
+      "Parent": 1,
+      "One": 1,
+      "Two": 1,
+      "Target.md": 1,
+      "Deep": 1,
+      "Body Link": 1
+    }
+  }
+}

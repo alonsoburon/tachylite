@@ -1,0 +1,120 @@
+{
+  "description": "Body tag recognition and frontmatter tag values.",
+  "metadata": {
+    "Tags.md": {
+      "tags": [
+        {
+          "tag": "#simple",
+          "position": {
+            "start": {
+              "line": 3,
+              "col": 0
+            }
+          }
+        },
+        {
+          "tag": "#nested/child/leaf"
+        },
+        {
+          "tag": "#with-dash"
+        },
+        {
+          "tag": "#with_under"
+        },
+        {
+          "tag": "#CamelCase"
+        },
+        {
+          "tag": "#2024-review",
+          "position": {
+            "start": {
+              "line": 4,
+              "col": 6
+            }
+          }
+        },
+        {
+          "tag": "#y2k"
+        },
+        {
+          "tag": "#café"
+        },
+        {
+          "tag": "#日本語"
+        },
+        {
+          "tag": "#dot",
+          "position": {
+            "start": {
+              "line": 5,
+              "col": 4
+            }
+          }
+        },
+        {
+          "tag": "#comma"
+        },
+        {
+          "tag": "#colon"
+        },
+        {
+          "tag": "#in-heading",
+          "position": {
+            "start": {
+              "line": 7,
+              "col": 10
+            }
+          }
+        },
+        {
+          "tag": "#in-list",
+          "position": {
+            "start": {
+              "line": 11,
+              "col": 7
+            }
+          }
+        },
+        {
+          "tag": "#in-table",
+          "position": {
+            "start": {
+              "line": 15,
+              "col": 6
+            }
+          }
+        }
+      ],
+      "frontmatter": {
+        "tags": [
+          "fm-one",
+          "nested/fm"
+        ]
+      }
+    },
+    "Strings.md": {
+      "tags": null,
+      "frontmatter": {
+        "tags": "one, two",
+        "tag": "single"
+      }
+    },
+    "Hash.md": {
+      "frontmatter": {
+        "tags": [
+          "#hashed"
+        ]
+      }
+    }
+  },
+  "fileTags": {
+    "Strings.md": [
+      "#one",
+      "#two",
+      "#single"
+    ],
+    "Hash.md": [
+      "#hashed"
+    ]
+  }
+}

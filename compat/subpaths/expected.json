@@ -1,0 +1,126 @@
+{
+  "description": "Heading and block subpath resolution (#Heading, #Parent#Child, #^block).",
+  "subpath": [
+    {
+      "file": "Doc.md",
+      "subpath": "#Top",
+      "expect": {
+        "type": "heading",
+        "current": {
+          "heading": "Top",
+          "level": 1
+        },
+        "next": {
+          "heading": "Second",
+          "level": 1
+        },
+        "start": {
+          "line": 0
+        },
+        "end": {
+          "line": 4
+        }
+      }
+    },
+    {
+      "file": "Doc.md",
+      "subpath": "#top",
+      "expect": {
+        "type": "heading",
+        "current": {
+          "heading": "Top",
+          "level": 1
+        }
+      },
+      "confidence": "high"
+    },
+    {
+      "file": "Doc.md",
+      "subpath": "#Top#Child B",
+      "expect": {
+        "type": "heading",
+        "current": {
+          "heading": "Child B",
+          "level": 2
+        },
+        "next": {
+          "heading": "Second",
+          "level": 1
+        }
+      }
+    },
+    {
+      "file": "Doc.md",
+      "subpath": "#Child A#Grand",
+      "expect": {
+        "type": "heading",
+        "current": {
+          "heading": "Grand",
+          "level": 3
+        },
+        "next": {
+          "heading": "Child B",
+          "level": 2
+        }
+      }
+    },
+    {
+      "file": "Doc.md",
+      "subpath": "#Second#Grand",
+      "expect": null
+    },
+    {
+      "file": "Doc.md",
+      "subpath": "#Second",
+      "expect": {
+        "type": "heading",
+        "current": {
+          "heading": "Second",
+          "level": 1
+        },
+        "next": null,
+        "end": null
+      }
+    },
+    {
+      "file": "Doc.md",
+      "subpath": "#^blk-1",
+      "expect": {
+        "type": "block",
+        "block": {
+          "id": "Blk-1"
+        },
+        "start": {
+          "line": 5
+        }
+      }
+    },
+    {
+      "file": "Doc.md",
+      "subpath": "#^BLK-1",
+      "expect": {
+        "type": "block",
+        "block": {
+          "id": "Blk-1"
+        }
+      }
+    },
+    {
+      "file": "Doc.md",
+      "subpath": "#What Why",
+      "expect": {
+        "type": "heading",
+        "current": {
+          "heading": "What? Why!",
+          "level": 2
+        }
+      },
+      "confidence": "medium"
+    },
+    {
+      "file": "Doc.md",
+      "subpath": "#Nope",
+      "expect": null
+    }
+  ]
+}

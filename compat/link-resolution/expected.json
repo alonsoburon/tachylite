@@ -1,0 +1,207 @@
+{
+  "description": "Link path resolution (getFirstLinkpathDest): names, paths, case, extensions, relative and root links, duplicates.",
+  "resolve": [
+    {
+      "link": "Only Here",
+      "from": "Folder/source.md",
+      "to": "Unique/Only Here.md",
+      "confidence": "high",
+      "why": "unique file name resolves from anywhere"
+    },
+    {
+      "link": "only here",
+      "from": "Folder/source.md",
+      "to": "Unique/Only Here.md",
+      "confidence": "high",
+      "why": "case-insensitive"
+    },
+    {
+      "link": "ONLY HERE.md",
+      "from": "Elsewhere/src.md",
+      "to": "Unique/Only Here.md",
+      "confidence": "high",
+      "why": "explicit .md extension, case-insensitive"
+    },
+    {
+      "link": "Note",
+      "from": "Folder/source.md",
+      "to": "Note.md",
+      "confidence": "medium",
+      "why": "a bare name that is also an exact vault path wins over a same-folder match"
+    },
+    {
+      "link": "Note",
+      "from": "Elsewhere/src.md",
+      "to": "Note.md",
+      "confidence": "high"
+    },
+    {
+      "link": "Folder/Note",
+      "from": "Elsewhere/src.md",
+      "to": "Folder/Note.md",
+      "confidence": "high",
+      "why": "exact vault path"
+    },
+    {
+      "link": "Deep",
+      "from": "Folder/source.md",
+      "to": "Folder/Sub/Deep.md",
+      "confidence": "medium",
+      "why": "duplicates: candidates under the source's folder first, then shortest path"
+    },
+    {
+      "link": "Deep",
+      "from": "Elsewhere/src.md",
+      "to": "Folder/Sub/Deep.md",
+      "confidence": "medium",
+      "why": "no candidate near the source: shortest path first"
+    },
+    {
+      "link": "Deeper/Deep",
+      "from": "Folder/source.md",
+      "to": "Other/Deeper/Deep.md",
+      "confidence": "high",
+      "why": "path-qualified links match as path suffixes"
+    },
+    {
+      "link": "Sub/Deep",
+      "from": "Elsewhere/src.md",
+      "to": "Folder/Sub/Deep.md",
+      "confidence": "high"
+    },
+    {
+      "link": "ub/Deep",
+      "from": "Elsewhere/src.md",
+      "to": "Folder/Sub/Deep.md",
+      "confidence": "medium",
+      "why": "suffix matching is a plain string suffix, not segment-aware"
+    },
+    {
+      "link": "Twin",
+      "from": "Folder/source.md",
+      "to": "Folderx/Twin.md",
+      "confidence": "medium",
+      "why": "the 'near' test is a plain prefix of the source folder ('folder' is a prefix of 'folderx/'), so it beats the shorter T/Twin.md"
+    },
+    {
+      "link": "./Note",
+      "from": "Folder/source.md",
+      "to": "Folder/Note.md",
+      "confidence": "high",
+      "why": "./ is relative to the source folder"
+    },
+    {
+      "link": "../Note",
+      "from": "Folder/source.md",
+      "to": "Note.md",
+      "confidence": "high"
+    },
+    {
+      "link": "../Note",
+      "from": "Folder/Sub/source2.md",
+      "to": "Folder/Note.md",
+      "confidence": "high"
+    },
+    {
+      "link": "./../Note",
+      "from": "Folder/Sub/source2.md",
+      "to": "Folder/Note.md",
+      "confidence": "high"
+    },
+    {
+      "link": "../../Note",
+      "from": "Folder/Sub/source2.md",
+      "to": "Note.md",
+      "confidence": "high"
+    },
+    {
+      "link": "/Note",
+      "from": "Folder/source.md",
+      "to": "Note.md",
+      "confidence": "medium",
+      "why": "leading / is the vault root"
+    },
+    {
+      "link": "/Deep",
+      "from": "Folder/source.md",
+      "confidence": "medium",
+      "why": "a rooted path does not fall back to suffix matching"
+    },
+    {
+      "link": "image.png",
+      "from": "Folder/source.md",
+      "to": "assets/image.png",
+      "confidence": "high",
+      "why": "attachments resolve by full file name"
+    },
+    {
+      "link": "IMAGE.PNG",
+      "from": "Folder/source.md",
+      "to": "assets/image.png",
+      "confidence": "high"
+    },
+    {
+      "link": "image",
+      "from": "Folder/source.md",
+      "confidence": "high",
+      "why": "non-markdown files need their extension"
+    },
+    {
+      "link": "v1.2 release notes",
+      "from": "Folder/source.md",
+      "to": "v1.2 release notes.md",
+      "confidence": "high",
+      "why": "dots in the name are not an extension when no such file exists"
+    },
+    {
+      "link": "Café",
+      "from": "Folder/source.md",
+      "to": "Café.md",
+      "confidence": "high"
+    },
+    {
+      "link": "CAFÉ",
+      "from": "Folder/source.md",
+      "to": "Café.md",
+      "confidence": "medium",
+      "why": "Unicode lowercasing"
+    },
+    {
+      "link": "日本語",
+      "from": "Folder/source.md",
+      "to": "日本語.md",
+      "confidence": "high"
+    },
+    {
+      "link": "Missing",
+      "from": "Folder/source.md",
+      "confidence": "high"
+    },
+    {
+      "link": "Folder",
+      "from": "Elsewhere/src.md",
+      "confidence": "high",
+      "why": "folders are not link targets"
+    },
+    {
+      "link": "Note#Some heading",
+      "from": "Elsewhere/src.md",
+      "to": "Note.md",
+      "confidence": "high",
+      "why": "#subpath is not part of the link path"
+    },
+    {
+      "link": "Note#^block",
+      "from": "Elsewhere/src.md",
+      "to": "Note.md",
+      "confidence": "high"
+    },
+    {
+      "link": "#Root note",
+      "from": "Note.md",
+      "to": "Note.md",
+      "confidence": "high",
+      "why": "empty link path resolves to the source note itself"
+    }
+  ]
+}

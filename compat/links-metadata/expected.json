@@ -1,0 +1,173 @@
+{
+  "description": "links/embeds in the metadata cache: wikilinks, aliases, subpaths, markdown links, embeds, exclusions (code, math, escapes, external URLs).",
+  "metadata": {
+    "Links.md": {
+      "links": [
+        {
+          "link": "Plain",
+          "displayText": "Plain",
+          "original": "[[Plain]]",
+          "position": {
+            "start": {
+              "line": 0,
+              "col": 0
+            },
+            "end": {
+              "line": 0,
+              "col": 9
+            }
+          }
+        },
+        {
+          "link": "Target",
+          "displayText": "Alias text",
+          "original": "[[Target|Alias text]]",
+          "position": {
+            "start": {
+              "line": 0,
+              "col": 10
+            },
+            "end": {
+              "line": 0,
+              "col": 31
+            }
+          }
+        },
+        {
+          "link": "Target#Heading",
+          "displayText": "Alias",
+          "original": "[[Target#Heading|Alias]]"
+        },
+        {
+          "link": "Target.md",
+          "displayText": "md",
+          "original": "[md](Target.md)",
+          "position": {
+            "start": {
+              "line": 2,
+              "col": 0
+            },
+            "end": {
+              "line": 2,
+              "col": 15
+            }
+          }
+        },
+        {
+          "link": "My Note.md",
+          "displayText": "md space",
+          "original": "[md space](My%20Note.md)"
+        },
+        {
+          "link": "My Note.md",
+          "displayText": "angle",
+          "original": "[angle](<My Note.md>)"
+        },
+        {
+          "link": "Target.md",
+          "displayText": "titled",
+          "original": "[titled](Target.md \"Title\")"
+        },
+        {
+          "link": "a",
+          "displayText": "b|c",
+          "original": "[[a|b|c]]"
+        },
+        {
+          "link": "Target",
+          "displayText": "Target"
+        },
+        {
+          "link": "Plain",
+          "displayText": "Plain"
+        },
+        {
+          "link": "#Local heading",
+          "displayText": "local"
+        },
+        {
+          "link": "Hidden",
+          "displayText": "Hidden"
+        },
+        {
+          "link": "Target",
+          "displayText": "Target",
+          "position": {
+            "start": {
+              "line": 10,
+              "col": 16
+            }
+          }
+        },
+        {
+          "link": "Plain",
+          "displayText": "Plain",
+          "position": {
+            "start": {
+              "line": 12,
+              "col": 23
+            }
+          }
+        },
+        {
+          "link": "Target",
+          "displayText": "Target",
+          "position": {
+            "start": {
+              "line": 13,
+              "col": 8
+            }
+          }
+        }
+      ],
+      "embeds": [
+        {
+          "link": "pic.png",
+          "displayText": "pic.png",
+          "original": "![[pic.png]]",
+          "position": {
+            "start": {
+              "line": 1,
+              "col": 0
+            },
+            "end": {
+              "line": 1,
+              "col": 12
+            }
+          }
+        },
+        {
+          "link": "pic.png",
+          "displayText": "200",
+          "original": "![[pic.png|200]]"
+        },
+        {
+          "link": "Note#Section",
+          "displayText": "Note#Section"
+        },
+        {
+          "link": "pic.png",
+          "displayText": "alt text",
+          "original": "![alt text](pic.png)"
+        },
+        {
+          "link": "pic.png",
+          "displayText": "",
+          "original": "![](pic.png)"
+        }
+      ]
+    }
+  },
+  "unresolvedLinks": {
+    "Links.md": {
+      "Plain": 3,
+      "Target": 5,
+      "Target.md": 2,
+      "My Note.md": 2,
+      "a": 1,
+      "Hidden": 1,
+      "pic.png": 4,
+      "Note": 1
+    }
+  }
+}

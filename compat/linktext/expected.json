@@ -1,0 +1,57 @@
+{
+  "description": "Link text generated for a target (fileToLinktext) under each newLinkFormat.",
+  "linktext": [
+    {
+      "target": "Folder/Unique.md",
+      "source": "src.md",
+      "expected": "Unique"
+    },
+    {
+      "target": "Folder/Note.md",
+      "source": "src.md",
+      "expected": "Folder/Note"
+    },
+    {
+      "target": "Note.md",
+      "source": "Folder/Sub/src.md",
+      "expected": "Note"
+    },
+    {
+      "target": "img/pic.png",
+      "source": "src.md",
+      "expected": "pic.png"
+    },
+    {
+      "target": "Folder/Note.md",
+      "source": "Folder/Sub/src.md",
+      "config": {
+        "newLinkFormat": "relative"
+      },
+      "expected": "../Note"
+    },
+    {
+      "target": "Note.md",
+      "source": "Folder/Sub/src.md",
+      "config": {
+        "newLinkFormat": "relative"
+      },
+      "expected": "../../Note"
+    },
+    {
+      "target": "Folder/Sub/src.md",
+      "source": "Folder/Note.md",
+      "config": {
+        "newLinkFormat": "relative"
+      },
+      "expected": "Sub/src"
+    },
+    {
+      "target": "Folder/Unique.md",
+      "source": "src.md",
+      "config": {
+        "newLinkFormat": "absolute"
+      },
+      "expected": "Folder/Unique"
+    }
+  ]
+}

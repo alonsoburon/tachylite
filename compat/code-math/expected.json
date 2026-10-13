@@ -1,0 +1,106 @@
+{
+  "description": "Fenced (backtick, tilde, nested, unclosed) and indented code, inline code with backticks, and math blocks hide links and tags.",
+  "metadata": {
+    "Code.md": {
+      "links": [
+        {
+          "link": "After"
+        },
+        {
+          "link": "list continuation"
+        }
+      ],
+      "tags": null,
+      "sections": [
+        {
+          "type": "code",
+          "position": {
+            "start": {
+              "line": 0
+            },
+            "end": {
+              "line": 2
+            }
+          }
+        },
+        {
+          "type": "code",
+          "position": {
+            "start": {
+              "line": 3
+            },
+            "end": {
+              "line": 5
+            }
+          }
+        },
+        {
+          "type": "code",
+          "position": {
+            "start": {
+              "line": 6
+            },
+            "end": {
+              "line": 10
+            }
+          }
+        },
+        {
+          "type": "paragraph",
+          "position": {
+            "start": {
+              "line": 11
+            },
+            "end": {
+              "line": 11
+            }
+          }
+        },
+        {
+          "type": "code",
+          "position": {
+            "start": {
+              "line": 13
+            },
+            "end": {
+              "line": 13
+            }
+          }
+        },
+        {
+          "type": "math",
+          "position": {
+            "start": {
+              "line": 15
+            },
+            "end": {
+              "line": 17
+            }
+          }
+        },
+        {
+          "type": "list",
+          "position": {
+            "start": {
+              "line": 19
+            },
+            "end": {
+              "line": 20
+            }
+          }
+        },
+        {
+          "type": "code",
+          "position": {
+            "start": {
+              "line": 22
+            },
+            "end": {
+              "line": 25
+            }
+          }
+        }
+      ]
+    }
+  }
+}

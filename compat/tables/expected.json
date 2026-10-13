@@ -1,0 +1,62 @@
+{
+  "description": "GFM tables (with and without leading pipes), escaped pipes in wikilinks inside cells.",
+  "metadata": {
+    "Tables.md": {
+      "links": [
+        {
+          "link": "Target",
+          "displayText": "alias",
+          "original": "[[Target\\|alias]]"
+        },
+        {
+          "link": "Plain",
+          "displayText": "Plain"
+        },
+        {
+          "link": "NoPipe",
+          "displayText": "NoPipe"
+        }
+      ],
+      "tags": [
+        {
+          "tag": "#tabletag"
+        }
+      ],
+      "sections": [
+        {
+          "type": "table",
+          "position": {
+            "start": {
+              "line": 0
+            },
+            "end": {
+              "line": 3
+            }
+          }
+        },
+        {
+          "type": "table",
+          "position": {
+            "start": {
+              "line": 5
+            },
+            "end": {
+              "line": 7
+            }
+          }
+        },
+        {
+          "type": "paragraph",
+          "position": {
+            "start": {
+              "line": 9
+            },
+            "end": {
+              "line": 9
+            }
+          }
+        }
+      ]
+    }
+  }
+}
