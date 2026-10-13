@@ -154,8 +154,10 @@ describe("live preview decorations", () => {
   it("bullets and checkboxes become widgets; raw when cursor on marker", () => {
     const doc = "- one\n- [ ] task\n- [x] done\n\nend";
     const d = decos(doc, doc.length);
-    expect(d.widgets.filter((w) => w === "BulletWidget").length).toBe(3);
+    // task items show the checkbox in place of the bullet
+    expect(d.widgets.filter((w) => w === "BulletWidget").length).toBe(1);
     expect(d.widgets.filter((w) => w === "CheckboxWidget").length).toBe(2);
+    expect(d.hidden).toContain("- ");
     expect(d.lines.some((l) => l.cls.includes("HyperMD-task-line") && l.attrs["data-task"] === "x")).toBe(true);
     expect(d.lines.some((l) => l.cls.includes("HyperMD-list-line-1"))).toBe(true);
     const d2 = decos(doc, 8); // inside "[ ]" of task line

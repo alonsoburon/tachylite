@@ -225,7 +225,11 @@ export function buildInline(
             const text = doc.sliceString(from, to);
             const d = listDepth(node);
             const ul = /^[-*+]$/.test(text);
-            if (ul && live && !touches(from, to)) {
+            // Task items show only the checkbox in place of the bullet (ordered ones keep their number).
+            const taskMark = node.parent?.getChild("Task")?.getChild("TaskMarker");
+            if (ul && live && taskMark && !touches(from, taskMark.to)) {
+              out.push(Decoration.replace({}).range(from, taskMark.from));
+            } else if (ul && live && !touches(from, to)) {
               out.push(Decoration.replace({ widget: new BulletWidget() }).range(from, to));
             } else {
               mark(from, to, `cm-formatting cm-formatting-list ${ul ? "cm-formatting-list-ul" : "cm-formatting-list-ol"} cm-list-${d}`);
@@ -234,7 +238,9 @@ export function buildInline(
           }
           case "TaskMarker": {
             const ch = doc.sliceString(from + 1, from + 2);
-            if (live && !touches(from, to)) out.push(Decoration.replace({ widget: new CheckboxWidget(ch) }).range(from, to));
+            const listMark = node.parent?.parent?.getChild("ListMark");
+            const hidesBullet = !!listMark && /^[-*+]$/.test(doc.sliceString(listMark.from, listMark.to));
+            if (live && !touches(hidesBullet ? listMark!.from : from, to)) out.push(Decoration.replace({ widget: new CheckboxWidget(ch) }).range(from, to));
             else mark(from, to, "cm-formatting cm-formatting-task cm-meta");
             return false;
           }
