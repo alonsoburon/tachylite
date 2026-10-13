@@ -1,5 +1,5 @@
 // Backlinks and outgoing-links core views, built on metadataCache + vault.
-import { TFile, type App, type WorkspaceLeaf } from "../../obsidian";
+import { TFile, getFrontMatterInfo, type App, type WorkspaceLeaf } from "../../obsidian";
 import { buildFileMenu } from "../files";
 import { activateView, addCommand, openFile, whileCoreEnabled, type CoreModule } from "./util";
 import { collapseIcon, fileLabel, FollowView, highlightText, naturalCompare, navButton, navHeader } from "./panel";
@@ -42,6 +42,49 @@ function clip(text: string, at: number): { text: string; shift: number } {
   if (t.length <= LINE_MAX) return { text: t, shift: lead };
   const start = Math.max(0, at - lead - 50);
   return { text: (start ? "…" : "") + t.slice(start, start + LINE_MAX) + "…", shift: lead + start - (start ? 1 : 0) };
+}
+
+/**
+ * Turn the plain-text mention at `m` in `source` into a link to `target` (an alias link when the text differs from the
+ * note name). Edits the open editor when there is one, so unsaved changes are kept; returns false if the text moved.
+ */
+export async function linkMention(app: App, source: TFile, m: Mention, target: TFile, expected?: string): Promise<boolean> {
+  const make = (text: string) => app.fileManager.generateMarkdownLink(target, source.path, undefined, text === target.basename ? undefined : text);
+  /** The mention's range in `line`: `m` when it still holds the expected text, else the first unlinked occurrence. */
+  const locate = (line: string): [number, number] | null => {
+    const text = line.slice(m.start, m.end);
+    if (text && (!expected || text.toLowerCase() === expected.toLowerCase())) return [m.start, m.end];
+    const alt = expected ? findUnlinkedMentions(line, [expected])[0] : undefined;
+    return alt ? [alt.start, alt.end] : null;
+  };
+  const view = app.workspace.getLeavesOfType("markdown").map((l) => l.view as any).find((v) => v?.file?.path === source.path && v.editor);
+  if (view) {
+    const line: string = view.editor.getLine(m.line) ?? "";
+    const r = locate(line);
+    if (!r) return false;
+    view.editor.replaceRange(make(line.slice(r[0], r[1])), { line: m.line, ch: r[0] }, { line: m.line, ch: r[1] });
+    await view.save?.();
+    return true;
+  }
+  let ok = false;
+  await app.vault.process(source, (data) => {
+    const lines = data.split("\n"), line = lines[m.line] ?? "", r = locate(line);
+    if (!r) return data;
+    lines[m.line] = line.slice(0, r[0]) + make(line.slice(r[0], r[1])) + line.slice(r[1]);
+    ok = true;
+    return lines.join("\n");
+  });
+  return ok;
+}
+
+/** "Link" button shown on hover of an unlinked mention row. */
+function linkButton(row: HTMLElement, onClick: () => Promise<boolean>): void {
+  const b = row.createEl("button", { cls: "search-result-file-match-replace-button", text: "Link", attr: { "aria-label": "Link this mention" } });
+  b.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    b.disabled = true;
+    if (!(await onClick())) b.disabled = false;
+  });
 }
 
 // ===================================================================== backlinks
@@ -227,6 +270,8 @@ export class BacklinksView extends FollowView {
           const { text } = clip(lines[m.line] ?? "", m.start);
           highlightText(el.createDiv({ cls: "search-result-file-match-text" }), text, names);
           el.addEventListener("click", (e) => { void openFile(this.app, f, e, { line: m.line }); });
+          const said = (lines[m.line] ?? "").slice(m.start, m.end);
+          linkButton(el, () => linkMention(this.app, f, m, file, said));
         }
       }
     };
@@ -237,11 +282,20 @@ export class BacklinksView extends FollowView {
 
 // ===================================================================== outgoing links
 export class OutgoingLinksView extends FollowView {
+  /** Persisted in the view state like Obsidian (`unlinkedCollapsed`). */
+  unlinkedCollapsed = true;
   private bodyEl!: HTMLElement;
+  private collapsed = new Set<string>();
+  private seq = 0;
   constructor(leaf: WorkspaceLeaf) { super(leaf); this.navigation = false; }
   getViewType(): string { return OUTGOING_VIEW; }
   getDisplayText(): string { return "Outgoing links"; }
   getIcon(): string { return "lucide-links-going-out"; }
+  getState(): Record<string, unknown> { return { unlinkedCollapsed: this.unlinkedCollapsed }; }
+  async setState(s: any): Promise<void> {
+    if (typeof s?.unlinkedCollapsed === "boolean") this.unlinkedCollapsed = s.unlinkedCollapsed;
+    if (this.bodyEl) this.refresh();
+  }
 
   async onOpen(): Promise<void> {
     this.contentEl.addClass("outgoing-link-pane");
@@ -252,25 +306,37 @@ export class OutgoingLinksView extends FollowView {
 
   refresh(): void {
     if (!this.bodyEl) return;
+    const seq = ++this.seq;
     this.bodyEl.empty();
     const file = this.file;
     if (!file) { this.bodyEl.createDiv({ cls: "pane-empty", text: "No outgoing links found." }); return; }
     const resolved = Object.entries(this.app.metadataCache.resolvedLinks[file.path] ?? {});
     const unresolved = Object.entries(this.app.metadataCache.unresolvedLinks[file.path] ?? {});
-    if (!resolved.length && !unresolved.length) { this.bodyEl.createDiv({ cls: "pane-empty", text: "No outgoing links found." }); return; }
-    this.group("Links", resolved.map(([p, n]) => ({ label: p, count: n, path: p })), false, file);
-    this.group("Unresolved links", unresolved.map(([l, n]) => ({ label: l, count: n, path: l })), true, file);
+    const links = this.section("Links", "links", resolved.length + unresolved.length, false);
+    if (!resolved.length && !unresolved.length) links.createDiv({ cls: "pane-empty", text: "No outgoing links found." });
+    this.items(links, resolved.map(([p, n]) => ({ label: p, count: n, path: p })), false, file);
+    this.items(links, unresolved.map(([l, n]) => ({ label: l, count: n, path: l })), true, file);
+    if (file.extension === "md") this.renderUnlinked(file, seq);
   }
 
-  private group(title: string, items: { label: string; count: number; path: string }[], unresolved: boolean, source: TFile): void {
-    if (!items.length) return;
-    const root = this.bodyEl.createDiv({ cls: "tree-item outgoing-link-section" + (unresolved ? " is-unresolved-section" : "") });
+  private section(title: string, id: string, count: number | null, collapsed: boolean, onToggle?: (collapsed: boolean) => void): HTMLElement {
+    const root = this.bodyEl.createDiv({ cls: `tree-item outgoing-link-section mod-${id}` + (collapsed ? " is-collapsed" : "") });
     const head = root.createDiv({ cls: "tree-item-self mod-collapsible is-clickable" });
     collapseIcon(head);
     head.createDiv({ cls: "tree-item-inner", text: title });
-    head.createDiv({ cls: "tree-item-flair-outer" }).createSpan({ cls: "tree-item-flair", text: String(items.length) });
+    head.createDiv({ cls: "tree-item-flair-outer" }).createSpan({ cls: "tree-item-flair", text: count === null ? "" : String(count) });
     const kids = root.createDiv({ cls: "tree-item-children" });
-    head.addEventListener("click", () => { const c = !root.hasClass("is-collapsed"); root.toggleClass("is-collapsed", c); if (c) kids.hide(); else kids.show(); });
+    if (collapsed) kids.hide();
+    head.addEventListener("click", () => {
+      const c = !root.hasClass("is-collapsed");
+      root.toggleClass("is-collapsed", c);
+      if (c) kids.hide(); else kids.show();
+      onToggle?.(c);
+    });
+    return kids;
+  }
+
+  private items(kids: HTMLElement, items: { label: string; count: number; path: string }[], unresolved: boolean, source: TFile): void {
     items.sort((a, b) => naturalCompare(a.label, b.label));
     for (const it of items) {
       const target = unresolved ? null : this.app.vault.getFileByPath(it.path);
@@ -287,6 +353,71 @@ export class OutgoingLinksView extends FollowView {
       });
       if (target) self.addEventListener("contextmenu", (e) => { e.preventDefault(); buildFileMenu(this.app, target, "outgoing-link").showAtMouseEvent(e); });
     }
+  }
+
+  /** Other notes whose name (or alias) appears in this note as plain text. */
+  private renderUnlinked(file: TFile, seq: number): void {
+    const kids = this.section("Unlinked mentions", "unlinked", null, this.unlinkedCollapsed, (c) => {
+      this.unlinkedCollapsed = c;
+      if (!c) void load();
+      this.app.workspace.requestSaveLayout();
+    });
+    const flair = kids.parentElement!.querySelector<HTMLElement>(":scope > .tree-item-self .tree-item-flair")!;
+    let loaded = false;
+    const load = async () => {
+      if (loaded) return;
+      loaded = true;
+      const text = await this.app.vault.cachedRead(file).catch(() => "");
+      if (seq !== this.seq) return;
+      kids.empty();
+      const linked = this.app.metadataCache.resolvedLinks[file.path] ?? {};
+      const byName = new Map<string, TFile[]>();
+      for (const f of this.app.vault.getMarkdownFiles()) {
+        if (f === file || linked[f.path]) continue;
+        const aliases = this.app.metadataCache.getFileCache(f)?.frontmatter?.aliases;
+        const names = [f.basename, ...(Array.isArray(aliases) ? aliases : typeof aliases === "string" ? [aliases] : [])];
+        for (const n of names) if (typeof n === "string" && n.trim().length > 1) { const k = n.trim().toLowerCase(); (byName.get(k) ?? byName.set(k, []).get(k)!).push(f); }
+      }
+      const body = text.slice(getFrontMatterInfo(text).contentStart), offset = text.slice(0, text.length - body.length).split("\n").length - 1;
+      const hits = new Map<TFile, Mention[]>();
+      // Overlapping names ("Start", "Start here"): keep the longest match.
+      const found = findUnlinkedMentions(body, [...byName.keys()]).sort((a, b) => a.line - b.line || a.start - b.start || b.end - a.end);
+      const kept: Mention[] = [];
+      for (const m of found) { const p = kept[kept.length - 1]; if (!p || p.line !== m.line || m.start >= p.end) kept.push(m); }
+      for (const m of kept) {
+        const name = body.split("\n")[m.line].slice(m.start, m.end).toLowerCase();
+        const target = byName.get(name)?.[0];
+        if (target) (hits.get(target) ?? hits.set(target, []).get(target)!).push({ ...m, line: m.line + offset });
+      }
+      flair.setText(String(hits.size));
+      if (!hits.size) { kids.createDiv({ cls: "pane-empty", text: "No unlinked mentions found." }); return; }
+      const lines = text.split("\n");
+      for (const [target, ms] of [...hits.entries()].sort((a, b) => naturalCompare(a[0].basename, b[0].basename))) {
+        const item = kids.createDiv({ cls: "tree-item search-result outgoing-link-item mod-unlinked" + (this.collapsed.has(target.path) ? " is-collapsed" : ""), attr: { "data-path": target.path } });
+        const title = item.createDiv({ cls: "tree-item-self search-result-file-title is-clickable", attr: { "aria-label": target.path } });
+        collapseIcon(title);
+        title.createDiv({ cls: "tree-item-inner", text: fileLabel(target) });
+        title.createDiv({ cls: "tree-item-flair-outer" }).createSpan({ cls: "tree-item-flair search-result-count", text: String(ms.length) });
+        const matches = item.createDiv({ cls: "search-result-file-matches" });
+        if (item.hasClass("is-collapsed")) matches.hide();
+        title.addEventListener("click", (e) => {
+          if ((e.target as HTMLElement).closest(".collapse-icon")) {
+            const c = !item.hasClass("is-collapsed");
+            item.toggleClass("is-collapsed", c);
+            if (c) { matches.hide(); this.collapsed.add(target.path); } else { matches.show(); this.collapsed.delete(target.path); }
+          } else void openFile(this.app, target, e);
+        });
+        for (const m of ms) {
+          const el = matches.createDiv({ cls: "tree-item-self search-result-file-match tappable", attr: { "data-line": String(m.line) } });
+          const raw = lines[m.line] ?? "";
+          const { text: t } = clip(raw, m.start);
+          highlightText(el.createDiv({ cls: "search-result-file-match-text" }), t, [raw.slice(m.start, m.end)]);
+          el.addEventListener("click", (e) => { void openFile(this.app, file, e, { line: m.line }); });
+          linkButton(el, () => linkMention(this.app, file, m, target, raw.slice(m.start, m.end)));
+        }
+      }
+    };
+    if (!this.unlinkedCollapsed) void load();
   }
 }
 
