@@ -187,7 +187,12 @@ export const editorEditorField = StateField.define<EditorView | null>({
   update: (v, tr) => { for (const e of tr.effects) if (e.is(setEditorView)) return e.value; return v; },
 }) as unknown as StateField<EditorView>;
 export const editorViewField = editorInfoField;
-export const editorLivePreviewField = StateField.define<boolean>({ create: () => true, update: (v) => v });
+/** Dispatched by the markdown view when it switches between Live Preview (true) and Source mode (false). */
+export const setLivePreview = StateEffect.define<boolean>();
+export const editorLivePreviewField = StateField.define<boolean>({
+  create: () => true,
+  update: (v, tr) => { for (const e of tr.effects) if (e.is(setLivePreview)) return e.value; return v; },
+});
 export const livePreviewState = ViewPlugin.define(() => ({ mousedown: false }));
 
 // ---------------------------------------------------------------- factory

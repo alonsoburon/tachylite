@@ -1,5 +1,7 @@
 export { createEditor, editorKeymap, codeHighlightStyle, continueMarkup } from "./editor";
-export type { EditorHost, EditorOptions, EditorHandle, EditorMode, LinkTarget } from "./types";
+export type { EditorHost, EditorOptions, EditorHandle, EditorMode, LinkTarget, CodeBlockRenderInfo } from "./types";
+export { tokenClassNodeProp, hypermdCompat, INLINE_CODE_TEXT } from "./tokens";
+export { CodeBlockWidget, splitFence } from "./codeblocks";
 export { obsidianMarkdown, obsidianSyntax } from "./parser";
 export {
   toggleWrap, toggleBold, toggleItalic, toggleStrikethrough, toggleHighlight, toggleInlineCode,

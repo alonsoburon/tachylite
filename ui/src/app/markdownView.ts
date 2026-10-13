@@ -3,7 +3,7 @@
 import { Decoration, EditorView, WidgetType } from "@codemirror/view";
 import { StateField, type Extension } from "@codemirror/state";
 import { Menu, MarkdownView, Notice, type App, type WorkspaceLeaf } from "../obsidian";
-import { editorInfoField } from "../obsidian/editor";
+import { editorInfoField, setLivePreview } from "../obsidian/editor";
 import { setIcon } from "../obsidian/icons";
 import { editorHandles } from "./bridge";
 import { buildFileMenu, renameTo } from "./files";
@@ -62,6 +62,7 @@ export class TachyMarkdownView extends MarkdownView {
     super(leaf);
     this.editMode.sourceMode = this.app.vault.getConfig("livePreview") === false;
     this.sourceEl.toggleClass("is-live-preview", !this.editMode.sourceMode);
+    this.cm.dispatch({ effects: setLivePreview.of(!this.editMode.sourceMode) });
     const left = this.headerEl.querySelector<HTMLElement>(".view-header-left")!;
     const nav = left.createDiv({ cls: "view-header-nav-buttons" });
     this.backEl = nav.createDiv({ cls: "clickable-icon", attr: { "aria-label": "Navigate back" } });
@@ -84,6 +85,7 @@ export class TachyMarkdownView extends MarkdownView {
   setSourceMode(source: boolean): void {
     this.editMode.sourceMode = source;
     editorHandles.get(this.cm)?.setMode(source ? "source" : "live-preview");
+    this.cm.dispatch({ effects: setLivePreview.of(!source) });
     this.sourceEl.toggleClass("is-live-preview", !source);
     this.updateModeAction();
     this.app.workspace.trigger("layout-change");

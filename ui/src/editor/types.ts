@@ -32,7 +32,12 @@ export interface EditorHost {
   /** Languages of fenced blocks that plugins render themselves (code-block processors). */
   codeBlockLanguages?(): string[];
   /** Render a whole fenced block (```lang ... ```) through the plugins' processors; the handle is unloaded with the widget. */
-  renderCodeBlock?(el: HTMLElement, markdown: string, sourcePath: string): { unload(): void } | void | Promise<{ unload(): void } | void>;
+  renderCodeBlock?(el: HTMLElement, markdown: string, sourcePath: string, info?: CodeBlockRenderInfo): { unload(): void } | void | Promise<{ unload(): void } | void>;
+}
+
+/** Live data about a Live Preview code-block widget (backs `MarkdownPostProcessorContext.getSectionInfo`). */
+export interface CodeBlockRenderInfo {
+  getSectionInfo(): { text: string; lineStart: number; lineEnd: number } | null;
 }
 
 export interface EditorOptions {
