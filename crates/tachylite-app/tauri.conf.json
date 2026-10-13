@@ -6,7 +6,7 @@
   "build": { "frontendDist": "../../ui/dist" },
   "app": {
     "withGlobalTauri": true,
-    "windows": [{ "title": "Tachylite", "width": 1280, "height": 800, "minWidth": 640, "minHeight": 400 }],
+    "windows": [{ "label": "main", "create": false, "title": "Tachylite", "width": 1280, "height": 800, "minWidth": 640, "minHeight": 400 }],
     "security": { "csp": null, "assetProtocol": { "enable": true, "scope": [] } }
   },
   "bundle": { "active": true, "targets": "all", "icon": ["icons/icon.png"] }

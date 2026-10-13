@@ -12,6 +12,8 @@ export interface FakeVault {
   root: string; /** where "system" trash moves files; set `systemTrashFails` to simulate an unavailable OS trash */ systemTrash: string; systemTrashFails: boolean;
   calls: { cmd: string; args: any }[]; emit(ev: { kind: string; path: string }): void; emitEvent(name: string, payload: unknown): void;
   cleanup(): void; write(rel: string, data: string): void; backend: (cmd: string, args?: any) => Promise<unknown>; bridge: FakeBridge;
+  /** popout_close / popout_focus calls, and the geometry popout_geometry answers per label */
+  popouts: { closed: string[]; focused: string[]; geometry: Record<string, unknown> };
 }
 
 const BRIDGE_DISABLED = "ERR_BRIDGE_DISABLED: plugins are not allowed to run programs or access files outside the vault";
@@ -185,6 +187,7 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
     return { resolved, unresolved };
   };
   const bytes = (a: number[] | Uint8Array) => Buffer.from(a as any);
+  const popouts: FakeVault["popouts"] = { closed: [], focused: [], geometry: {} };
   const backend = async (cmd: string, a: any = {}): Promise<unknown> => {
     calls.push({ cmd, args: a });
     switch (cmd) {
@@ -302,6 +305,10 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
       }
       case "bridge_unwatch": watchers.get(a.id)?.close(); watchers.delete(a.id); return null;
       case "bridge_open_path": gate(); bridge.opened.push({ path: a.path, reveal: !!a.reveal }); return null;
+      // popout windows: the window itself comes from the test's popout opener (test/helpers/popout.ts)
+      case "popout_close": popouts.closed.push(a.label); return null;
+      case "popout_focus": popouts.focused.push(a.label); return null;
+      case "popout_geometry": return popouts.geometry[a.label] ?? null;
       default: throw new Error(`fake backend: unhandled command ${cmd}`);
     }
   };
@@ -317,7 +324,7 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
   });
   const systemTrash = fs.mkdtempSync(path.join(os.tmpdir(), "tachy-trash-"));
   const fake: FakeVault = {
-    root, calls, backend, write, bridge, emitEvent, systemTrash, systemTrashFails: false,
+    root, calls, backend, write, bridge, emitEvent, systemTrash, systemTrashFails: false, popouts,
     emit: (ev) => emitEvent("vault-event", ev),
     cleanup: () => { bridge.procs.forEach((p) => p.kill("SIGKILL")); watchers.forEach((w) => w.close()); fs.rmSync(root, { recursive: true, force: true }); fs.rmSync(systemTrash, { recursive: true, force: true }); },
   };

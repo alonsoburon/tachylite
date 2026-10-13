@@ -5,6 +5,7 @@ import { Events } from "./events";
 import { TFile } from "./files";
 import { debounce, getLinkpath, parseLinktext, type Debouncer } from "./util";
 import { setIcon } from "./icons";
+import { notifyWindowMigrated, setActiveWindow } from "./dom";
 import { Menu } from "./ui";
 import { DeferredView, EmptyView, FileView, MarkdownView, View, type ViewCreator } from "./views";
 import type { App } from "./app";
@@ -27,9 +28,16 @@ export interface LayoutHost {
   onSidedockToggle?(side: "left" | "right", collapsed: boolean): void;
   /** Persist the layout (debounced). */
   saveLayout?(layout: Record<string, unknown>): void | Promise<void>;
-  /** Open a popout window; return it, or nothing to let the model create a detached one. */
-  openPopout?(win: WorkspaceWindow): Window | void;
+  /** Open the OS window of a popout and mount `win.containerEl` in it; return its Window, or nothing to keep it detached. */
+  openPopout?(win: WorkspaceWindow, data?: WorkspaceWindowInitData): Window | void;
+  /** The popout was closed by the model (its leaves are detached already): tear the OS window down. */
+  closePopout?(win: WorkspaceWindow): void;
+  /** Bring a popout (or the main window, `null`) to the front. */
+  focusWindow?(win: WorkspaceWindow | null): void;
 }
+
+/** Options for creating a popout window (obsidian.d.ts); `width`/`height` are also accepted, as workspace.json stores them. */
+export interface WorkspaceWindowInitData { x?: number; y?: number; size?: { width: number; height: number }; width?: number; height?: number; maximize?: boolean }
 
 export interface OpenViewState { state?: Record<string, unknown>; eState?: Record<string, unknown>; active?: boolean; group?: WorkspaceLeaf }
 export interface ViewState { type: string; state?: Record<string, unknown>; active?: boolean; pinned?: boolean; group?: WorkspaceLeaf }
@@ -45,9 +53,10 @@ export abstract class WorkspaceItem extends Events {
     super();
     this.containerEl = createDiv({ cls });
   }
+  /** The top of this item's tree: the root split, a sidedock or a popout window. */
   getRoot(): WorkspaceItem {
     let n: WorkspaceItem = this;
-    while (n.parent) n = n.parent;
+    while (n.parent && !(n instanceof WorkspaceContainer)) n = n.parent;
     return n;
   }
   /** The window container this item lives in (sidebars belong to the main window's root). */
@@ -67,7 +76,10 @@ export abstract class WorkspaceParent extends WorkspaceItem {
     this.children.splice(index, 0, child);
     const host = this.childHost();
     const before = host.children[index] ?? null;
+    const doc = child.containerEl.ownerDocument;
     host.insertBefore(child.containerEl, before);
+    // Moved into another window (popout <-> main): editors re-root, `onWindowMigrated` listeners fire.
+    if (child.containerEl.ownerDocument !== doc) notifyWindowMigrated(child.containerEl);
   }
   removeChild(child: WorkspaceItem): void {
     const i = this.children.indexOf(child);
@@ -165,11 +177,51 @@ export abstract class WorkspaceContainer extends WorkspaceSplit {
 export class WorkspaceRoot extends WorkspaceContainer {
   constructor(app: App) { super(app, "vertical", "mod-root"); }
 }
+/** A popout: an OS window showing its own split of tab groups. Lives in `workspace.floatingSplit`. */
 export class WorkspaceWindow extends WorkspaceContainer {
-  constructor(app: App) { super(app, "vertical", "mod-root"); }
+  declare parent: WorkspaceFloating | null;
+  id = rid();
+  /** Last known screen geometry (logical px), persisted as `x`/`y`/`width`/`height` in workspace.json. */
+  geometry: { x?: number; y?: number; width?: number; height?: number } = {};
+  maximize = false;
+  private closing = false;
+  constructor(app: App, data?: WorkspaceWindowInitData) {
+    super(app, "vertical", "mod-root workspace-window");
+    if (data) {
+      const width = data.size?.width ?? data.width, height = data.size?.height ?? data.height;
+      for (const [k, val] of [["x", data.x], ["y", data.y], ["width", width], ["height", height]] as const) if (typeof val === "number" && Number.isFinite(val)) this.geometry[k] = val;
+      this.maximize = !!data.maximize;
+    }
+  }
+  get isClosing(): boolean { return this.closing; }
+  /** The window lost its last tab group. */
+  protected onChildRemoved(): void {
+    super.onChildRemoved();
+    if (this.children.length === 0) this.close();
+  }
+  /** Close the popout: detach its leaves (pending saves run), drop it from the layout and close the OS window. */
+  close(): void {
+    if (this.closing) return;
+    this.closing = true;
+    const ws = this.app.workspace;
+    for (const l of this.leaves()) l.detach();
+    ws.onWindowClosed(this);
+  }
 }
+/** Holds the popout windows. It has no DOM of its own: each window's container lives in its own document. */
 export class WorkspaceFloating extends WorkspaceParent {
+  declare children: WorkspaceWindow[];
   constructor(app: App) { super(app, "workspace-split mod-floating"); }
+  insertChild(index: number, child: WorkspaceItem): void {
+    child.parent = this;
+    this.children.splice(index, 0, child as WorkspaceWindow);
+  }
+  removeChild(child: WorkspaceItem): void {
+    const i = this.children.indexOf(child as WorkspaceWindow);
+    if (i < 0) return;
+    this.children.splice(i, 1);
+    child.parent = null;
+  }
 }
 export class WorkspaceMobileDrawer extends WorkspaceParent {
   collapsed = true;
@@ -248,7 +300,9 @@ export class WorkspaceLeaf extends WorkspaceItem {
   private mountView(view: View): void {
     view.containerEl.setAttribute("data-type", view.getViewType());
     this.containerEl.empty();
+    const doc = view.containerEl.ownerDocument;
     this.containerEl.appendChild(view.containerEl);
+    if (view.containerEl.ownerDocument !== doc) notifyWindowMigrated(view.containerEl);
   }
   /** Await the last (async) setViewState; handy for tests and shells. */
   whenReady(): Promise<void> { return this.opening; }
@@ -375,7 +429,6 @@ export class Workspace extends Events {
   private recentFile: TFile | null = null;
   private lastOpenFiles: string[] = [];
   private lastFileOpened: TFile | null | undefined = undefined;
-  private windows: WorkspaceWindow[] = [];
 
   constructor(public app: App) {
     super();
@@ -464,11 +517,15 @@ export class Workspace extends Events {
     for (const l of this.allLeaves()) callback(l);
   }
   iterateRootLeaves(callback: (leaf: WorkspaceLeaf) => any): void {
-    for (const l of this.rootSplit.leaves()) callback(l);
-    for (const w of this.windows) for (const l of w.leaves()) callback(l);
+    for (const l of this.rootLeaves()) callback(l);
   }
+  /** Leaves of the main area and of every popout (not the sidebars). */
+  private rootLeaves(): WorkspaceLeaf[] { return [...this.rootSplit.leaves(), ...this.floatingSplit.leaves()]; }
+  private isRootLeaf(l: WorkspaceLeaf): boolean { const r = l.getRoot(); return r === this.rootSplit || r instanceof WorkspaceWindow; }
+  /** Open popout windows. */
+  get windows(): WorkspaceWindow[] { return this.floatingSplit.children.slice(); }
   allLeaves(): WorkspaceLeaf[] {
-    return [...this.rootSplit.leaves(), ...this.leftSplit.leaves(), ...this.rightSplit.leaves(), ...this.windows.flatMap((w) => w.leaves()), ...this.floatingSplit.leaves()];
+    return [...this.rootSplit.leaves(), ...this.leftSplit.leaves(), ...this.rightSplit.leaves(), ...this.floatingSplit.leaves()];
   }
   getLeavesOfType(viewType: string): WorkspaceLeaf[] {
     return this.allLeaves().filter((l) => l.view.getViewType() === viewType);
@@ -483,13 +540,14 @@ export class Workspace extends Events {
     return this.recent.find((l) => l.getRoot() === r.getRoot() && l.parent) ?? null;
   }
   getUnpinnedLeaf(): WorkspaceLeaf {
-    const l = this.rootSplit.leaves();
+    // The most recent main-area or popout leaf: links followed inside a popout stay in that window.
+    const l = this.rootLeaves();
     const recent = this.recent.find((x) => l.includes(x) && !x.pinned);
-    return recent ?? l.find((x) => !x.pinned) ?? this.createTab();
+    return recent ?? this.rootSplit.leaves().find((x) => !x.pinned) ?? this.createTab();
   }
   private createTab(near?: WorkspaceLeaf | null): WorkspaceLeaf {
     let tabs: WorkspaceTabs | undefined;
-    const ref = near && near.getRoot() === this.rootSplit ? near : this.getMostRecentLeaf();
+    const ref = near && this.isRootLeaf(near) ? near : this.getMostRecentLeaf();
     if (ref && ref.parent instanceof WorkspaceTabs) tabs = ref.parent;
     tabs ??= this.rootSplit.children.find((c): c is WorkspaceTabs => c instanceof WorkspaceTabs) ?? this.firstTabs(this.rootSplit);
     return this.createLeafInTabs(tabs);
@@ -540,13 +598,13 @@ export class Workspace extends Events {
     return this.createLeafInParent(wrap, before ? 0 : 1);
   }
   splitActiveLeaf(direction: SplitDirection = "vertical"): WorkspaceLeaf {
-    const base = this.activeLeaf && this.activeLeaf.getRoot() === this.rootSplit ? this.activeLeaf : this.getMostRecentLeaf() ?? this.rootSplit.leaves()[0];
+    const base = this.activeLeaf && this.isRootLeaf(this.activeLeaf) ? this.activeLeaf : this.getMostRecentLeaf() ?? this.rootSplit.leaves()[0];
     return this.createLeafBySplit(base, direction);
   }
   async duplicateLeaf(leaf: WorkspaceLeaf, a?: SplitDirection | PaneType | boolean, b?: SplitDirection): Promise<WorkspaceLeaf> {
     const type: PaneType | boolean = a === "vertical" || a === "horizontal" || a === undefined ? "tab" : a;
     const dir = a === "vertical" || a === "horizontal" ? a : b;
-    const nl = type === "split" ? this.createLeafBySplit(leaf, dir) : this.createTab(leaf);
+    const nl = type === "window" ? this.openPopoutLeaf() : type === "split" ? this.createLeafBySplit(leaf, dir) : this.createTab(leaf);
     await nl.setViewState(leaf.getViewState(), leaf.getEphemeralState());
     return nl;
   }
@@ -557,22 +615,74 @@ export class Workspace extends Events {
     const unpinned = this.getUnpinnedLeaf();
     return unpinned;
   }
-  openPopoutLeaf(_data?: unknown): WorkspaceLeaf {
-    const win = new WorkspaceWindow(this.app);
-    this.windows.push(win);
-    const w = this.host?.openPopout?.(win);
-    if (w) { win.win = w; win.doc = w.document; }
-    const tabs = new WorkspaceTabs(this.app);
-    win.insertChild(0, tabs);
-    const leaf = this.createLeafInTabs(tabs);
-    this.trigger("window-open", win, win.win);
+  /** Open a popout window with one new empty leaf and return that leaf. */
+  openPopoutLeaf(data?: WorkspaceWindowInitData): WorkspaceLeaf {
+    const win = this.openPopout(data);
+    const leaf = this.createLeafInTabs(this.firstTabs(win));
+    this.setActiveLeaf(leaf, { focus: true });
     return leaf;
   }
-  moveLeafToPopout(leaf: WorkspaceLeaf, data?: unknown): WorkspaceWindow {
-    const nl = this.openPopoutLeaf(data);
-    void nl.setViewState(leaf.getViewState(), leaf.getEphemeralState());
-    leaf.detach();
-    return nl.getContainer() as WorkspaceWindow;
+  /** Move a leaf (its live view, not a copy) into a new popout window. */
+  moveLeafToPopout(leaf: WorkspaceLeaf, data?: WorkspaceWindowInitData): WorkspaceWindow {
+    const win = this.openPopout(data);
+    const tabs = this.firstTabs(win);
+    this.moveLeaf(leaf, tabs, 0);
+    return win;
+  }
+  /** Create a popout window (the shell opens the OS window) with an empty tab group. */
+  openPopout(data?: WorkspaceWindowInitData, id?: string): WorkspaceWindow {
+    const win = new WorkspaceWindow(this.app, data);
+    if (id) win.id = id;
+    this.floatingSplit.insertChild(this.floatingSplit.children.length, win);
+    const w = this.host?.openPopout?.(win, data);
+    if (w) { win.win = w; win.doc = w.document; }
+    win.insertChild(0, new WorkspaceTabs(this.app));
+    this.trigger("window-open", win, win.win);
+    return win;
+  }
+  /** Called by WorkspaceWindow.close once its leaves are gone. */
+  onWindowClosed(win: WorkspaceWindow): void {
+    for (const c of win.children.slice()) win.removeChild(c);
+    this.floatingSplit.removeChild(win);
+    this.host?.closePopout?.(win);
+    this.trigger("window-close", win, win.win);
+    if (this.activeLeaf && this.activeLeaf.getContainer() === win) {
+      const next = this.getMostRecentLeaf() ?? this.rootSplit.leaves()[0] ?? null;
+      this.activeLeaf = null;
+      if (next) this.setActiveLeaf(next);
+    }
+    if ((globalThis as any).activeWindow === win.win && win.win !== window) setActiveWindow(window);
+    this.trigger("layout-change");
+    this.host?.onLayoutChange?.();
+    this.requestSaveLayout();
+  }
+  /** Move a leaf (keeping its view) to `index` of a tab group, possibly in another window. Keeps one leaf in the main area. */
+  moveLeaf(leaf: WorkspaceLeaf, target: WorkspaceTabs, index: number): void {
+    const from = leaf.parent;
+    if (!from) return;
+    if (from === target) {
+      const cur = from.children.indexOf(leaf);
+      if (index > cur) index--;
+      if (index === cur) return;
+    }
+    const wasActive = this.activeLeaf === leaf;
+    from.removeChild(leaf);
+    target.insertChild(Math.min(index, target.children.length), leaf);
+    target.selectTab(leaf);
+    if (this.rootSplit.leaves().length === 0) {
+      // The main area never ends up empty (like closing its last tab).
+      const tabs = this.firstTabs(this.rootSplit);
+      const nl = new WorkspaceLeaf(this.app);
+      tabs.insertChild(tabs.children.length, nl);
+      nl.updateHeader();
+      tabs.selectTab(nl);
+    }
+    if (wasActive) this.activeLeaf = null;
+    this.setActiveLeaf(leaf);
+    leaf.onResize();
+    this.trigger("layout-change");
+    this.host?.onLayoutChange?.();
+    this.requestSaveLayout();
   }
   private sideLeaf(dock: WorkspaceSidedock, split: boolean): WorkspaceLeaf {
     if (split || dock.children.length === 0) {
@@ -601,6 +711,8 @@ export class Workspace extends Events {
       const root = parent.getRoot();
       if (root === this.leftSplit || root === this.rightSplit) (root as WorkspaceSidedock).expand();
     }
+    const c = leaf.getContainer();
+    this.host?.focusWindow?.(c instanceof WorkspaceWindow ? c : null);
     this.host?.revealLeaf?.(leaf);
     this.setActiveLeaf(leaf);
   }
@@ -614,6 +726,8 @@ export class Workspace extends Events {
     leaf.tabHeaderEl.addClass("mod-active");
     this.recent = [leaf, ...this.recent.filter((l) => l !== leaf)];
     if (leaf.parent instanceof WorkspaceTabs) leaf.parent.selectTab(leaf);
+    const c = leaf.getContainer();
+    if (c.win && (globalThis as any).activeWindow !== c.win) setActiveWindow(c.win);
     this.activeEditor = leaf.view instanceof MarkdownView ? leaf.view : null;
     this.trackFile(leaf);
     this.trigger("active-leaf-change", leaf);
@@ -649,7 +763,7 @@ export class Workspace extends Events {
     }
     // Reuse a leaf that already shows the file when not asked for a new one.
     let leaf: WorkspaceLeaf | null = null;
-    if (!newLeaf) leaf = this.allLeaves().find((l) => l.getRoot() === this.rootSplit && l.view instanceof FileView && l.view.file === file) ?? null;
+    if (!newLeaf) leaf = this.rootLeaves().find((l) => l.view instanceof FileView && l.view.file === file) ?? null;
     leaf ??= this.getLeaf(newLeaf as any);
     const eState = { ...(openViewState?.eState ?? {}), ...(subpath ? { subpath } : {}) };
     await leaf.openFile(file, { ...openViewState, eState, active: openViewState?.active ?? true });
@@ -662,6 +776,7 @@ export class Workspace extends Events {
   handleLinkContextMenu(menu: Menu, linktext: string, sourcePath: string, _leaf?: WorkspaceLeaf): boolean {
     menu.addItem((i) => i.setTitle("Open in new tab").setIcon("lucide-file-plus").onClick(() => { void this.openLinkText(linktext, sourcePath, "tab"); }));
     menu.addItem((i) => i.setTitle("Open to the right").setIcon("lucide-separator-vertical").onClick(() => { void this.openLinkText(linktext, sourcePath, "split"); }));
+    menu.addItem((i) => i.setTitle("Open in new window").setIcon("lucide-picture-in-picture-2").onClick(() => { void this.openLinkText(linktext, sourcePath, "window"); }));
     return true;
   }
 
@@ -671,13 +786,20 @@ export class Workspace extends Events {
       const size = n.size !== null ? { size: Math.round(n.size * 100) / 100 } : {};
       if (n instanceof WorkspaceLeaf) return { id: n.id, type: "leaf", state: n.getViewState(), ...(n.group ? { group: n.group } : {}) };
       if (n instanceof WorkspaceTabs) return { id: rid(), type: "tabs", ...size, currentTab: n.currentTab, children: n.children.map(ser) };
+      if (n instanceof WorkspaceWindow) {
+        const g = n.geometry;
+        const geo = Object.fromEntries((["x", "y", "width", "height"] as const).filter((k) => typeof g[k] === "number").map((k) => [k, Math.round(g[k]!)]));
+        return { id: n.id, type: "window", children: n.children.map(ser), direction: n.direction, ...geo, maximize: n.maximize };
+      }
       const p = n as WorkspaceSplit;
       return { id: rid(), type: "split", ...size, children: p.children.map(ser), direction: p.direction };
     };
+    const wins = this.floatingSplit.children.filter((w) => !w.isClosing);
     return {
       main: ser(this.rootSplit),
       left: { ...ser(this.leftSplit), width: this.leftSplit.width, collapsed: this.leftSplit.collapsed },
       right: { ...ser(this.rightSplit), width: this.rightSplit.width, collapsed: this.rightSplit.collapsed },
+      ...(wins.length ? { floating: { id: rid(), type: "floating", children: wins.map(ser) } } : {}),
       active: this.activeLeaf?.id,
       lastOpenFiles: this.lastOpenFiles,
     };
@@ -706,16 +828,28 @@ export class Workspace extends Events {
         }
       }
     };
+    for (const w of this.floatingSplit.children.slice()) w.close();
     for (const l of this.allLeaves()) l.detach();
     for (const root of [this.rootSplit, this.leftSplit, this.rightSplit]) for (const c of root.children.slice()) root.removeChild(c);
     this.recent = [];
     if (layout.main) await build(layout.main, this.rootSplit);
+    for (const spec of layout.floating?.children ?? []) {
+      if (spec?.type !== "window") continue;
+      let win: WorkspaceWindow;
+      try { win = this.openPopout(spec, typeof spec.id === "string" ? spec.id : undefined); } catch (e) { console.error("Failed to restore popout window", e); continue; }
+      const placeholder = win.children[0];
+      await build(spec, win);
+      if (placeholder && win.children.length > 1) win.removeChild(placeholder);
+      if (spec.direction === "horizontal" || spec.direction === "vertical") win.direction = spec.direction;
+      if (!win.leaves().length) win.close();
+    }
     if (typeof layout.left?.width === "number") this.leftSplit.width = layout.left.width;
     if (typeof layout.right?.width === "number") this.rightSplit.width = layout.right.width;
     if (layout.left) { await build(layout.left, this.leftSplit); layout.left.collapsed ? this.leftSplit.collapse() : this.leftSplit.expand(); }
     if (layout.right) { await build(layout.right, this.rightSplit); layout.right.collapsed ? this.rightSplit.collapse() : this.rightSplit.expand(); }
     if (!this.rootSplit.leaves().length) this.createTab();
     const act = (layout.active && this.getLeafById(layout.active)) || this.rootSplit.leaves()[0];
+    setActiveWindow(window);
     this.activeLeaf = null;
     if (act) this.setActiveLeaf(act);
     if (Array.isArray(layout.lastOpenFiles)) this.lastOpenFiles = layout.lastOpenFiles;

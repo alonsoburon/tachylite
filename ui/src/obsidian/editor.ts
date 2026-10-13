@@ -3,6 +3,19 @@ import { Compartment, EditorSelection as CMSelection, EditorState, Extension, St
 import { EditorView, ViewPlugin, keymap } from "@codemirror/view";
 import { cursorCharLeft, cursorCharRight, cursorDocEnd, cursorDocStart, cursorGroupLeft, cursorGroupRight, cursorLineDown, cursorLineUp, defaultKeymap, deleteLine, history, historyKeymap, indentLess, indentMore, insertNewlineAndIndent, moveLineDown, moveLineUp, redo, undo } from "@codemirror/commands";
 import { foldAll, toggleFold, unfoldAll } from "@codemirror/language";
+import { addWindowMigrationHook } from "./dom";
+
+// A CodeMirror editor moved to another window (popout) must re-root: its styles mount per document and its
+// selection/resize listeners belong to the owning window.
+addWindowMigrationHook((root) => {
+  const els = [...(root.matches(".cm-editor") ? [root] : []), ...root.querySelectorAll(".cm-editor")];
+  for (const el of els) {
+    const v = EditorView.findFromDOM(el as HTMLElement);
+    if (!v) continue;
+    const r = v.root as Document | ShadowRoot;
+    if ((r.nodeType === 9 ? r : r.ownerDocument) !== el.ownerDocument) v.setRoot(el.ownerDocument);
+  }
+});
 
 export interface EditorPosition { line: number; ch: number }
 export interface EditorRange { from: EditorPosition; to: EditorPosition }

@@ -1,5 +1,5 @@
 // Core commands (ids follow Obsidian's public command ids) and their default hotkeys.
-import { FileView, MarkdownView, Notice, WorkspaceTabs, type App, type Command, type Hotkey, type WorkspaceLeaf } from "../obsidian";
+import { FileView, MarkdownView, Notice, WorkspaceTabs, WorkspaceWindow, type App, type Command, type Hotkey, type WorkspaceLeaf } from "../obsidian";
 import {
   indentListLess, indentListMore, insertLink, toggleBold, toggleChecklist, toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough,
 } from "../editor";
@@ -26,6 +26,8 @@ export function installCommands(app: App, history: History): () => void {
     const l = ws.activeLeaf;
     return l && l.parent instanceof WorkspaceTabs ? { tabs: l.parent, leaf: l } : null;
   };
+  /** The active leaf when it is a tab of the main area or of a popout (not a sidebar). */
+  const rootLeaf = (): WorkspaceLeaf | null => { const l = ws.activeLeaf; const r = l?.getRoot(); return l && (r === ws.rootSplit || r instanceof WorkspaceWindow) ? l : null; };
   const cmdIds: string[] = [];
   const add = (c: Command) => { app.commands.addCommand(c); cmdIds.push(c.id); };
   const cm = (e: { cm?: EditorView }) => e.cm as EditorView;
@@ -50,11 +52,16 @@ export function installCommands(app: App, history: History): () => void {
 
   // ---- workspace / tabs
   add({ id: "workspace:new-tab", name: "New tab", hotkeys: mod("t"), callback: () => { const l = ws.getLeaf("tab"); ws.setActiveLeaf(l, { focus: true }); } });
-  add({ id: "workspace:close", name: "Close current tab", hotkeys: mod("w"), checkCallback: (c) => { const l = ws.activeLeaf; if (!l || l.getRoot() !== ws.rootSplit) return false; if (!c) l.detach(); return true; } });
+  add({ id: "workspace:close", name: "Close current tab", hotkeys: mod("w"), checkCallback: (c) => { const l = rootLeaf(); if (!l) return false; if (!c) l.detach(); return true; } });
   add({ id: "workspace:next-tab", name: "Go to next tab", hotkeys: [{ modifiers: ["Ctrl"], key: "Tab" }], checkCallback: (c) => { const t = mainTabs(); if (!t || t.tabs.children.length < 2) return false; if (!c) ws.setActiveLeaf(t.tabs.children[(t.tabs.children.indexOf(t.leaf) + 1) % t.tabs.children.length] as WorkspaceLeaf, { focus: true }); return true; } });
   add({ id: "workspace:previous-tab", name: "Go to previous tab", hotkeys: [{ modifiers: ["Ctrl", "Shift"], key: "Tab" }], checkCallback: (c) => { const t = mainTabs(); if (!t || t.tabs.children.length < 2) return false; if (!c) { const n = t.tabs.children.length; ws.setActiveLeaf(t.tabs.children[(t.tabs.children.indexOf(t.leaf) + n - 1) % n] as WorkspaceLeaf, { focus: true }); } return true; } });
-  add({ id: "workspace:split-vertical", name: "Split right", checkCallback: (c) => { const l = ws.activeLeaf; if (!l || l.getRoot() !== ws.rootSplit) return false; if (!c) void ws.duplicateLeaf(l, "split", "vertical"); return true; } });
-  add({ id: "workspace:split-horizontal", name: "Split down", checkCallback: (c) => { const l = ws.activeLeaf; if (!l || l.getRoot() !== ws.rootSplit) return false; if (!c) void ws.duplicateLeaf(l, "split", "horizontal"); return true; } });
+  add({ id: "workspace:split-vertical", name: "Split right", checkCallback: (c) => { const l = rootLeaf(); if (!l) return false; if (!c) void ws.duplicateLeaf(l, "split", "vertical"); return true; } });
+  add({ id: "workspace:split-horizontal", name: "Split down", checkCallback: (c) => { const l = rootLeaf(); if (!l) return false; if (!c) void ws.duplicateLeaf(l, "split", "horizontal"); return true; } });
+  // ---- popout windows (ids and names as in Obsidian)
+  add({ id: "workspace:new-window", name: "New window", callback: () => { ws.openPopoutLeaf(); } });
+  add({ id: "workspace:open-in-new-window", name: "Open current tab in new window", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) void ws.duplicateLeaf(l, "window"); return true; } });
+  add({ id: "workspace:move-to-new-window", name: "Move current tab to new window", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) ws.moveLeafToPopout(l); return true; } });
+  add({ id: "workspace:close-window", name: "Close window", checkCallback: (c) => { const w = ws.activeLeaf?.getContainer(); if (!(w instanceof WorkspaceWindow)) return false; if (!c) w.close(); return true; } });
   add({ id: "workspace:toggle-pin", name: "Pin/unpin tab", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) l.togglePinned(); return true; } });
   add({ id: "workspace:close-others", name: "Close other tabs", checkCallback: (c) => { const t = mainTabs(); if (!t) return false; if (!c) for (const l of [...t.tabs.children] as WorkspaceLeaf[]) if (l !== t.leaf && !l.pinned) l.detach(); return true; } });
 

@@ -1,12 +1,14 @@
 // Notice, Modal, Menu, tooltips and the suggestion family (PopoverSuggest, SuggestModal, ...).
 import { Component, Scope, type Modifier } from "./events";
 import { setIcon } from "./icons";
+import { activeDoc } from "./dom";
 import { prepareFuzzySearch, renderResults, sortSearchResults, type SearchResult } from "./util";
 import type { App } from "./app";
 
 // ---------------------------------------------------------------- Notice
 
 export class Notice {
+  /** The notice container of the main window (each popout gets its own, found by class). */
   static containerEl: HTMLElement | null = null;
   noticeEl: HTMLElement;
   messageEl: HTMLElement;
@@ -14,10 +16,13 @@ export class Notice {
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(message: string | DocumentFragment, duration?: number) {
-    let c = Notice.containerEl;
+    // Notices show in the focused window.
+    const doc = activeDoc();
+    let c = doc === document ? Notice.containerEl : doc.body.querySelector<HTMLElement>(":scope > .notice-container");
     if (!c || !c.isConnected) {
-      c = document.body.createDiv({ cls: "notice-container" });
-      Notice.containerEl = c;
+      c = createDiv({ cls: "notice-container" });
+      doc.body.appendChild(c);
+      if (doc === document) Notice.containerEl = c;
     }
     this.containerEl = c;
     this.noticeEl = c.createDiv({ cls: "notice" });
@@ -51,7 +56,8 @@ export function setTooltip(el: HTMLElement, tooltip: string, options?: TooltipOp
   if (options?.classes?.length) el.setAttribute("aria-label-classes", options.classes.join(" "));
 }
 export function displayTooltip(target: HTMLElement, content: string | DocumentFragment, options?: TooltipOptions): void {
-  const tip = document.body.createDiv({ cls: ["tooltip", ...(options?.classes ?? [])] });
+  const tip = createDiv({ cls: ["tooltip", ...(options?.classes ?? [])] });
+  target.ownerDocument.body.appendChild(tip);
   tip.createDiv({ cls: "tooltip-arrow" });
   const body = tip.createDiv();
   if (typeof content === "string") body.textContent = content; else body.appendChild(content);
@@ -94,8 +100,10 @@ export class Modal {
   open(): void {
     if (this.isOpen) return;
     this.isOpen = true;
-    this.previousFocus = document.activeElement;
-    document.body.appendChild(this.containerEl);
+    // Modals open in the focused window (a command run from a popout shows its modal there).
+    const doc = activeDoc();
+    this.previousFocus = doc.activeElement;
+    doc.body.appendChild(this.containerEl);
     this.app.keymap.pushScope(this.scope);
     const r = this.onOpen();
     if (r && typeof (r as Promise<void>).catch === "function") (r as Promise<void>).catch((e) => console.error(e));
@@ -250,7 +258,7 @@ export class Menu extends Component {
   showAtMouseEvent(evt: MouseEvent): this {
     return this.showAtPosition({ x: evt.clientX ?? evt.pageX, y: evt.clientY ?? evt.pageY }, (evt.target as Node | null)?.ownerDocument ?? document);
   }
-  showAtPosition(pos: { x: number; y: number; width?: number; overlap?: boolean; left?: boolean }, doc: Document = document): this {
+  showAtPosition(pos: { x: number; y: number; width?: number; overlap?: boolean; left?: boolean }, doc: Document = this.parentMenu?.dom.ownerDocument ?? activeDoc()): this {
     if (this.shown) this.hide();
     this.render();
     this.shown = true;
@@ -362,7 +370,7 @@ export abstract class PopoverSuggest<T> implements ISuggestOwner<T> {
   open(): void {
     if (this.isOpen) return;
     this.isOpen = true;
-    document.body.appendChild(this.suggestEl);
+    activeDoc().body.appendChild(this.suggestEl);
     this.app.keymap.pushScope(this.scope);
   }
   close(): void {
@@ -404,11 +412,11 @@ export abstract class AbstractInputSuggest<T> extends PopoverSuggest<T> {
   }
   setValue(value: string): void {
     const el = this.textInputEl as HTMLElement;
-    if (el instanceof HTMLInputElement) el.value = value; else el.setText(value);
+    if (el.tagName === "INPUT") (el as HTMLInputElement).value = value; else el.setText(value);
   }
   getValue(): string {
     const el = this.textInputEl as HTMLElement;
-    return el instanceof HTMLInputElement ? el.value : el.getText();
+    return el.tagName === "INPUT" ? (el as HTMLInputElement).value : el.getText();
   }
   protected abstract getSuggestions(query: string): T[] | Promise<T[]>;
   selectSuggestion(value: T, evt: MouseEvent | KeyboardEvent): void {
