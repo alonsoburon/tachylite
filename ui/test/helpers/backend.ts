@@ -11,6 +11,8 @@ export interface FakeBridge { consent: boolean; active: boolean; opened: { path:
 export interface FakeVault {
   root: string; /** where "system" trash moves files; set `systemTrashFails` to simulate an unavailable OS trash */ systemTrash: string; systemTrashFails: boolean;
   calls: { cmd: string; args: any }[]; emit(ev: { kind: string; path: string }): void; emitEvent(name: string, payload: unknown): void;
+  /** Recent vault paths (`vaults_recent`), URLs passed to `open_url`; `openUrl` delivers a deep link like the shell does. */
+  recents: string[]; opened: string[]; openUrl(url: string): void;
   cleanup(): void; write(rel: string, data: string): void; backend: (cmd: string, args?: any) => Promise<unknown>; bridge: FakeBridge;
 }
 
@@ -144,6 +146,7 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
   }
   if (opts.enabled) write(".obsidian/community-plugins.json", JSON.stringify(opts.enabled));
   const calls: { cmd: string; args: any }[] = [];
+  const recents: string[] = [root], deepLinks: string[] = [], opened: string[] = [];
   const listeners = new Map<string, Set<(p: unknown) => void>>();
   const emitEvent = (name: string, payload: unknown) => listeners.get(name)?.forEach((l) => l(payload));
   const bridge: FakeBridge = { consent: !!opts.bridgeConsent, active: false, opened: [], procs: new Map() };
@@ -302,6 +305,9 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
       }
       case "bridge_unwatch": watchers.get(a.id)?.close(); watchers.delete(a.id); return null;
       case "bridge_open_path": gate(); bridge.opened.push({ path: a.path, reveal: !!a.reveal }); return null;
+      case "vaults_recent": return [...recents];
+      case "deep_link_take": return deepLinks.splice(0);
+      case "open_url": opened.push(a.url); return null;
       default: throw new Error(`fake backend: unhandled command ${cmd}`);
     }
   };
@@ -317,7 +323,8 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
   });
   const systemTrash = fs.mkdtempSync(path.join(os.tmpdir(), "tachy-trash-"));
   const fake: FakeVault = {
-    root, calls, backend, write, bridge, emitEvent, systemTrash, systemTrashFails: false,
+    root, calls, backend, write, bridge, emitEvent, systemTrash, systemTrashFails: false, recents, opened,
+    openUrl: (url) => { deepLinks.push(url); emitEvent("open-url", [url]); },
     emit: (ev) => emitEvent("vault-event", ev),
     cleanup: () => { bridge.procs.forEach((p) => p.kill("SIGKILL")); watchers.forEach((w) => w.close()); fs.rmSync(root, { recursive: true, force: true }); fs.rmSync(systemTrash, { recursive: true, force: true }); },
   };

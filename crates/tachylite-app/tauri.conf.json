@@ -9,5 +9,8 @@
     "windows": [{ "title": "Tachylite", "width": 1280, "height": 800, "minWidth": 640, "minHeight": 400 }],
     "security": { "csp": null, "assetProtocol": { "enable": true, "scope": [] } }
   },
+  "plugins": {
+    "deep-link": { "desktop": { "schemes": ["tachylite"] } }
+  },
   "bundle": { "active": true, "targets": "all", "icon": ["icons/icon.png"] }
 }
