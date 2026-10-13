@@ -145,6 +145,7 @@ class TextWidget extends PropertyWidgetComponent {
     this.value = value === null || value === undefined ? "" : typeof value === "string" ? value : JSON.stringify(value);
     this.show(false);
     const suggest = new ValueSuggest(ctx.app, this.inputEl, ctx, "text", () => [], (v) => { this.inputEl.setText(v); this.commit(); ctx.blur(); });
+    this.register(() => suggest.close());
     this.inputEl.addEventListener("focus", () => { this.show(true); caretToEnd(this.inputEl); });
     this.inputEl.addEventListener("blur", () => { suggest.close(); this.commit(); this.show(false); });
     this.inputEl.addEventListener("keydown", (e) => {
@@ -181,6 +182,7 @@ export class MultiSelectWidget extends PropertyWidgetComponent {
     this.inputEl = lineEditor(this.containerEl, "multi-select-input", "");
     this.renderPills();
     const suggest = new ValueSuggest(ctx.app, this.inputEl, ctx, type, () => this.values, (v) => { this.add(v); this.inputEl.setText(""); });
+    this.register(() => suggest.close());
     this.containerEl.addEventListener("mousedown", (e) => { if (e.target === this.containerEl) { e.preventDefault(); this.inputEl.focus(); } });
     this.inputEl.addEventListener("keydown", (e) => {
       if (suggest.isOpen && (e.key === "Enter" || e.key === "ArrowDown" || e.key === "ArrowUp")) return;

@@ -72,7 +72,7 @@ export class MetadataEditor extends Component {
 
   render(fm: Record<string, unknown> | null): void {
     this.frontmatter = fm ?? {};
-    for (const w of this.widgets) w.widget.unload();
+    for (const w of this.widgets) w.widget.unload?.();
     this.widgets = [];
     this.propertiesEl.empty();
     for (const [key, value] of Object.entries(this.frontmatter)) this.renderRow(key, value);
@@ -105,6 +105,7 @@ export class MetadataEditor extends Component {
         void this.write((fm) => { fm[name] = null; });
       };
       const suggest = new KeySuggest(this.app, keyInput, () => Object.keys(this.frontmatter), (n) => commit(n));
+      this.register(() => suggest.close());
       keyInput.addEventListener("keydown", (e) => {
         if (suggest.isOpen && (e.key === "Enter" || e.key === "ArrowDown" || e.key === "ArrowUp")) return;
         if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); commit(keyInput.value); }
@@ -124,10 +125,12 @@ export class MetadataEditor extends Component {
       const warn = keyEl.createSpan({ cls: "metadata-property-warning-icon", attr: { "aria-label": `Type mismatch, expected ${info.expected.name()}` } });
       setIcon(warn, "lucide-alert-triangle");
     }
+    if (!widget._loaded) widget.load?.();
     this.widgets.push({ key, row, keyInput, widget });
 
     // Rename within this note.
     const suggest = new KeySuggest(this.app, keyInput, () => Object.keys(this.frontmatter), (n) => rename(n));
+    widget.register(() => suggest.close());
     const rename = (to: string) => {
       to = to.trim();
       if (!to || to === key) { keyInput.value = key; return; }
@@ -253,7 +256,7 @@ export class MetadataEditor extends Component {
     if (f.part === "key") w.keyInput.focus(); else w.widget.focus();
     return true;
   }
-  onunload(): void { for (const w of this.widgets) w.widget.unload(); this.widgets = []; }
+  onunload(): void { for (const w of this.widgets) w.widget.unload?.(); this.widgets = []; }
 }
 
 /** Live tables register here so a focus request can find the rebuilt table (Live Preview rebuilds on every edit). */
