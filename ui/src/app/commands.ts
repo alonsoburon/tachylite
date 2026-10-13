@@ -9,7 +9,10 @@ import { copyText, deleteWithPrompt, newNote, promptRename, revealInExplorer } f
 import type { History } from "./history";
 import { coreEnabled, whileCoreEnabled } from "./core/util";
 import { TachyMarkdownView } from "./markdownView";
+import { ipc } from "../ipc";
+import { uriForFile } from "./uri";
 
+const HELP_URL = "https://github.com/alonsoburon/tachylite#readme";
 const mod = (key: string, ...more: Hotkey["modifiers"]): Hotkey[] => [{ modifiers: ["Mod", ...more], key }];
 
 export function openVaultSwitcher(): void {
@@ -39,6 +42,8 @@ export function installCommands(app: App, history: History): () => void {
   add({ id: "app:toggle-right-sidebar", name: "Toggle right sidebar", callback: () => ws.rightSplit.toggle() });
   add({ id: "app:open-vault-switcher", name: "Open another vault", callback: openVaultSwitcher });
   add({ id: "app:reload", name: "Reload app without saving", callback: () => location.reload() });
+  add({ id: "app:open-help", name: "Open help", callback: () => { void ipc.openUrl(HELP_URL).catch((e) => new Notice(String(e.message ?? e))); } });
+  add({ id: "workspace:copy-url", name: "Copy Tachylite URL", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) { copyText(uriForFile(app, f)); new Notice("URL copied to clipboard"); } return true; } });
 
   // ---- files
   add({ id: "file-explorer:new-file", name: "Create new note", hotkeys: mod("n"), callback: () => { void newNote(app, { open: ws.activeLeaf?.view.getViewType() === "empty" && ws.activeLeaf.getRoot() === ws.rootSplit ? true : "tab" }); } });

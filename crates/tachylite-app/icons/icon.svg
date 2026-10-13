@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="1024" height="1024">
+  <defs>
+    <linearGradient id="face" x1="59" y1="0" x2="197" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#837fb6"/><stop offset="1" stop-color="#9e91ed"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="0" y1="128" x2="0" y2="227" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7878a0"/><stop offset="1" stop-color="#8681bc"/>
+    </linearGradient>
+  </defs>
+  <circle cx="128" cy="128" r="119.5" fill="#181a26"/>
+  <path d="M128 29 L197 128 L128 227 L59 128 Z" fill="url(#face)"/>
+  <path d="M128 128 L197 128 L128 227 Z" fill="url(#fold)"/>
+</svg>

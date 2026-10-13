@@ -1,6 +1,6 @@
 // Vault, TFile tree and the DataAdapter, backed by the Rust core through ipc.
 import { ipc, type VaultFileInfo, type VaultInfo, type Listing } from "../ipc";
-import { Events } from "./events";
+import { Events, Platform } from "./events";
 import { TAbstractFile, TFile, TFolder } from "./files";
 import { normalizePath } from "./util";
 import type { App } from "./app";
@@ -11,6 +11,22 @@ export interface ListedFiles { files: string[]; folders: string[] }
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
+
+const isWinPath = (p: string) => /^[A-Za-z]:([\\/]|$)|^\\\\/.test(p);
+/** `base` + vault path, using `\\` throughout when `base` is a Windows path. */
+export function joinNative(base: string, rel: string): string {
+  const win = isWinPath(base);
+  const b = base.replace(win ? /[\\/]+$/ : /\/+$/, "");
+  if (rel === "/" || rel === "") return win && /^[A-Za-z]:$/.test(b) ? b + "\\" : b || "/";
+  return win ? `${b}\\${rel.replace(/\//g, "\\")}` : `${b}/${rel}`;
+}
+/** Absolute path -> `file://` URL (drive letters as `file:///C:/...`, UNC shares as `file://server/share/...`). */
+export function fileUrl(abs: string): string {
+  const enc = (s: string) => s.split("/").map((seg) => encodeURIComponent(seg).replace(/%3A/gi, ":")).join("/");
+  if (/^\\\\/.test(abs)) return "file:" + enc(abs.replace(/\\/g, "/"));
+  const p = isWinPath(abs) ? abs.replace(/\\/g, "/") : abs;
+  return "file://" + (p.startsWith("/") ? "" : "/") + enc(p);
+}
 
 function parentOf(path: string): string {
   const i = path.lastIndexOf("/");
@@ -33,14 +49,17 @@ export class FileSystemAdapter {
   constructor(private vault: Vault) {}
   getName(): string { return this.vault.getName(); }
   getBasePath(): string { return this.vault.basePath; }
-  getFullPath(p: string): string { return this.vault.basePath.replace(/\/$/, "") + "/" + normalizePath(p); }
-  getFilePath(p: string): string { return this.getFullPath(p); }
+  /** Absolute path with the OS separator (`\\` under a Windows base path such as `C:\\Vault`). */
+  getFullPath(p: string): string { return joinNative(this.vault.basePath, normalizePath(p)); }
+  /** `file://` URL of a vault path, like Node's `pathToFileURL`. */
+  getFilePath(p: string): string { return fileUrl(this.getFullPath(p)); }
+  /** URL the webview loads the file from (Tauri asset protocol), with the mtime as cache buster. */
   getResourcePath(p: string): string {
     p = normalizePath(p);
     const w = globalThis as any;
     const full = this.getFullPath(p);
     const conv = w.__TAURI__?.core?.convertFileSrc ?? w.__TAURI_INTERNALS__?.convertFileSrc;
-    const base = conv ? conv(full) : "app://local/" + encodeURI(p);
+    const base = conv ? conv(full) : Platform.resourcePathPrefix + encodeURIComponent(full);
     const f = this.vault.getFileByPath(p);
     return base + "?" + (f ? f.stat.mtime : Date.now());
   }

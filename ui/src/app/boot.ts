@@ -2,6 +2,7 @@
 import { ipc } from "../ipc";
 import { showPicker } from "./picker";
 import { startSession, type Session } from "./session";
+import { carryUris, vaultForUri } from "./uri";
 
 let session: Session | null = null;
 export function getSession(): Session | null { return session; }
@@ -20,7 +21,14 @@ export async function boot(host: HTMLElement): Promise<void> {
   sessionStorage.removeItem("tachylite-show-picker");
   const next = sessionStorage.getItem("tachylite-open");
   sessionStorage.removeItem("tachylite-open");
-  const target = showPick ? null : next ?? launch.vault;
+  // Launch URIs (`tachylite://open?vault=...`) wait for the session; one naming a known vault picks it.
+  const uris = await ipc.deepLinkTake().catch(() => [] as string[]);
+  if (uris.length) carryUris(uris);
+  let target = showPick ? null : next ?? launch.vault;
+  if (!target && !showPick && uris.length) {
+    const recents = await ipc.vaultsRecent().catch(() => [] as string[]);
+    target = uris.map((u) => vaultForUri(u, recents)).find((p) => p) ?? null;
+  }
   const handlers = {
     onOpen: async (p: string, create: boolean) => {
       // A clean reload is the simplest way to swap vaults: it drops every global the previous App installed.

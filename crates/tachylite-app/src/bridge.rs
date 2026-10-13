@@ -1126,6 +1126,10 @@ pub fn bridge_open_path(bridge: State<Bridge>, path: String, reveal: Option<bool
     } else if cfg!(windows) {
         let mut c = Command::new("explorer");
         if reveal {
+            // explorer parses `/select,"<path>"` itself; default argument quoting would wrap the whole switch.
+            #[cfg(windows)]
+            std::os::windows::process::CommandExt::raw_arg(&mut c, format!("/select,\"{}\"", p.display()));
+            #[cfg(not(windows))]
             c.arg(format!("/select,{}", p.display()));
         } else {
             c.arg(&p);

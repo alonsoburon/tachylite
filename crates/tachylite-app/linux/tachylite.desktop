@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name={{name}}
+{{#if comment}}
+Comment={{comment}}
+{{/if}}
+Exec={{exec}} %u
+TryExec={{exec}}
+Icon={{icon}}
+StartupWMClass={{exec}}
+Terminal=false
+Categories={{categories}}
+Keywords=notes;markdown;knowledge;wiki;
+{{#if mime_type}}
+MimeType={{mime_type}}
+{{/if}}

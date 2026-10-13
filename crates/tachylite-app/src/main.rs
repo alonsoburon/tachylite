@@ -3,6 +3,7 @@
 //! Obsidian-API shim in `ui/` are written against.
 
 mod bridge;
+mod platform;
 mod popout;
 
 use notify::{RecursiveMode, Watcher};
@@ -520,22 +521,6 @@ fn quit_app(app: AppHandle) {
     app.exit(0);
 }
 
-/// Open an http(s)/mailto link in the system browser.
-#[tauri::command]
-fn open_url(url: String) -> Res<()> {
-    if !(url.starts_with("http://") || url.starts_with("https://") || url.starts_with("mailto:")) {
-        return Err("unsupported url scheme".into());
-    }
-    let opener = if cfg!(target_os = "macos") {
-        "open"
-    } else if cfg!(target_os = "windows") {
-        "explorer"
-    } else {
-        "xdg-open"
-    };
-    std::process::Command::new(opener).arg(url).spawn().map(|_| ()).map_err(e)
-}
-
 /// Developer automation: render a webview to a PNG (Linux, debug builds, `TACHYLITE_DEV=1`). Snapshots the
 /// calling window, or the window `label` (e.g. a popout, which has no IPC of its own).
 /// Works on locked/headless desktops where grabbing the screen does not.
@@ -633,7 +618,7 @@ async fn http_request(req: HttpReq) -> Res<HttpResp> {
 }
 
 fn main() {
-    tauri::Builder::default()
+    platform::install(tauri::Builder::default())
         .plugin(tauri_plugin_dialog::init())
         .manage(App::default())
         .manage(bridge::Bridge::default())
@@ -682,7 +667,8 @@ fn main() {
             meta_all,
             launch_args,
             log_frontend,
-            open_url,
+            platform::open_url,
+            platform::deep_link_take,
             quit_app,
             dev_screenshot,
             dev_request_close,

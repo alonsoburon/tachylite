@@ -9,6 +9,8 @@ import { installMarkdownView } from "./markdownView";
 import { applyAppearance, installSettings } from "./settings";
 import { Shell } from "./shell";
 import { installStatusBar } from "./statusbar";
+import { installMenuCommands } from "./platform";
+import { installUriHandling } from "./uri";
 import { TachyMarkdownView } from "./markdownView";
 
 export interface Session {
@@ -77,6 +79,7 @@ export async function startSession(info: VaultInfo, host: HTMLElement, opts: { s
       disposers.push(installCommands(app, history));
       disposers.push(installSettings(app));
       disposers.push(installStatusBar(app));
+      disposers.push(installMenuCommands(app));
       app.internalPlugins.on("change", (id: string, on: boolean) => { if (!on) { const t = ({ "file-explorer": "file-explorer", "global-search": "search", backlink: "backlink", "outgoing-link": "outgoing-link", "tag-pane": "tag", outline: "outline", bookmarks: "bookmarks", graph: "graph" } as Record<string, string>)[id]; if (t) app.workspace.detachLeavesOfType(t); } });
     },
     restoreLayout: async () => {
@@ -103,6 +106,7 @@ export async function startSession(info: VaultInfo, host: HTMLElement, opts: { s
   const cfgRef = app.workspace.on("config-changed", () => applyConfigToBody(app));
   const cssRef = app.workspace.on("css-change", () => { void applyAppearance(app); });
   applyConfigToBody(app);
+  disposers.push(installUriHandling(app));
   await app.start();
   applyConfigToBody(app);
   void applyAppearance(app);

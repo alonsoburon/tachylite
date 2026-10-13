@@ -101,6 +101,8 @@ impl Vault {
     /// Open a vault folder and index it. Dot-folders (`.obsidian`, `.trash`, ...) are skipped.
     pub fn open(root: impl AsRef<Path>) -> Result<Self> {
         let root = root.as_ref().canonicalize()?;
+        #[cfg(windows)]
+        let root = PathBuf::from(path::simplify_verbatim(&root.to_string_lossy()));
         let config = AppConfig::load(&root);
         let mut v = Vault { root, files: BTreeMap::new(), folders: vec![], config };
         v.reindex()?;
@@ -218,13 +220,17 @@ impl Vault {
         if !a.exists() {
             return Err(VaultError::NotFound(from));
         }
-        if b.exists() && !a.to_string_lossy().eq_ignore_ascii_case(&b.to_string_lossy()) {
-            return Err(VaultError::Exists(to));
+        let to_exists = b.exists();
+        match rename_plan(&from, &to, to_exists, to_exists && same_entry(&a, &b)) {
+            RenamePlan::Conflict => return Err(VaultError::Exists(to)),
+            RenamePlan::ViaTemp => rename_via_temp(&a, &b)?,
+            RenamePlan::Direct => {
+                if let Some(d) = b.parent() {
+                    fs::create_dir_all(d)?;
+                }
+                fs::rename(&a, &b)?
+            }
         }
-        if let Some(d) = b.parent() {
-            fs::create_dir_all(d)?;
-        }
-        fs::rename(&a, &b)?;
         self.reindex()
     }
 
@@ -289,6 +295,62 @@ impl Vault {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum RenamePlan {
+    Direct,
+    /// Case-only rename on a case-insensitive file system: go through a temporary name.
+    ViaTemp,
+    Conflict,
+}
+
+/// `same` is true when `to` already exists and is the very entry `from` names (macOS/Windows report
+/// `note.md` as existing while renaming `Note.md`). Anything else that exists is a conflict, so a
+/// case-sensitive file system never overwrites a distinct `A.md` when renaming `a.md`.
+fn rename_plan(from: &str, to: &str, to_exists: bool, same: bool) -> RenamePlan {
+    if !to_exists || from == to {
+        RenamePlan::Direct
+    } else if same && from.to_lowercase() == to.to_lowercase() {
+        RenamePlan::ViaTemp
+    } else {
+        RenamePlan::Conflict
+    }
+}
+
+/// True when both paths open the same file system entry.
+fn same_entry(a: &Path, b: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        matches!((fs::symlink_metadata(a), fs::symlink_metadata(b)), (Ok(x), Ok(y)) if x.dev() == y.dev() && x.ino() == y.ino())
+    }
+    #[cfg(windows)]
+    {
+        // `canonicalize` resolves to the on-disk spelling, so both spellings of one entry agree.
+        matches!((fs::canonicalize(a), fs::canonicalize(b)), (Ok(x), Ok(y)) if x == y)
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = (a, b);
+        false
+    }
+}
+
+/// Two-step rename through a sibling temporary name: case-insensitive file systems that ignore a direct
+/// case-only rename (FAT/exFAT, some network shares) still record the new spelling.
+fn rename_via_temp(a: &Path, b: &Path) -> io::Result<()> {
+    let name = a.file_name().map_or_else(String::new, |n| n.to_string_lossy().into_owned());
+    let mut tmp = a.with_file_name(format!(".{name}.tachylite-rename"));
+    let mut n = 1;
+    while tmp.exists() {
+        n += 1;
+        tmp = a.with_file_name(format!(".{name}.tachylite-rename-{n}"));
+    }
+    fs::rename(a, &tmp)?;
+    fs::rename(&tmp, b).inspect_err(|_| {
+        let _ = fs::rename(&tmp, a);
+    })
+}
+
 /// `userIgnoreFilters`: plain entries match as path prefixes/substrings; `/regex/` entries as regex.
 fn ignored(rel: &str, filters: &[String]) -> bool {
     filters.iter().any(|f| {
@@ -299,4 +361,41 @@ fn ignored(rel: &str, filters: &[String]) -> bool {
             rel == f || rel.starts_with(&format!("{f}/")) || rel.contains(f)
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rename_plan_covers_case_only_renames() {
+        // Nothing at the target: plain rename (also a case-only rename on a case-sensitive file system).
+        assert_eq!(rename_plan("Note.md", "note.md", false, false), RenamePlan::Direct);
+        // Case-insensitive file system: the target "exists" because it is the same entry.
+        assert_eq!(rename_plan("Note.md", "note.md", true, true), RenamePlan::ViaTemp);
+        assert_eq!(rename_plan("Ärger.md", "ärger.md", true, true), RenamePlan::ViaTemp);
+        // Case-sensitive file system with a distinct `A.md`: never overwrite it.
+        assert_eq!(rename_plan("a.md", "A.md", true, false), RenamePlan::Conflict);
+        // Hard links share an entry but are different names.
+        assert_eq!(rename_plan("a.md", "b.md", true, true), RenamePlan::Conflict);
+        assert_eq!(rename_plan("a.md", "a.md", true, true), RenamePlan::Direct);
+    }
+
+    #[test]
+    fn rename_via_temp_moves_the_file() {
+        let d = tempfile::tempdir().unwrap();
+        fs::write(d.path().join("Note.md"), "x").unwrap();
+        rename_via_temp(&d.path().join("Note.md"), &d.path().join("note.md")).unwrap();
+        let names: Vec<String> = fs::read_dir(d.path()).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+        assert_eq!(names, vec!["note.md"]);
+    }
+
+    #[test]
+    fn same_entry_detects_one_file_under_two_names() {
+        let d = tempfile::tempdir().unwrap();
+        fs::write(d.path().join("a.md"), "x").unwrap();
+        fs::write(d.path().join("b.md"), "x").unwrap();
+        assert!(same_entry(&d.path().join("a.md"), &d.path().join("./a.md")));
+        assert!(!same_entry(&d.path().join("a.md"), &d.path().join("b.md")));
+    }
 }

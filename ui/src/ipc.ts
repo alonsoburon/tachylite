@@ -131,6 +131,8 @@ export const ipc = {
   launchArgs: () => call<{ vault: string | null; script: string | null }>("launch_args"),
   quitApp: () => call<void>("quit_app"),
   openUrl: (url: string) => call<void>("open_url", { url }),
+  /** `tachylite://` URLs received so far (launch argument, second launches, macOS open events); empties the queue. */
+  deepLinkTake: () => call<string[]>("deep_link_take"),
   logFrontend: (level: string, message: string) => call<void>("log_frontend", { level, message }),
   // popout windows (crates/tachylite-app/src/popout.rs); the windows themselves are opened with window.open
   popoutClose: (label: string) => call<void>("popout_close", { label }),

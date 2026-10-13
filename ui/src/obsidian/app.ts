@@ -113,6 +113,11 @@ export class App {
 
   isDarkMode(): boolean { return document.body.classList.contains("theme-dark"); }
   getAppId(): string { return this.appId; }
+  /** URI that opens `file` (`tachylite://open?vault=...&file=...`; Obsidian returns its own scheme here). */
+  getObsidianUrl(file: { path: string; extension?: string }): string {
+    const path = file.extension === "md" || (file.extension === undefined && file.path.endsWith(".md")) ? file.path.replace(/\.md$/, "") : file.path;
+    return `tachylite://open?vault=${encodeURIComponent(this.vault.getName())}&file=${encodeURIComponent(path)}`;
+  }
   loadLocalStorage(key: string): any | null {
     const raw = localStorage.getItem(`${this.appId}-${key}`);
     if (raw === null) return null;

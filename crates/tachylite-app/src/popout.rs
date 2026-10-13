@@ -59,7 +59,7 @@ pub fn on_new_window<R: Runtime>(app: &AppHandle<R>, url: Url, features: NewWind
     use tauri::webview::NewWindowResponse;
     let Some(req) = parse_request(url.as_str()) else {
         if matches!(url.scheme(), "http" | "https" | "mailto") {
-            let _ = crate::open_url(url.to_string());
+            let _ = crate::platform::open_url(url.to_string());
         }
         return NewWindowResponse::Deny;
     };

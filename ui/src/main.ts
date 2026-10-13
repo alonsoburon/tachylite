@@ -2,6 +2,7 @@ import "./styles";
 import { boot, getSession } from "./app/boot";
 import { ipc, listen } from "./ipc";
 import { installFrontendLog } from "./app/log";
+import { installBodyClasses } from "./app/platform";
 import "./obsidian";
 
 installFrontendLog();
@@ -11,6 +12,7 @@ void listen("close-requested", () => {
 const host = document.getElementById("app");
 if (!host) throw new Error("#app missing");
 document.body.classList.add("theme-dark", "app-body");
+installBodyClasses();
 boot(host).catch((e) => {
   console.error("boot failed", e);
   host.textContent = `Tachylite failed to start: ${(e as Error).message ?? e}`;
