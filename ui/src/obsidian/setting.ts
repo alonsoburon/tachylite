@@ -497,6 +497,8 @@ export class SettingManager {
     const first = this.settingTabs[0] ?? this.pluginTabs[0];
     if (first) this.openTab(first);
   }
+  /** Redraw the navigation after tabs were added or removed. */
+  refreshNav(): void { if (this.isOpen) this.renderNav(); }
   private renderNav(): void {
     if (!this.tabHeaderEl) return; // a host-provided dialog renders its own navigation
     this.tabHeaderEl.empty();
@@ -511,7 +513,9 @@ export class SettingManager {
         it.addEventListener("click", () => this.openTab(t));
       }
     };
-    group("Options", this.settingTabs);
+    // Tabs of core plugins carry `corePluginId` (app/core/settingTab.ts) and get their own group, like Obsidian.
+    group("Options", this.settingTabs.filter((t) => !(t as any).corePluginId));
+    group("Core plugins", this.settingTabs.filter((t) => (t as any).corePluginId).sort((a, b) => a.name.localeCompare(b.name)));
     group("Community plugins", this.pluginTabs);
   }
   openTab(tab: SettingTab): void {
