@@ -45,6 +45,8 @@ export class App {
   customCss: CustomCss;
   setting: SettingManager;
   secretStorage: SecretStorage;
+  /** Per-file fold state; Calendar / Periodic Notes copy a template's folds onto the note they create. */
+  foldManager = { load: (f: { path: string }) => this.loadLocalStorage(`fold-${f.path}`) ?? null, save: (f: { path: string }, info: unknown) => this.saveLocalStorage(`fold-${f.path}`, info ?? null) };
   renderContext = new RenderContext();
   lastEvent: UIEventLike | null = null;
   isMobile = false;

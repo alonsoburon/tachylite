@@ -206,6 +206,7 @@ body.show-inline-title .inline-title { display: block; }
 }
 .status-bar-item { display: flex; align-items: center; padding: 1px 4px; border-radius: var(--radius-s); white-space: nowrap; }
 .status-bar-item.mod-clickable:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.status-bar-item-segment + .status-bar-item-segment { margin-inline-start: var(--size-4-2, 8px); }
 
 /* ---------------------------------------------------------------- vault picker */
 .vault-picker { height: 100%; display: flex; align-items: center; justify-content: center; background: var(--background-secondary); padding: var(--size-4-8); }

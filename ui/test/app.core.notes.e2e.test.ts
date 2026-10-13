@@ -172,6 +172,11 @@ describe("Daily notes", () => {
 
     // plugins read the same options object (Calendar / Periodic Notes)
     expect((app as any).internalPlugins.getPluginById("daily-notes").instance.options).toMatchObject({ folder: "Daily", format: "YYYY-MM-DD", template: "Templates/Daily" });
+    // ...and copy a template's folds onto the note they create
+    const tf = app.vault.getFileByPath("Templates/Daily.md")!;
+    expect(app.foldManager.load(tf)).toBeNull();
+    app.foldManager.save(tf, { folds: [{ from: 0, to: 1 }], lines: 2 });
+    expect(app.foldManager.load(tf)).toEqual({ folds: [{ from: 0, to: 1 }], lines: 2 });
 
     await plugin(app, "daily-notes").disable();
     for (const id of ["daily-notes", "daily-notes:goto-prev", "daily-notes:goto-next"]) expect(cmd(app, id)).toBeUndefined();
