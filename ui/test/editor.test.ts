@@ -516,3 +516,23 @@ describe("createEditor (DOM)", () => {
     h.destroy();
   });
 });
+
+describe("undo history across files", () => {
+  it("loading another file into an editor starts a fresh undo history", async () => {
+    const { createEditor } = await import("../src/editor");
+    const { clearEditorHistory } = await import("../src/editor/history");
+    const { undo } = await import("@codemirror/commands");
+    const host = { resolveLink: () => null, getResourceUrl: (p: string) => p, openLink() {}, readFile: async () => "" } as any;
+    const el = document.createElement("div"); document.body.appendChild(el);
+    const h = createEditor(el, { doc: "first file", host, mode: "source" });
+    h.view.dispatch({ changes: { from: 0, insert: "edit " } });
+    h.view.dispatch({ changes: { from: 0, to: h.view.state.doc.length, insert: "second file" } });
+    clearEditorHistory(h.view);
+    expect(undo(h.view)).toBe(false);
+    expect(h.getValue()).toBe("second file");
+    h.view.dispatch({ changes: { from: 0, insert: "x" } });
+    expect(undo(h.view)).toBe(true);
+    expect(h.getValue()).toBe("second file");
+    h.destroy();
+  });
+});

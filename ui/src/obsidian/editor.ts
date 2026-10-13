@@ -1,4 +1,5 @@
 // Editor (the Obsidian abstraction) implemented over a CodeMirror 6 EditorView.
+import { historyFor } from "../editor/history";
 import { Compartment, EditorSelection as CMSelection, EditorState, Extension, StateEffect, StateField, Transaction } from "@codemirror/state";
 import { EditorView, ViewPlugin, keymap } from "@codemirror/view";
 import { cursorCharLeft, cursorCharRight, cursorDocEnd, cursorDocStart, cursorGroupLeft, cursorGroupRight, cursorLineDown, cursorLineUp, defaultKeymap, deleteLine, history, historyKeymap, indentLess, indentMore, insertNewlineAndIndent, moveLineDown, moveLineUp, redo, undo } from "@codemirror/commands";
@@ -206,8 +207,12 @@ export interface EditorFactoryOptions {
 export interface EditorFactory { create(opts: EditorFactoryOptions): EditorView }
 
 export const defaultEditorFactory: EditorFactory = {
-  create: ({ parent, doc, extensions }) =>
-    new EditorView({ parent, doc, extensions: [history(), EditorState.allowMultipleSelections.of(true), keymap.of([...defaultKeymap, ...historyKeymap]), EditorView.lineWrapping, ...extensions] }),
+  create: ({ parent, doc, extensions }) => {
+    const h = historyFor();
+    const view = new EditorView({ parent, doc, extensions: [h.ext, EditorState.allowMultipleSelections.of(true), keymap.of([...defaultKeymap, ...historyKeymap]), EditorView.lineWrapping, ...extensions] });
+    h.register(view);
+    return view;
+  },
 };
 
 let factory: EditorFactory = defaultEditorFactory;
@@ -215,3 +220,4 @@ export function setEditorFactory(f: EditorFactory | null): void { factory = f ??
 export function getEditorFactory(): EditorFactory { return factory; }
 
 export { Compartment };
+export { clearEditorHistory } from "../editor/history";

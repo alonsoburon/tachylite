@@ -6,7 +6,7 @@ import { TFile } from "./files";
 import { setIcon } from "./icons";
 import { type Menu } from "./ui";
 import { debounce, resolveSubpath, type Debouncer } from "./util";
-import { CMEditor, Editor, editorEditorField, editorInfoField, editorLivePreviewField, getEditorFactory, setEditorInfo, setEditorView } from "./editor";
+import { clearEditorHistory, CMEditor, Editor, editorEditorField, editorInfoField, editorLivePreviewField, getEditorFactory, setEditorInfo, setEditorView } from "./editor";
 import { installPreviewTaskToggle } from "./previewTasks";
 import { MarkdownRenderer } from "./markdown";
 import type { App } from "./app";
@@ -339,6 +339,7 @@ export class MarkdownView extends TextFileView {
     try {
       const cm = this.cm;
       if (cm.state.doc.toString() !== data) cm.dispatch({ changes: { from: 0, to: cm.state.doc.length, insert: data }, selection: clear ? { anchor: 0 } : undefined });
+      if (clear) clearEditorHistory(cm);
     } finally { this.muted = false; }
     this.previewMode.set(data, clear);
   }

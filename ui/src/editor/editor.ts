@@ -28,6 +28,7 @@ import { tagCompletionSource, wikilinkCompletionSource } from "./autocomplete";
 import { headingFoldService, listFoldService } from "./folding";
 import type { WidgetEnv } from "./widgets";
 import { vimExtension, vimSaveFacet } from "./vim";
+import { historyFor } from "./history";
 
 const External = Annotation.define<boolean>();
 
@@ -189,13 +190,14 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
     }
   });
 
+  const hist = historyFor();
   const baseExtensions: Extension[] = [
     vimC.of(vimExt()),
     vimSaveFacet.of(() => opts.host.save?.(cur.sourcePath)),
     envFacet.of(env),
     obsidianMarkdown(),
     EditorState.languageData.of(() => [{ closeBrackets: { brackets: ["(", "[", "{", "`"] } }]),
-    history(),
+    hist.ext,
     drawSelection(),
     dropCursor(),
     EditorState.allowMultipleSelections.of(true),
@@ -235,6 +237,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
     state: EditorState.create({ doc: opts.doc ?? "", extensions: baseExtensions }),
     parent,
   });
+  hist.register(view);
 
   const rootClasses = ["markdown-source-view", "cm-s-obsidian", "mod-cm6"];
   const applyRoot = () => {
