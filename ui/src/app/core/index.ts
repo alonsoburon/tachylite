@@ -14,7 +14,10 @@ import { noteComposer } from "./noteComposer";
 import { slashCommands } from "./slashCommands";
 import { randomNote } from "./randomNote";
 import { wordCount } from "./wordCount";
+import { properties } from "../properties";
+import { fileRecovery } from "./fileRecovery";
+import { workspaces } from "./workspaces";
 
 /** Core views installed on vault open (in ribbon order). */
 export const coreModules: CoreModule[] = [explorer, search, backlinks, outgoingLinks, tags, outline, bookmarks, graph, canvas, bases,
-  dailyNotes, templates, noteComposer, randomNote, slashCommands, wordCount];
+  properties, fileRecovery, workspaces, dailyNotes, templates, noteComposer, randomNote, slashCommands, wordCount];

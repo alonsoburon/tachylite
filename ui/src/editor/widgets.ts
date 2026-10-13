@@ -183,17 +183,26 @@ export { CodeBlockWidget } from "./codeblocks";
 
 // ------------------------------------------------------------------ frontmatter
 
+const tableHandles = new WeakMap<HTMLElement, { destroy(): void }>();
+
 export class FrontmatterWidget extends WidgetType {
   constructor(readonly source: string, readonly env: WidgetEnv) {
     super();
   }
   eq(o: FrontmatterWidget): boolean {
-    return o.source === this.source;
+    return o.source === this.source && o.env.getSourcePath() === this.env.getSourcePath();
   }
   toDOM(view: EditorView): HTMLElement {
     const wrap = document.createElement("div");
     wrap.className = "cm-frontmatter-widget";
     const info = splitFrontmatter(this.source + "\n");
+    // The host's editable table (app/properties); otherwise a read-only block that reveals the YAML on click.
+    const handle = info.frontmatter && this.env.host.renderProperties ? this.env.host.renderProperties(wrap, info.frontmatter, this.env.getSourcePath()) : null;
+    if (handle) {
+      tableHandles.set(wrap, handle);
+      new ResizeObserverLike(wrap, () => view.requestMeasure());
+      return wrap;
+    }
     const ctx = makeRenderContext(this.env.host, this.env.getSourcePath());
     const box = renderFrontmatter(
       { frontmatter: info.frontmatter, raw: info.raw, error: info.error },
@@ -215,7 +224,20 @@ export class FrontmatterWidget extends WidgetType {
     });
     return wrap;
   }
+  destroy(dom: HTMLElement): void {
+    tableHandles.get(dom)?.destroy();
+    tableHandles.delete(dom);
+  }
   ignoreEvent(): boolean {
     return true;
+  }
+}
+
+/** Re-measure the editor when the table changes height (rows added, heading folded). */
+class ResizeObserverLike {
+  constructor(el: HTMLElement, cb: () => void) {
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => { if (!el.isConnected) ro.disconnect(); else cb(); });
+    ro.observe(el);
   }
 }

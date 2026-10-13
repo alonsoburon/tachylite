@@ -155,6 +155,7 @@ export abstract class TextFileView extends EditableFileView {
   requestSave: Debouncer<[], Promise<void>>;
   private saving = false;
   private dirty = false;
+  private saveGen = 0;
   constructor(leaf: WorkspaceLeaf) {
     super(leaf);
     this.requestSave = debounce(async () => { await this.save(); }, 2000, true) as Debouncer<[], Promise<void>>;
@@ -164,7 +165,9 @@ export abstract class TextFileView extends EditableFileView {
     super.onload();
     this.registerEvent(this.app.vault.on("modify", (f: any) => {
       if (f !== this.file || this.saving || this.dirty) return;
-      void this.app.vault.read(f).then((d) => { if (d !== this.data && !this.dirty) { this.data = d; this.setViewData(d, false); } });
+      // A save that starts while the file is being read makes that read stale: keep the newer view data.
+      const gen = this.saveGen;
+      void this.app.vault.read(f).then((d) => { if (d !== this.data && !this.dirty && !this.saving && gen === this.saveGen) { this.data = d; this.setViewData(d, false); } });
     }));
   }
   async onUnloadFile(file: TFile): Promise<void> {
@@ -186,6 +189,7 @@ export abstract class TextFileView extends EditableFileView {
     const data = this.getViewData();
     if (this.dirty || data !== this.data) {
       this.saving = true;
+      this.saveGen++;
       try { await this.app.vault.modify(file, data); this.data = data; this.dirty = false; }
       finally { this.saving = false; }
     }

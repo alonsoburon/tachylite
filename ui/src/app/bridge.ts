@@ -4,7 +4,8 @@ import type { EditorView } from "@codemirror/view";
 import { createEditor, splitFence, type EditorHandle, type EditorHost, type EditorMode, type LinkTarget } from "../editor";
 import { renderMarkdown, type RenderContext } from "../markdown";
 import { ipc } from "../ipc";
-import { Component, MarkdownPreviewRenderer, MarkdownRenderer, Menu, prepareFuzzySearch, type App } from "../obsidian";
+import { Component, MarkdownPreviewRenderer, MarkdownPreviewView, MarkdownRenderer, Menu, prepareFuzzySearch, type App } from "../obsidian";
+import { propertiesMode, renderPropertiesTable } from "./properties/embed";
 import { setEditorFactory } from "../obsidian/editor";
 import { createPostProcessorContext, runCodeBlockProcessor, setMarkdownRenderer } from "../obsidian/markdown";
 
@@ -36,6 +37,8 @@ export function makeEditorHost(app: App): EditorHost {
     listLinkTargets: (query, source) => linkTargets(app, query, source),
     codeBlockLanguages: () => MarkdownPreviewRenderer.getCodeBlockLanguages(),
     renderFileEmbed: fileEmbedRenderer(app),
+    propertiesInDocument: () => propertiesMode(app),
+    renderProperties: (el, fm, sourcePath) => renderPropertiesTable(app, el, fm, sourcePath),
     renderCodeBlock: async (el, markdown, sourcePath, info) => {
       const comp = new Component();
       comp.load();
@@ -128,6 +131,13 @@ export function makeRenderContext(app: App, sourcePath: string, component?: { ad
     openTag: (tag) => { void openTagSearch(app, tag); },
     addChild: component ? (c) => component.addChild(c) : undefined,
     renderFileEmbed: fileEmbedRenderer(app, component),
+    propertiesInDocument: propertiesMode(app),
+    // Editable only in a note's own reading view; other renders (embeds, plugins) keep the read-only block.
+    renderProperties: component instanceof MarkdownPreviewView ? (el, fm, sourcePath) => {
+      const h = renderPropertiesTable(app, el, fm, sourcePath);
+      if (h) component.addChild(h.component);
+      return !!h;
+    } : undefined,
     strictLineBreaks: !!app.vault.getConfig("strictLineBreaks"),
   };
 }

@@ -145,7 +145,7 @@ export const obsidianSyntax: MarkdownConfig = {
       before: "HorizontalRule",
       parse(cx: BlockContext, line: Line) {
         if (cx.lineStart !== 0 || !/^---[ \t]*$/.test(line.text)) return false;
-        const m = /^---[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?=\r?\n|$)/.exec(readAhead(cx, 0));
+        const m = /^---[ \t]*\r?\n(?:[\s\S]*?\r?\n)?(?:---|\.\.\.)[ \t]*(?=\r?\n|$)/.exec(readAhead(cx, 0));
         if (!m) return false;
         const end = m[0].length;
         while (cx.nextLine() && cx.lineStart < end) {

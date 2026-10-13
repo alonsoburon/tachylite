@@ -7,3 +7,4 @@ import "./app-panels.css";
 import "./app-settings.css";
 import "./canvas.css";
 import "./bases.css";
+import "./properties.css";

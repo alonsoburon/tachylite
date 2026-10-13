@@ -2,11 +2,12 @@
 // Live Preview / Source / Reading modes. Subclasses the model's MarkdownView so plugins' instanceof checks hold.
 import { Decoration, EditorView, WidgetType } from "@codemirror/view";
 import { StateField, type Extension } from "@codemirror/state";
-import { Menu, MarkdownView, Notice, type App, type WorkspaceLeaf } from "../obsidian";
+import { FRONTMATTER_RE, Menu, MarkdownView, Notice, type App, type WorkspaceLeaf } from "../obsidian";
 import { editorInfoField, setLivePreview } from "../obsidian/editor";
 import { setIcon } from "../obsidian/icons";
 import { editorHandles } from "./bridge";
 import { buildFileMenu, renameTo } from "./files";
+import { metadataEditorIn } from "./properties/embed";
 
 function titleEl(view: TachyMarkdownView): HTMLElement {
   const el = createDiv({ cls: "inline-title", attr: { contenteditable: "true", spellcheck: "false", "data-placeholder": "Untitled" } });
@@ -80,6 +81,8 @@ export class TachyMarkdownView extends MarkdownView {
   }
 
   getIcon(): string { return "lucide-file"; }
+  /** The Properties table of the visible mode (Live Preview or reading view), if shown. */
+  get metadataEditor() { return metadataEditorIn(this.contentEl); }
 
   // ---- modes
   get isSourceMode(): boolean { return this.editMode.sourceMode; }
@@ -120,7 +123,7 @@ export class TachyMarkdownView extends MarkdownView {
     editorHandles.get(this.cm)?.setSourcePath(file.path);
     await super.onLoadFile(file);
     // A fresh note opens with the caret after the properties block so Live Preview shows them as a table, not raw YAML.
-    const fm = /^---\r?\n[\s\S]*?\r?\n---[ \t]*(\r?\n|$)/.exec(this.data);
+    const fm = FRONTMATTER_RE.exec(this.data);
     if (fm && !this.editMode.sourceMode && this.cm.state.selection.main.head < fm[0].length) {
       this.cm.dispatch({ selection: { anchor: Math.min(fm[0].length, this.cm.state.doc.length) } });
     }

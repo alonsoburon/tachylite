@@ -8,7 +8,7 @@ export {
   insertLink, toggleChecklist, toggleTask, indentListMore, indentListLess,
 } from "./commands";
 export { wikilinkCompletionSource, tagCompletionSource } from "./autocomplete";
-export { buildInline, buildBlocks, envFacet, inlinePlugin, blockField } from "./decorations";
+export { buildInline, buildBlocks, envFacet, inlinePlugin, blockField, refreshBlocks } from "./decorations";
 export {
   parseTable, splitRow, parseTableModel, serializeTable, escapeCell, displayWidth, setCell, insertRow, deleteRow,
   insertColumn, deleteColumn, setAlign, columnCount, TableWidget, type TableModel, type Align, type TableMenuItem,

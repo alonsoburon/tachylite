@@ -40,11 +40,17 @@ export function debounce<T extends unknown[], V>(cb: (...args: [...T]) => V, tim
   return d;
 }
 
+/** js-yaml rejects documents with no content; YAML (and Obsidian) read them as null. */
+export function isBlankYaml(text: string): boolean { return text.split("\n").every((l) => /^\s*(#.*)?$/.test(l)); }
 export function parseYaml(text: string): any {
-  return yaml.load(text);
+  return isBlankYaml(text) ? null : yaml.load(text);
 }
+/** Block style like Obsidian's output: double quotes when needed, `key:` for null, no line folding. */
 export function stringifyYaml(obj: any): string {
-  return yaml.dump(obj, { lineWidth: -1, schema: yaml.CORE_SCHEMA });
+  return yaml.dump(obj, {
+    lineWidth: -1, schema: yaml.CORE_SCHEMA, quoteStyle: "double",
+    transform: (docs) => yaml.visit(docs, (n: any) => { if (n.kind === "scalar" && n.tag === "tag:yaml.org,2002:null") n.value = ""; }),
+  });
 }
 
 export function requireApiVersion(version: string): boolean {
@@ -129,8 +135,10 @@ export function iterateCacheRefs(cache: CachedMetadata, cb: (ref: any) => boolea
 }
 
 // ---- front matter
+/** `---` YAML `---` (or `...`) at the very start; the body group is absent for an empty block (`---\n---`). */
+export const FRONTMATTER_RE = /^---[ \t]*\r?\n(?:([\s\S]*?)\r?\n)?(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/;
 export function getFrontMatterInfo(content: string): { exists: boolean; frontmatter: string; from: number; to: number; contentStart: number } {
-  const m = /^---[ \t]*\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/.exec(content) ?? /^---[ \t]*\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/.exec(content);
+  const m = FRONTMATTER_RE.exec(content);
   if (!m) return { exists: false, frontmatter: "", from: 0, to: 0, contentStart: 0 };
   const fm = m[1] ?? "";
   const first = content.indexOf("\n") + 1;

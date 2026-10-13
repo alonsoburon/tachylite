@@ -83,9 +83,9 @@ function pos(text: string, offset: number) {
 export function parseMeta(text: string): any {
   const meta: any = {};
   let body = text, base = 0;
-  const fm = /^---\n([\s\S]*?)\n---(\n|$)/.exec(text);
+  const fm = /^---\n(?:([\s\S]*?)\n)?---(\n|$)/.exec(text);
   if (fm) {
-    try { meta.frontmatter = yaml.load(fm[1]) ?? {}; } catch { /* ignore */ }
+    try { meta.frontmatter = (fm[1] ?? "").trim() ? yaml.load(fm[1]) ?? {} : {}; } catch { /* ignore */ }
     meta.frontmatterPosition = { start: pos(text, 0), end: pos(text, fm[0].length) };
     base = fm[0].length;
   }
@@ -137,6 +137,7 @@ function canvasMeta(text: string): any {
 export function makeVault(files: Record<string, string> = {}, opts: { plugins?: Record<string, { manifest?: any; main: string; styles?: string; data?: any }>; enabled?: string[]; root?: string; copyFrom?: string; bridgeConsent?: boolean } = {}): FakeVault {
   const root = opts.root ?? fs.mkdtempSync(path.join(os.tmpdir(), "tachy-"));
   if (opts.copyFrom) fs.cpSync(opts.copyFrom, root, { recursive: true });
+  const readJson = (rel: string): any => { try { return JSON.parse(fs.readFileSync(path.join(root, rel), "utf8")); } catch { return null; } };
   const write = (rel: string, data: string | Buffer) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), data); };
   for (const [p, d] of Object.entries(files)) write(p, d);
   fs.mkdirSync(path.join(root, ".obsidian"), { recursive: true });
@@ -236,7 +237,7 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
       case "meta_links": return links();
       case "config_read": { const p = abs(`.obsidian/${a.name}`); return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : null; }
       case "config_write": write(`.obsidian/${a.name}`, JSON.stringify(a.value, null, 2)); return null;
-      case "core_plugins": return ["file-explorer", "global-search", "switcher", "graph", "backlink", "canvas", "outgoing-link", "tag-pane", "properties", "page-preview", "daily-notes", "templates", "note-composer", "command-palette", "slash-command", "editor-status", "bookmarks", "markdown-importer", "zk-prefixer", "random-note", "outline", "word-count", "slides", "audio-recorder", "workspaces", "file-recovery", "publish", "sync", "bases", "webviewer"].map((id) => [id, !["properties", "slash-command", "markdown-importer", "zk-prefixer", "random-note", "slides", "audio-recorder", "workspaces", "publish", "sync", "webviewer", "daily-notes"].includes(id)]);
+      case "core_plugins": { const saved = readJson(".obsidian/core-plugins.json") ?? {}; return ["file-explorer", "global-search", "switcher", "graph", "backlink", "canvas", "outgoing-link", "tag-pane", "properties", "page-preview", "daily-notes", "templates", "note-composer", "command-palette", "slash-command", "editor-status", "bookmarks", "markdown-importer", "zk-prefixer", "random-note", "outline", "word-count", "slides", "audio-recorder", "workspaces", "file-recovery", "publish", "sync", "bases", "webviewer"].map((id) => [id, !["properties", "slash-command", "markdown-importer", "zk-prefixer", "random-note", "slides", "audio-recorder", "workspaces", "publish", "sync", "webviewer", "daily-notes"].includes(id)]).map(([id, on]: any) => [id, typeof saved[id] === "boolean" ? saved[id] : on]); }
       case "plugins_installed": {
         const dir = abs(".obsidian/plugins");
         if (!fs.existsSync(dir)) return [];

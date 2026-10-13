@@ -39,6 +39,10 @@ export interface EditorHost {
   /** Render a whole fenced block (```lang ... ```) through the plugins' processors; the handle is unloaded with the widget. */
   renderCodeBlock?(el: HTMLElement, markdown: string, sourcePath: string, info?: CodeBlockRenderInfo): { unload(): void } | void | Promise<{ unload(): void } | void>;
   /** Show a context menu (Live Preview table cells). Without it, the table widget has no context menu. */
+  /** app.json `propertiesInDocument`: "visible" (editable table, default), "hidden", or "source" (raw YAML). */
+  propertiesInDocument?(): "visible" | "hidden" | "source";
+  /** Draw the editable Properties table for valid frontmatter; null = use the built-in read-only block. */
+  renderProperties?(el: HTMLElement, frontmatter: Record<string, unknown>, sourcePath: string): { destroy(): void } | null;
   showMenu?(evt: MouseEvent, items: { title: string; icon: string; section: string; checked?: boolean; disabled?: boolean; onClick(): void }[]): void;
 }
 

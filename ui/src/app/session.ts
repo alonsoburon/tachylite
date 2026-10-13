@@ -1,6 +1,7 @@
 // One vault session: builds the App, installs the shell, core views, commands and settings, restores the layout.
 import { ipc, type VaultInfo } from "../ipc";
 import { App, Notice, MarkdownView, type WorkspaceLeaf } from "../obsidian";
+import { refreshBlocks } from "../editor";
 import { editorHandles, installBridge } from "./bridge";
 import { installCommands } from "./commands";
 import { coreModules } from "./core";
@@ -34,6 +35,7 @@ export function applyConfigToBody(app: App): void {
       showLineNumbers: !!app.vault.getConfig("showLineNumber"), foldHeading: app.vault.getConfig("foldHeading"), foldIndent: app.vault.getConfig("foldIndent"),
       strictLineBreaks: !!app.vault.getConfig("strictLineBreaks"), vimMode: !!app.vault.getConfig("vimMode"),
     });
+    v.cm.dispatch({ effects: refreshBlocks.of(null) });
     if (v.getMode() === "preview") v.previewMode.rerender(true);
   }
 }
