@@ -8,6 +8,7 @@ import {
   extractSubpath, scrollToSubpath, splitFences, splitFrontmatter, splitLinktext, stripComments,
 } from "./util";
 import { processCallouts } from "./callouts";
+import { highlightCodeBlocks } from "./highlight";
 import { renderFrontmatter } from "./frontmatter";
 import { linkIcon } from "./icons";
 
@@ -244,6 +245,7 @@ async function renderInternal(md: string, el: HTMLElement, ctx: RenderContext, s
       await processEmbeds(sec, ctx, st);
       processCallouts(sec);
       await processCodeBlocks(sec, ctx, pctx);
+      await highlightCodeBlocks(sec);
       for (const pp of ctx.postProcessors ?? []) {
         try {
           await pp(sec, pctx);

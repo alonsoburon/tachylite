@@ -92,6 +92,7 @@ export class MarkdownPreviewRenderer {
       if (jobs.length) return Promise.all(jobs).then(() => {});
     };
     (fn as any).codeBlockLanguage = language;
+    (fn as any).codeBlockHandler = handler;
     return fn;
   }
   /** Languages claimed by registered code-block processors (Live Preview renders those blocks as widgets). */
@@ -116,9 +117,27 @@ export function createPostProcessorContext(app: App, sourcePath: string, compone
 
 /** Run every registered post-processor on `el` (renderer implementations that render sections can call this per section). */
 export async function runPostProcessors(el: HTMLElement, ctx: MarkdownPostProcessorContext): Promise<void> {
-  for (const { fn } of postProcessors.slice()) {
+  // Plugins may set `registered.sortOrder` after registering (Dataview does), so order by the current value.
+  for (const { fn } of sortedProcessors()) {
     try { await fn(el, ctx); } catch (e) { console.error("markdown post-processor failed", e); }
   }
+}
+
+function sortedProcessors(): PPEntry[] {
+  return postProcessors.map((e, i) => ({ e, i, so: e.fn.sortOrder ?? e.sortOrder })).sort((a, b) => a.so - b.so || a.i - b.i).map((x) => x.e);
+}
+
+/**
+ * Run the code-block processor claiming `language` on `source` (fence body), the way Live Preview does: `el` becomes the
+ * `block-language-<lang>` container. Returns false when no processor claims the language.
+ */
+export async function runCodeBlockProcessor(language: string, source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext): Promise<boolean> {
+  const entry = sortedProcessors().find((e) => (e.fn as any).codeBlockLanguage === language);
+  const handler = entry && ((entry.fn as any).codeBlockHandler as ((s: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => unknown) | undefined);
+  if (!handler) return false;
+  el.classList.add(`block-language-${language}`);
+  try { await handler(source, el, ctx); } catch (e) { console.error(`code block processor "${language}" failed`, e); }
+  return true;
 }
 
 export class MarkdownRenderChild extends Component {

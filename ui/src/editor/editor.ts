@@ -27,16 +27,19 @@ import {
 import { tagCompletionSource, wikilinkCompletionSource } from "./autocomplete";
 import { headingFoldService, listFoldService } from "./folding";
 import type { WidgetEnv } from "./widgets";
+import { vimExtension, vimSaveFacet } from "./vim";
 
 const External = Annotation.define<boolean>();
 
 /** Code-token classes in the CodeMirror 5 naming (`cm-keyword`...) that Obsidian themes style. */
 export const codeHighlightStyle = HighlightStyle.define([
-  { tag: t.keyword, class: "cm-keyword" },
+  { tag: [t.keyword, t.self], class: "cm-keyword" },
   { tag: [t.string, t.regexp, t.special(t.string)], class: "cm-string" },
   { tag: [t.number, t.bool, t.null], class: "cm-number" },
   { tag: t.atom, class: "cm-atom" },
-  { tag: [t.lineComment, t.blockComment], class: "cm-comment" },
+  { tag: t.comment, class: "cm-comment" },
+  { tag: t.standard(t.variableName), class: "cm-builtin" },
+  { tag: t.special(t.variableName), class: "cm-variable-2" },
   { tag: [t.definition(t.variableName), t.function(t.variableName)], class: "cm-def" },
   { tag: t.variableName, class: "cm-variable" },
   { tag: t.propertyName, class: "cm-property" },
@@ -87,6 +90,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
     foldIndent: opts.foldIndent ?? true,
     extra: opts.extraExtensions ?? [],
     sourcePath: opts.sourcePath ?? "",
+    vimMode: opts.vimMode ?? false,
   };
   let mode: EditorMode = opts.mode ?? "live-preview";
 
@@ -100,6 +104,8 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
   const numC = new Compartment();
   const foldC = new Compartment();
   const extraC = new Compartment();
+  const vimC = new Compartment();
+  const vimExt = (): Extension => (cur.vimMode ? vimExtension() : []);
 
   const modeExt = (m: EditorMode): Extension =>
     m === "live-preview" ? [inlinePlugin(true), blockField, setextField, calloutFoldField] : [inlinePlugin(false)];
@@ -184,6 +190,8 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
   });
 
   const baseExtensions: Extension[] = [
+    vimC.of(vimExt()),
+    vimSaveFacet.of(() => opts.host.save?.(cur.sourcePath)),
     envFacet.of(env),
     obsidianMarkdown(),
     EditorState.languageData.of(() => [{ closeBrackets: { brackets: ["(", "[", "{", "`"] } }]),
@@ -278,6 +286,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
         if (o.foldIndent !== undefined) cur.foldIndent = o.foldIndent;
         effects.push(foldC.reconfigure(foldExt()));
       }
+      if (o.vimMode !== undefined && o.vimMode !== cur.vimMode) { cur.vimMode = o.vimMode; effects.push(vimC.reconfigure(vimExt())); }
       if (o.extraExtensions !== undefined) { cur.extra = o.extraExtensions; effects.push(extraC.reconfigure(cur.extra)); }
       if (o.sourcePath !== undefined) cur.sourcePath = o.sourcePath;
       if (effects.length) view.dispatch({ effects });

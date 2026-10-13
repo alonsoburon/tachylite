@@ -178,47 +178,7 @@ export { TableWidget, parseTable, splitRow, type ParsedTable } from "./table";
 
 // ------------------------------------------------------------------ plugin-rendered code blocks
 
-export class CodeBlockWidget extends WidgetType {
-  constructor(readonly source: string, readonly lang: string, readonly env: WidgetEnv) {
-    super();
-  }
-  eq(o: CodeBlockWidget): boolean {
-    return o.source === this.source && o.lang === this.lang && o.env.getSourcePath() === this.env.getSourcePath();
-  }
-  toDOM(view: EditorView): HTMLElement {
-    const el = document.createElement("div");
-    el.className = "cm-embed-block cm-code-block-widget block-language-wrapper";
-    el.setAttribute("data-language", this.lang);
-    const body = el.appendChild(document.createElement("div"));
-    body.className = "cm-code-block-widget-body";
-    const edit = el.appendChild(document.createElement("div"));
-    edit.className = "edit-block-button";
-    edit.setAttribute("aria-label", "Edit this block");
-    edit.textContent = "</>";
-    edit.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      view.dispatch({ selection: { anchor: Math.min(view.posAtDOM(el) + 1, view.state.doc.length) } });
-      view.focus();
-    });
-    const done = () => view.requestMeasure();
-    try {
-      const r = this.env.host.renderCodeBlock?.(body, this.source, this.env.getSourcePath());
-      const keep = (h: { unload(): void } | void) => { (el as any)._handle = h; done(); };
-      if (r && typeof (r as Promise<unknown>).then === "function") (r as Promise<{ unload(): void } | void>).then(keep, done);
-      else keep(r as { unload(): void } | void);
-    } catch (e) {
-      body.textContent = String(e);
-    }
-    return el;
-  }
-  destroy(dom: HTMLElement): void {
-    try { (dom as any)._handle?.unload?.(); } catch { /* ignore */ }
-  }
-  ignoreEvent(): boolean {
-    return true;
-  }
-}
+export { CodeBlockWidget } from "./codeblocks";
 
 // ------------------------------------------------------------------ frontmatter
 

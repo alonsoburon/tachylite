@@ -11,7 +11,7 @@ import * as cmView from "@codemirror/view";
 import * as lezerCommon from "@lezer/common";
 import * as lezerHighlight from "@lezer/highlight";
 import * as lezerLr from "@lezer/lr";
-import { NodeProp } from "@lezer/common";
+import { tokenClassNodeProp } from "../editor/tokens";
 import moment from "moment";
 import { ipc, type PluginBundle } from "../ipc";
 import type { App } from "./app";
@@ -25,7 +25,7 @@ import { Platform } from "./events";
 import * as obsidianApi from "./index";
 
 /** Token-class prop (value: space-separated CM5 class names) exposed through `@codemirror/language` like Obsidian does. */
-export const tokenClassNodeProp = new NodeProp<string>();
+export { tokenClassNodeProp };
 export type ObsidianModule = Record<string, unknown>;
 let obsidianModule: ObsidianModule | null = null;
 /** Override the module handed to plugins (tests). Defaults to this package's own index. */
@@ -71,7 +71,7 @@ export function createRequire(app: App): RequireFn {
     "@codemirror/view": () => cmView,
     "@codemirror/commands": () => cmCommands,
     // Obsidian's build of @codemirror/language also exports `tokenClassNodeProp` (CM5-style token classes per node);
-    // plugins read it with `node.type.prop(...)`, so it has to exist even though our parser attaches no values.
+    // plugins read it with `node.type.prop(...)`; the editor's markdown parser attaches the values (editor/tokens.ts).
     "@codemirror/language": () => ({ ...cmLanguage, tokenClassNodeProp }),
     "@codemirror/autocomplete": () => cmAutocomplete,
     "@codemirror/search": () => cmSearch,

@@ -42,7 +42,6 @@ export class EditorSettingTab extends SettingTab {
     this.toggle("Auto pair brackets", "Type the closing bracket or quote automatically.", "autoPairBrackets");
     this.toggle("Auto pair Markdown syntax", "Type the closing mark for emphasis, code and similar syntax automatically.", "autoPairMarkdown");
     this.toggle("Smart indent lists", "Keep the indentation of list items when pressing Enter.", "smartIndentList");
-    new Setting(el).setName("Vim key bindings").setDesc("Vim key bindings are not supported yet.").addToggle((t) => t.setValue(false).setDisabled(true))
-      .setDisabled(true);
+    this.toggle("Vim key bindings", "Use Vim key bindings when editing.", "vimMode");
   }
 }

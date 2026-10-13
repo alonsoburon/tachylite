@@ -30,7 +30,7 @@ export function applyConfigToBody(app: App): void {
     editorHandles.get(v.cm)?.reconfigure({
       tabSize: app.vault.getConfig("tabSize"), useTabs: app.vault.getConfig("useTab"), spellcheck: app.vault.getConfig("spellcheck"),
       showLineNumbers: !!app.vault.getConfig("showLineNumber"), foldHeading: app.vault.getConfig("foldHeading"), foldIndent: app.vault.getConfig("foldIndent"),
-      strictLineBreaks: !!app.vault.getConfig("strictLineBreaks"),
+      strictLineBreaks: !!app.vault.getConfig("strictLineBreaks"), vimMode: !!app.vault.getConfig("vimMode"),
     });
     if (v.getMode() === "preview") v.previewMode.rerender(true);
   }

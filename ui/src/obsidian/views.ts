@@ -261,6 +261,8 @@ export class MarkdownPreviewView extends MarkdownRenderer {
   clear(): void { this.text = ""; this.containerEl.empty(); }
   rerender(_full?: boolean): void {
     const el = this.containerEl;
+    // Render children that post-processors attached (ctx.addChild) belong to the previous render.
+    for (const c of this._children.slice()) this.removeChild(c);
     el.empty();
     const holder = el.createDiv({ cls: "markdown-preview-view markdown-rendered" });
     const sizer = holder.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
@@ -311,7 +313,8 @@ export class MarkdownView extends TextFileView {
     cm.dispatch({ effects: [setEditorInfo.of(this), setEditorView.of(cm)] });
     this.editor = new CMEditor(cm);
     (this.editor as any).cm = cm;
-    this.previewMode = new MarkdownPreviewView(this);
+    // A child of the view, so render children added by post-processors get loaded (and unloaded with the view).
+    this.previewMode = this.addChild(new MarkdownPreviewView(this));
     this.editMode = new MarkdownEditView(this);
     this.currentMode = this.mode === "preview" ? this.previewMode : this.editMode;
   }

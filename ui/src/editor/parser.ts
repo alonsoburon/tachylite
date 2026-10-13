@@ -1,11 +1,9 @@
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import type { MarkdownConfig, BlockContext, Line, InlineContext } from "@lezer/markdown";
-import { LanguageDescription } from "@codemirror/language";
-import { javascript } from "@codemirror/lang-javascript";
-import { css } from "@codemirror/lang-css";
-import { html } from "@codemirror/lang-html";
 import { inlineFootnoteSyntax } from "./footnotes";
 import { customTaskSyntax } from "./tasks";
+import { findCodeLanguage } from "./languages";
+import { hypermdCompat } from "./tokens";
 
 const HighlightDelim = { resolve: "Highlight", mark: "HighlightMark" };
 const TAG_RE = /^#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/u;
@@ -209,22 +207,12 @@ export const obsidianSyntax: MarkdownConfig = {
   ],
 };
 
-// lang-markdown already bundles lang-html (and with it the CSS and JavaScript parsers), so these load statically:
-// a dynamic import() of a module that is also imported statically does not split it out of the bundle.
-const jsLang = LanguageDescription.of({
-  name: "javascript",
-  alias: ["js", "jsx", "ts", "tsx", "typescript", "json", "mjs", "cjs"],
-  support: javascript({ jsx: true, typescript: true }),
-});
-const cssLang = LanguageDescription.of({ name: "css", alias: ["scss", "less"], support: css() });
-const htmlLang = LanguageDescription.of({ name: "html", alias: ["xml", "svg", "vue"], support: html() });
-
 /** The markdown language with Obsidian syntax extensions (wikilinks, tags, ==hl==, %%c%%, math, callout-aware). */
 export function obsidianMarkdown() {
   return markdown({
     base: markdownLanguage,
-    extensions: [obsidianSyntax, inlineFootnoteSyntax, customTaskSyntax],
-    codeLanguages: [jsLang, cssLang, htmlLang],
+    extensions: [obsidianSyntax, hypermdCompat, inlineFootnoteSyntax, customTaskSyntax],
+    codeLanguages: findCodeLanguage,
     addKeymap: false,
   });
 }

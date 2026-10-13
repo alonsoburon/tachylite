@@ -92,7 +92,8 @@
 .markdown-source-view .cm-keyword { color: var(--code-keyword); }
 .markdown-source-view .cm-string { color: var(--code-string); }
 .markdown-source-view .cm-number, .markdown-source-view .cm-atom { color: var(--code-value); }
-.markdown-source-view .cm-def { color: var(--code-function); }
+.markdown-source-view .cm-def, .markdown-source-view .cm-builtin { color: var(--code-function); }
+.markdown-source-view .cm-variable-2 { color: var(--code-property); }
 .markdown-source-view .cm-variable { color: var(--code-normal); }
 .markdown-source-view .cm-property { color: var(--code-property); }
 .markdown-source-view .cm-operator { color: var(--code-operator); }
@@ -326,3 +327,9 @@
 /* ---- misc ---- */
 .markdown-source-view .cm-line.cm-active { background: transparent; }
 .markdown-source-view .cm-placeholder { color: var(--text-faint); }
+
+/* ---- Vim key bindings: block cursor in normal/visual mode, ex/search prompt ---- */
+.markdown-source-view .cm-editor .cm-fat-cursor { background: var(--interactive-accent); color: var(--text-on-accent) !important; border-radius: 1px; }
+.markdown-source-view .cm-editor:not(.cm-focused) .cm-fat-cursor { background: none; outline: 1px solid var(--interactive-accent); color: transparent !important; }
+.markdown-source-view .cm-vim-panel { font-family: var(--font-monospace); font-size: var(--font-ui-small); color: var(--text-normal); background: var(--background-secondary); padding: var(--size-2-1) var(--size-4-2); }
+.markdown-source-view .cm-vim-panel input { color: var(--text-normal); font-family: inherit; }

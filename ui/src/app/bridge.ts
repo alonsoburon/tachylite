@@ -1,12 +1,12 @@
 // Glue between the Obsidian-API model (ui/src/obsidian) and the real renderers:
 // editor factory (CM6 Live Preview), reading-view markdown renderer, external links.
 import type { EditorView } from "@codemirror/view";
-import { createEditor, type EditorHandle, type EditorHost, type EditorMode, type LinkTarget } from "../editor";
+import { createEditor, splitFence, type EditorHandle, type EditorHost, type EditorMode, type LinkTarget } from "../editor";
 import { renderMarkdown, type RenderContext } from "../markdown";
 import { ipc } from "../ipc";
 import { Component, MarkdownPreviewRenderer, MarkdownRenderer, Menu, prepareFuzzySearch, type App } from "../obsidian";
 import { setEditorFactory } from "../obsidian/editor";
-import { setMarkdownRenderer } from "../obsidian/markdown";
+import { createPostProcessorContext, runCodeBlockProcessor, setMarkdownRenderer } from "../obsidian/markdown";
 
 /** CM6 view -> handle of the real editor (mode switching, source path). */
 export const editorHandles = new WeakMap<EditorView, EditorHandle>();
@@ -25,13 +25,21 @@ export function makeEditorHost(app: App): EditorHost {
     readFile: async (p) => { const f = md(p); return f ? app.vault.cachedRead(f) : app.vault.adapter.read(p); },
     openTag: (tag) => { void openTagSearch(app, tag); },
     openExternal,
+    save: (path) => {
+      for (const leaf of app.workspace.getLeavesOfType("markdown")) {
+        const v = leaf.view as unknown as { file?: { path: string }; save?(): Promise<void> };
+        if (v.file?.path === path) void v.save?.();
+      }
+    },
     listTags: () => Object.keys(app.metadataCache.getTags()),
     listLinkTargets: (query, source) => linkTargets(app, query, source),
     codeBlockLanguages: () => MarkdownPreviewRenderer.getCodeBlockLanguages(),
-    renderCodeBlock: async (el, markdown, sourcePath) => {
+    renderCodeBlock: async (el, markdown, sourcePath, info) => {
       const comp = new Component();
       comp.load();
-      await MarkdownRenderer.render(app, markdown, el, sourcePath, comp);
+      const { lang, source } = splitFence(markdown);
+      const ctx = createPostProcessorContext(app, sourcePath, comp, info ? { getSectionInfo: () => info.getSectionInfo() } : undefined);
+      if (!(await runCodeBlockProcessor(lang, source, el, ctx))) await MarkdownRenderer.render(app, markdown, el, sourcePath, comp);
       return comp;
     },
     showMenu: (evt, items) => {
@@ -113,6 +121,7 @@ export function installBridge(app: App): () => void {
         doc, host, mode, extraExtensions: extensions,
         tabSize: cfg("tabSize"), useTabs: cfg("useTab"), spellcheck: cfg("spellcheck"),
         showLineNumbers: cfg("showLineNumber"), foldHeading: cfg("foldHeading"), foldIndent: cfg("foldIndent"),
+        vimMode: !!cfg("vimMode"),
       });
       editorHandles.set(handle.view, handle);
       return handle.view;
@@ -123,6 +132,11 @@ export function installBridge(app: App): () => void {
     // The renderer wraps its output in `.markdown-preview-sizer`; Obsidian's MarkdownRenderer.render does not
     // (callers such as the reading view and plugins provide their own container), so unwrap it.
     for (const sizer of Array.from(el.querySelectorAll<HTMLElement>(":scope > .markdown-preview-sizer"))) sizer.replaceWith(...Array.from(sizer.childNodes));
+    // Outside the reading view (whose container is the sizer) it is flat too: no `.el-*` section wrappers and no whitespace
+    // text between blocks. Plugins rely on that, e.g. Dataview unwraps a lone `:scope > p` when `childNodes.length == 1`.
+    if (el.classList.contains("markdown-preview-sizer")) return;
+    for (const sec of Array.from(el.querySelectorAll<HTMLElement>(":scope > .markdown-preview-section"))) sec.replaceWith(...Array.from(sec.childNodes));
+    for (const n of Array.from(el.childNodes)) if (n.nodeType === 3 && !/\S/.test(n.textContent ?? "")) n.remove();
   });
   return () => { setEditorFactory(null); setMarkdownRenderer(null); };
 }

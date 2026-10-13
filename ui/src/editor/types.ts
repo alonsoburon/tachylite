@@ -28,13 +28,20 @@ export interface EditorHost {
   /** Render a note/media embed into `el`. If omitted, the built-in markdown renderer is used. */
   renderEmbed?(el: HTMLElement, linktext: string, sourcePath: string): void | Promise<void>;
   openTag?(tag: string): void;
+  /** Save the note now (Vim `:w`). */
+  save?(sourcePath: string): void;
   openExternal?(url: string): void;
   /** Languages of fenced blocks that plugins render themselves (code-block processors). */
   codeBlockLanguages?(): string[];
   /** Render a whole fenced block (```lang ... ```) through the plugins' processors; the handle is unloaded with the widget. */
-  renderCodeBlock?(el: HTMLElement, markdown: string, sourcePath: string): { unload(): void } | void | Promise<{ unload(): void } | void>;
+  renderCodeBlock?(el: HTMLElement, markdown: string, sourcePath: string, info?: CodeBlockRenderInfo): { unload(): void } | void | Promise<{ unload(): void } | void>;
   /** Show a context menu (Live Preview table cells). Without it, the table widget has no context menu. */
   showMenu?(evt: MouseEvent, items: { title: string; icon: string; section: string; checked?: boolean; disabled?: boolean; onClick(): void }[]): void;
+}
+
+/** Live data about a Live Preview code-block widget (backs `MarkdownPostProcessorContext.getSectionInfo`). */
+export interface CodeBlockRenderInfo {
+  getSectionInfo(): { text: string; lineStart: number; lineEnd: number } | null;
 }
 
 export interface EditorOptions {
@@ -45,7 +52,8 @@ export interface EditorOptions {
   sourcePath?: string;
   onChange?(doc: string, update: ViewUpdate): void;
   readOnly?: boolean;
-  vimMode?: false;
+  /** Vim key bindings (app.json `vimMode`). */
+  vimMode?: boolean;
   lineWrapping?: boolean;
   tabSize?: number;
   /** Indent with a tab character (default true, like Obsidian). */

@@ -108,3 +108,75 @@ for (const spec of PLUGINS) {
     }, 60_000);
   });
 }
+
+// Live Preview with the real Dataview bundle and the real editor (bridge): ```dataview blocks render as widgets through the
+// code-block processor, inline `= ...` / `$= ...` queries through Dataview's own CM6 extension (needs our token classes).
+const dvDir = dirOf("dataview");
+
+/** In-process stand-in for a blob-URL Web Worker (happy-dom has none): runs the script with its own `onmessage`/`postMessage`. */
+function installInlineWorkers(): () => void {
+  const g = globalThis as any;
+  const blobs = new Map<string, Blob>();
+  const origUrl = URL.createObjectURL, origWorker = g.Worker;
+  let n = 0;
+  URL.createObjectURL = ((b: Blob) => { const u = `blob:inline-${n++}`; blobs.set(u, b); return u; }) as typeof URL.createObjectURL;
+  g.Worker = class {
+    onmessage: ((e: { data: unknown }) => void) | null = null;
+    private handler: Promise<((e: { data: unknown }) => unknown) | undefined>;
+    constructor(url: string) {
+      this.handler = blobs.get(url)!.text().then((code) => {
+        const post = (data: unknown) => setTimeout(() => this.onmessage?.({ data: structuredClone(data) }));
+        return new Function("postMessage", "self", `var onmessage;\n${code}\nreturn onmessage;`)(post, g);
+      });
+    }
+    postMessage(data: unknown) { void this.handler.then((h) => h?.({ data: structuredClone(data) })); }
+    terminate() {}
+    addEventListener() {}
+    removeEventListener() {}
+  };
+  return () => { URL.createObjectURL = origUrl; g.Worker = origWorker; };
+}
+describe.skipIf(!ENABLED || !fs.existsSync(path.join(dvDir, "main.js")))("real plugin: dataview in Live Preview", () => {
+  it("renders query blocks and inline queries in the editor, raw text under the cursor", async () => {
+    const { installBridge } = await import("../src/app/bridge");
+    const read = (f: string) => fs.readFileSync(path.join(dvDir, f), "utf8");
+    const home = "# Home\nName: `= this.file.name`\nJS: `$= dv.current().file.name`\n\n```dataview\nLIST FROM \"Notes\"\n```\n\nend\n";
+    v = makeVault(
+      { "Home.md": home, "Notes/Alpha.md": "a", "Notes/Beta.md": "b" },
+      { plugins: { dataview: { manifest: JSON.parse(read("manifest.json")), main: read("main.js"), styles: read("styles.css"), data: { enableDataviewJs: true, enableInlineDataviewJs: true } } }, enabled: ["dataview"] },
+    );
+    const undoWorkers = installInlineWorkers();
+    app = await makeApp(v);
+    const undo = installBridge(app);
+    try {
+      document.body.appendChild(app.dom.appContainerEl);
+      const dv = app.plugins.getPlugin("dataview") as any;
+      await vi.waitFor(() => expect(dv?.index?.initialized).toBe(true), { timeout: 5000 });
+      const leaf = app.workspace.getLeaf(false);
+      await leaf.openFile(app.vault.getFileByPath("Home.md")!, { active: true });
+      const cm = (leaf.view as any).editor.cm as import("@codemirror/view").EditorView;
+      cm.dispatch({ selection: { anchor: cm.state.doc.length } }); // Dataview (re)scans on selection changes
+      await vi.waitFor(() => {
+        const inline = [...cm.contentDOM.querySelectorAll(".dataview-inline")].map((e) => e.textContent);
+        expect(inline).toEqual(["Home", "Home"]);
+        const items = [...cm.dom.querySelectorAll(".cm-preview-code-block.cm-lang-dataview .block-language-dataview li")].map((e) => e.textContent);
+        expect(items.join(",")).toMatch(/Alpha.*Beta/);
+      }, { timeout: 5000 });
+      // cursor inside the inline query -> raw source; inside the block -> raw fence
+      cm.dispatch({ selection: { anchor: home.indexOf("this.file") } });
+      expect(cm.contentDOM.textContent).toContain("`= this.file.name`");
+      expect(cm.contentDOM.querySelectorAll(".dataview-inline").length).toBe(1);
+      cm.dispatch({ selection: { anchor: home.indexOf("LIST") } });
+      expect(cm.dom.querySelector(".cm-lang-dataview")).toBeNull();
+      expect(cm.contentDOM.textContent).toContain('LIST FROM "Notes"');
+      // reading view: the inline post-processor's render children are loaded (preview mode is a child of the view)
+      (leaf.view as any).setMode("preview");
+      const reading = (leaf.view as any).previewEl as HTMLElement;
+      await vi.waitFor(() => {
+        expect(reading.textContent).toContain("Name: Home");
+        expect(reading.textContent).toContain("JS: Home");
+        expect(reading.querySelectorAll(".block-language-dataview li").length).toBe(2);
+      }, { timeout: 5000 });
+    } finally { undo(); undoWorkers(); }
+  }, 30_000);
+});
