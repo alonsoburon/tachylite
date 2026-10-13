@@ -75,6 +75,9 @@ export class InternalPluginWrapper extends Events {
   get _loaded(): boolean { return this.enabled; }
   async load(): Promise<void> {}
   get name(): string { return this.instance.name; }
+  /** Options persistence in .obsidian/<id>.json, as the core plugins' own loadData/saveData. */
+  async loadData(): Promise<any> { try { return await ipc.configRead(`${this.id}.json`); } catch { return null; } }
+  async saveData(data: any): Promise<void> { await ipc.configWrite(`${this.id}.json`, data); }
   enable(): Promise<void> { return this.set(true); }
   disable(): Promise<void> { return this.set(false); }
   private async set(on: boolean): Promise<void> {

@@ -16,7 +16,7 @@ export function installSettings(app: App): () => void {
     new EditorSettingTab(app), new FilesSettingTab(app), new AppearanceSettingTab(app), new HotkeysSettingTab(app),
     new CorePluginsSettingTab(app), new CommunityPluginsSettingTab(app), new AboutSettingTab(app),
   ];
-  app.setting.settingTabs = tabs;
+  app.setting.settingTabs = [...tabs, ...app.setting.settingTabs.filter((t) => !tabs.includes(t))]; // keep core plugin tabs added earlier
   return () => {
     for (const t of tabs) t.hide();
     app.setting.settingTabs = app.setting.settingTabs.filter((t) => !tabs.includes(t));

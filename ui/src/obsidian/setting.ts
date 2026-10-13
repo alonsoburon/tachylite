@@ -476,6 +476,16 @@ export class SettingManager {
     if (!this.pluginTabs.includes(tab)) this.pluginTabs.push(tab);
     if (this.isOpen) this.renderNav();
   }
+  /** Options tab of a core plugin: lives in settingTabs (as in Obsidian) but is listed under "Core plugins". */
+  addCorePluginTab(tab: SettingTab & { corePluginId: string }): void {
+    if (!this.settingTabs.includes(tab)) this.settingTabs.push(tab);
+    if (this.isOpen) this.renderNav();
+  }
+  removeCorePluginTab(tab: SettingTab): void {
+    this.settingTabs = this.settingTabs.filter((t) => t !== tab);
+    if (this.activeTab === tab) { tab.hide(); this.activeTab = null; this.contentEl?.empty(); }
+    if (this.isOpen) this.renderNav();
+  }
   removeSettingTab(tab: SettingTab): void {
     this.pluginTabs = this.pluginTabs.filter((t) => t !== tab);
     if (this.activeTab === tab) { tab.hide(); this.activeTab = null; this.contentEl?.empty(); }
@@ -511,7 +521,9 @@ export class SettingManager {
         it.addEventListener("click", () => this.openTab(t));
       }
     };
-    group("Options", this.settingTabs);
+    const core = (t: SettingTab) => !!(t as any).corePluginId;
+    group("Options", this.settingTabs.filter((t) => !core(t)));
+    group("Core plugins", this.settingTabs.filter(core));
     group("Community plugins", this.pluginTabs);
   }
   openTab(tab: SettingTab): void {

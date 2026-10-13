@@ -307,6 +307,7 @@ export class MarkdownView extends TextFileView {
             this.app.workspace.trigger("quick-preview", this.file, this.editor.getValue());
           }
           if (u.docChanged || u.selectionSet) this.app.workspace.editorSuggestManager?.update(this);
+          if (u.selectionSet && !this.muted) this.app.workspace.trigger("editor-selection-change", this.editor, this);
         }),
       ],
     });
