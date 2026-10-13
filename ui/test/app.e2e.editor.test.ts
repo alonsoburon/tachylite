@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setBackend } from "../src/ipc";
 import { makeVault, type FakeVault } from "./helpers/backend";
 import { startSession, type Session } from "../src/app/session";
+import { getCM, Vim } from "../src/editor";
+import { clickToggle, readJson, row, show } from "./helpers/settings";
+import fs from "node:fs";
+import path from "node:path";
 
 let v: FakeVault;
 let session: Session | null = null;
@@ -73,5 +77,25 @@ describe("editor features (fake backend)", () => {
     await view.previewMode.whenRendered();
     await vi.waitFor(() => expect(qa(".markdown-reading-view pre code span.token").map((e) => `${e.className}|${e.textContent}`)).toEqual(expect.arrayContaining(["token keyword|const", "token comment|// c", "token number|1"])));
     expect(q(".markdown-reading-view .block-language-shout b")?.textContent).toBe("HELLO");
+  });
+
+  it("turns Vim key bindings on from Settings > Editor in open editors; :w saves the note", async () => {
+    const s = await boot();
+    await s.app.workspace.openLinkText("Code", "", false);
+    const view = s.app.workspace.activeLeaf!.view as any;
+    const cm = view.editor.cm;
+    expect(getCM(cm)).toBeNull();
+    expect((window as any).CodeMirrorAdapter.Vim).toBe(Vim);
+    const tab = await show(s.app, "editor");
+    clickToggle(row(tab.containerEl, "Vim key bindings"));
+    await vi.waitFor(() => expect(readJson(v, ".obsidian/app.json")?.vimMode).toBe(true));
+    expect(getCM(cm)).not.toBeNull();
+    cm.dispatch({ selection: { anchor: 0 } });
+    Vim.handleKey(getCM(cm) as any, "x", "user"); // deletes the "#"
+    expect(view.editor.getValue().startsWith(" Code")).toBe(true);
+    Vim.handleEx(getCM(cm) as any, "w");
+    await vi.waitFor(() => expect(fs.readFileSync(path.join(v.root, "Code.md"), "utf8").startsWith(" Code")).toBe(true));
+    clickToggle(row(tab.containerEl, "Vim key bindings"));
+    await vi.waitFor(() => expect(getCM(cm)).toBeNull());
   });
 });

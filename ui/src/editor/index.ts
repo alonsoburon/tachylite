@@ -11,3 +11,4 @@ export { wikilinkCompletionSource, tagCompletionSource } from "./autocomplete";
 export { buildInline, buildBlocks, envFacet, inlinePlugin, blockField } from "./decorations";
 export { parseTable, splitRow } from "./widgets";
 export { headingFold, listFold } from "./folding";
+export { vimAdapter, vimExtension, vimSaveFacet, Vim, getCM } from "./vim";

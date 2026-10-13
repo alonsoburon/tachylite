@@ -1,6 +1,7 @@
 // The App object handed to every plugin.
 import { ipc, listen, type VaultEvent, type VaultInfo } from "../ipc";
 import moment from "moment";
+import { vimAdapter } from "../editor/vim";
 import { installDomHelpers } from "./dom";
 import { Keymap, Scope } from "./events";
 import { FileManager, MetadataCache, MetadataTypeManager } from "./metadata";
@@ -184,11 +185,8 @@ function installLegacyGlobals(): void {
     });
     return mk();
   })();
-  if (!g.CodeMirrorAdapter) {
-    // The CM5 Vim adapter object Obsidian keeps around; Vim mode itself is not provided.
-    const noop = () => undefined;
-    g.CodeMirrorAdapter = { commands: {}, Vim: { defineAction: noop, defineEx: noop, defineMotion: noop, defineOperator: noop, defineOption: noop, mapCommand: noop, map: noop, noremap: noop, unmap: noop, handleKey: noop, getRegisterController: () => ({ pushText: noop }), enterVimMode: noop, exitInsertMode: noop, _mapCommand: noop } };
-  }
+  // The CM5 adapter of the Vim bindings, with the real Vim API on `.Vim` (vimrc-style plugins map keys and ex commands).
+  g.CodeMirrorAdapter ??= vimAdapter();
   if (!g.CodeMirror) {
     // CodeMirror 5 is gone; some plugins still register legacy modes at load time. Accept and ignore them.
     const noop = () => undefined;

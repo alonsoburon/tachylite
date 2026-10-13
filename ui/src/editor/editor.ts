@@ -25,6 +25,7 @@ import {
 import { tagCompletionSource, wikilinkCompletionSource } from "./autocomplete";
 import { headingFoldService, listFoldService } from "./folding";
 import type { WidgetEnv } from "./widgets";
+import { vimExtension, vimSaveFacet } from "./vim";
 
 const External = Annotation.define<boolean>();
 
@@ -87,6 +88,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
     foldIndent: opts.foldIndent ?? true,
     extra: opts.extraExtensions ?? [],
     sourcePath: opts.sourcePath ?? "",
+    vimMode: opts.vimMode ?? false,
   };
   let mode: EditorMode = opts.mode ?? "live-preview";
 
@@ -100,6 +102,8 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
   const numC = new Compartment();
   const foldC = new Compartment();
   const extraC = new Compartment();
+  const vimC = new Compartment();
+  const vimExt = (): Extension => (cur.vimMode ? vimExtension() : []);
 
   const modeExt = (m: EditorMode): Extension =>
     m === "live-preview" ? [inlinePlugin(true), blockField] : [inlinePlugin(false)];
@@ -184,6 +188,8 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
   });
 
   const baseExtensions: Extension[] = [
+    vimC.of(vimExt()),
+    vimSaveFacet.of(() => opts.host.save?.(cur.sourcePath)),
     envFacet.of(env),
     obsidianMarkdown(),
     EditorState.languageData.of(() => [{ closeBrackets: { brackets: ["(", "[", "{", "`"] } }]),
@@ -278,6 +284,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
         if (o.foldIndent !== undefined) cur.foldIndent = o.foldIndent;
         effects.push(foldC.reconfigure(foldExt()));
       }
+      if (o.vimMode !== undefined && o.vimMode !== cur.vimMode) { cur.vimMode = o.vimMode; effects.push(vimC.reconfigure(vimExt())); }
       if (o.extraExtensions !== undefined) { cur.extra = o.extraExtensions; effects.push(extraC.reconfigure(cur.extra)); }
       if (o.sourcePath !== undefined) cur.sourcePath = o.sourcePath;
       if (effects.length) view.dispatch({ effects });

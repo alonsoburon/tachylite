@@ -25,6 +25,12 @@ export function makeEditorHost(app: App): EditorHost {
     readFile: async (p) => { const f = md(p); return f ? app.vault.cachedRead(f) : app.vault.adapter.read(p); },
     openTag: (tag) => { void openTagSearch(app, tag); },
     openExternal,
+    save: (path) => {
+      for (const leaf of app.workspace.getLeavesOfType("markdown")) {
+        const v = leaf.view as unknown as { file?: { path: string }; save?(): Promise<void> };
+        if (v.file?.path === path) void v.save?.();
+      }
+    },
     listTags: () => Object.keys(app.metadataCache.getTags()),
     listLinkTargets: (query, source) => linkTargets(app, query, source),
     codeBlockLanguages: () => MarkdownPreviewRenderer.getCodeBlockLanguages(),
@@ -105,6 +111,7 @@ export function installBridge(app: App): () => void {
         doc, host, mode, extraExtensions: extensions,
         tabSize: cfg("tabSize"), useTabs: cfg("useTab"), spellcheck: cfg("spellcheck"),
         showLineNumbers: cfg("showLineNumber"), foldHeading: cfg("foldHeading"), foldIndent: cfg("foldIndent"),
+        vimMode: !!cfg("vimMode"),
       });
       editorHandles.set(handle.view, handle);
       return handle.view;

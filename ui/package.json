@@ -48,6 +48,7 @@
     "@lezer/highlight": "^1.2.5",
     "@lezer/lr": "^1.4.11",
     "@lezer/markdown": "^1.8.0",
+    "@replit/codemirror-vim": "^6.4.0",
     "@tauri-apps/api": "^2.12.3",
     "@types/js-yaml": "^4.0.9",
     "@types/markdown-it": "^14.2.0",
