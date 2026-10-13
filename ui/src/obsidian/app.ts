@@ -112,6 +112,16 @@ export class App {
   get pluginProcess(): any { return (this._process ??= createProcess()); }
 
   isDarkMode(): boolean { return document.body.classList.contains("theme-dark"); }
+  /** The accent colour as hex: the configured one, else the theme's `--accent-h/s/l`. */
+  getAccentColor(): string {
+    const cfg = this.vault.getConfig("accentColor");
+    if (typeof cfg === "string" && cfg) return cfg;
+    const cs = getComputedStyle(document.body);
+    const num = (v: string, d: number) => { const n = parseFloat(v); return Number.isFinite(n) ? n : d; };
+    const h = num(cs.getPropertyValue("--accent-h"), 262), sat = num(cs.getPropertyValue("--accent-s"), 62) / 100, l = num(cs.getPropertyValue("--accent-l"), 52) / 100;
+    const f = (n: number) => { const k = (n + h / 30) % 12; const a = sat * Math.min(l, 1 - l); return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); };
+    return "#" + [f(0), f(8), f(4)].map((x) => x.toString(16).padStart(2, "0")).join("");
+  }
   getAppId(): string { return this.appId; }
   /** URI that opens `file` (`tachylite://open?vault=...&file=...`; Obsidian returns its own scheme here). */
   getObsidianUrl(file: { path: string; extension?: string }): string {

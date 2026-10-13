@@ -142,7 +142,11 @@ describe("opening files and events", () => {
     const a = tv.addAction("lucide-x", "Close it", () => {}); expect(a.classList.contains("view-action") && a.getAttribute("aria-label") === "Close it").toBe(true);
     leaf.setPinned(true); expect(leaf.getViewState().pinned).toBe(true); expect(ws().getUnpinnedLeaf()).not.toBe(leaf);
     leaf.setGroup("g1"); expect(ws().getGroupLeaves("g1")).toEqual([leaf]); expect(ws().getLeafById(leaf.id)).toBe(leaf);
+    // Obsidian's order: the element is detached and the component unloaded before onClose runs.
+    let atClose: [boolean, boolean] | null = null;
+    tv.onClose = async () => { tv.closed++; atClose = [tv._loaded, tv.containerEl.isConnected]; };
     await leaf.setViewState({ type: "empty" }); expect(tv.closed).toBe(1); expect(tv._loaded).toBe(false);
+    expect(atClose).toEqual([false, false]);
     function ws() { return app.workspace; }
   });
   it("Menu hooks: handleLinkContextMenu adds open-in items", () => {
@@ -171,6 +175,13 @@ describe("commands & hotkeys", () => {
     await vi.waitFor(() => expect(document.querySelectorAll(".prompt .suggestion-item").length).toBeGreaterThan(0)); expect(document.querySelector(".prompt-input")).not.toBeNull();
     app.keymap.handleEvent(new KeyboardEvent("keydown", { key: "Escape", cancelable: true }));
     expect(app.internalPlugins.getPluginById("file-explorer")!.enabled).toBe(true); expect(app.internalPlugins.getEnabledPluginById("daily-notes")).toBeNull(); expect(app.internalPlugins.getPluginById("nope")).toBeUndefined();
+  });
+  it("app.getAccentColor: configured colour, else the theme's accent as hex", () => {
+    expect(app.getAccentColor()).toMatch(/^#[0-9a-f]{6}$/);
+    document.body.style.setProperty("--accent-h", "0"); document.body.style.setProperty("--accent-s", "100%"); document.body.style.setProperty("--accent-l", "50%");
+    expect(app.getAccentColor()).toBe("#ff0000");
+    (app.vault as any).config.accentColor = "#123456";
+    expect(app.getAccentColor()).toBe("#123456");
   });
   it("app helpers: loadLocalStorage/saveLocalStorage, isDarkMode, config, customCss", async () => {
     expect(app.loadLocalStorage("k")).toBeNull(); app.saveLocalStorage("k", { a: 1 }); expect(app.loadLocalStorage("k")).toEqual({ a: 1 }); app.saveLocalStorage("k", null); expect(app.loadLocalStorage("k")).toBeNull();

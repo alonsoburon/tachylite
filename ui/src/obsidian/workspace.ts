@@ -368,12 +368,13 @@ export class WorkspaceLeaf extends WorkspaceItem {
     ws.onLeafChanged(this);
     if (vs.active) ws.setActiveLeaf(this, { focus: true });
   }
+  /** Same order as Obsidian's View.close: detach the element, unload the component, then onClose (which saves). */
   private async closeView(): Promise<void> {
     const v = this.view;
-    try { await v._close(); } catch (e) { console.error(e); }
-    try { v.unload(); } catch (e) { console.error(e); }
-    this.app.workspace.host?.onViewClosed?.(this, v);
     v.containerEl.detach();
+    try { v.unload(); } catch (e) { console.error(e); }
+    try { await v._close(); } catch (e) { console.error(e); }
+    this.app.workspace.host?.onViewClosed?.(this, v);
   }
   async open(view: View): Promise<View> {
     await this.closeView();
