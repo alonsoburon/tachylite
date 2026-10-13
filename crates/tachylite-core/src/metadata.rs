@@ -3,6 +3,7 @@
 //! (`./`, `../`) links resolve against the source folder, and ties prefer the source's
 //! own folder, then the shortest path.
 
+use crate::canvas::canvas_links;
 use crate::parse::{self, CachedMetadata};
 use crate::path::{basename, dirname, extension, strip_ext};
 use crate::vault::Vault;
@@ -19,6 +20,8 @@ pub struct MetadataCache {
     pub resolved_links: BTreeMap<String, BTreeMap<String, usize>>,
     /// source path -> (unresolved link text -> count)
     pub unresolved_links: BTreeMap<String, BTreeMap<String, usize>>,
+    /// `.canvas` path -> link paths its nodes reference (see `canvas::canvas_links`)
+    canvas: BTreeMap<String, Vec<String>>,
 }
 
 /// Split `path#subpath` into its parts (subpath keeps the leading `#`).
@@ -38,6 +41,11 @@ impl MetadataCache {
         for f in vault.markdown_files() {
             if let Ok(text) = vault.read(&f.path) {
                 c.cache.insert(f.path.clone(), parse::parse(&text));
+            }
+        }
+        for f in vault.files().filter(|f| f.extension == "canvas") {
+            if let Ok(text) = vault.read(&f.path) {
+                c.canvas.insert(f.path.clone(), canvas_links(&text));
             }
         }
         c.resolve_all();
@@ -74,6 +82,8 @@ impl MetadataCache {
             if let Ok(text) = vault.read(path) {
                 self.cache.insert(path.to_string(), parse::parse(&text));
             }
+        } else if extension(path) == "canvas" {
+            self.canvas.insert(path.to_string(), vault.read(path).map(|t| canvas_links(&t)).unwrap_or_default());
         }
         self.resolve_all();
     }
@@ -81,6 +91,7 @@ impl MetadataCache {
     pub fn remove_file(&mut self, path: &str) {
         self.unregister(path);
         self.cache.remove(path);
+        self.canvas.remove(path);
         self.resolved_links.remove(path);
         self.unresolved_links.remove(path);
         self.resolve_all();
@@ -89,15 +100,20 @@ impl MetadataCache {
     fn resolve_all(&mut self) {
         let mut resolved = BTreeMap::new();
         let mut unresolved = BTreeMap::new();
-        for (src, meta) in &self.cache {
-            let mut r: BTreeMap<String, usize> = BTreeMap::new();
-            let mut u: BTreeMap<String, usize> = BTreeMap::new();
-            let refs = meta
+        let notes = self.cache.iter().map(|(src, meta)| {
+            let refs: Vec<&str> = meta
                 .links
                 .iter()
                 .map(|l| l.link.as_str())
                 .chain(meta.embeds.iter().map(|l| l.link.as_str()))
-                .chain(meta.frontmatter_links.iter().map(|l| l.link.as_str()));
+                .chain(meta.frontmatter_links.iter().map(|l| l.link.as_str()))
+                .collect();
+            (src, refs)
+        });
+        let canvases = self.canvas.iter().map(|(src, links)| (src, links.iter().map(String::as_str).collect::<Vec<_>>()));
+        for (src, refs) in notes.chain(canvases) {
+            let mut r: BTreeMap<String, usize> = BTreeMap::new();
+            let mut u: BTreeMap<String, usize> = BTreeMap::new();
             for link in refs {
                 let (p, _) = split_subpath(link);
                 match self.first_linkpath_dest(p, src) {

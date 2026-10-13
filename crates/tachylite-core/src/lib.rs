@@ -1,5 +1,6 @@
 //! Tachylite core: an Obsidian-vault-compatible engine.
 
+pub mod canvas;
 pub mod config;
 pub mod metadata;
 pub mod parse;
