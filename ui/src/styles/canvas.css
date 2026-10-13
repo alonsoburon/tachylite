@@ -137,7 +137,7 @@ body {
 .canvas-ghost-path { stroke: var(--interactive-accent); stroke-dasharray: 6 6; }
 .canvas-path-label-wrapper { position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; }
 .canvas-path-label {
-  max-width: 300px; padding: 2px 8px; border-radius: var(--radius-s); white-space: pre-wrap; text-align: center;
+  width: max-content; max-width: 300px; overflow-wrap: normal; word-break: normal; padding: 2px 8px; border-radius: var(--radius-s); white-space: pre-wrap; text-align: center;
   background: var(--canvas-background); color: var(--text-normal); font-size: var(--font-ui-medium, 15px);
 }
 .canvas-path-label-wrapper.is-themed .canvas-path-label { color: var(--canvas-color); }

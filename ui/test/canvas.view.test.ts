@@ -125,6 +125,24 @@ describe("canvas view", () => {
     expect(Object.keys(d.nodes.at(-1)!)).toEqual(["id", "type", "text", "x", "y", "width", "height"]);
   });
 
+  it("card editors coexist with the note editor's extensions (inline title) and expose editorInfoField", async () => {
+    const { installMarkdownView } = await import("../src/app/markdownView");
+    const { editorInfoField } = await import("../src/obsidian/editor");
+    const undo = installMarkdownView(c.app);
+    try {
+      const v = await open();
+      const t1 = v.canvas.nodes.get("t1") as CanvasTextNode;
+      t1.startEditing();
+      await vi.waitFor(() => expect((t1.child as any)?.editMode).toBeTruthy());
+      const cm = (t1.child as any).editMode.cm;
+      expect(t1.nodeEl.querySelector(".inline-title")).toBeNull();
+      const info = cm.state.field(editorInfoField);
+      expect(info.file.path).toBe("board.canvas");
+      expect(info.editor.getValue()).toBe("**bold** [[Note]]");
+      t1.stopEditing();
+    } finally { undo(); }
+  });
+
   it("drags a card (snapping to the grid); dragging a group moves the cards inside it", async () => {
     const v = await open();
     const t1 = v.canvas.nodes.get("t1")!, f1 = v.canvas.nodes.get("f1")!, l1 = v.canvas.nodes.get("l1")!;
@@ -257,6 +275,18 @@ describe("canvas view", () => {
     await vi.waitFor(() => expect(JSON.parse(disk("closed.canvas")).nodes[0].file).toBe("Other2.md"));
   });
 
+  it("lists canvases in the backlinks pane of the notes their cards show", async () => {
+    await c.app.metadataCache.refreshLinks();
+    await c.app.workspace.openLinkText("Note", "", false);
+    const leaf = await c.app.workspace.ensureSideLeaf("backlink", "right", { active: false });
+    await vi.waitFor(() => expect(leaf.view.containerEl.querySelector('.backlink-linked [data-path="board.canvas"]')).not.toBeNull());
+    const item = leaf.view.containerEl.querySelector<HTMLElement>('.backlink-linked [data-path="board.canvas"]')!;
+    await tick(20);
+    expect(item.style.display).not.toBe("none");
+    expect(item.querySelector(".search-result-count")?.textContent).toBe("2");
+    expect(c.app.vault.getAbstractFileByPathInsensitive("BOARD.canvas")?.path).toBe("board.canvas");
+  });
+
   it("supports the internal API plugins use (headless canvas, createFileNode, removeNode, selection, requestSave)", async () => {
     const wrapper = c.app.internalPlugins.plugins.canvas as any;
     await wrapper.load();
@@ -291,7 +321,7 @@ describe("canvas view", () => {
     v.canvas.setData({ nodes: [], edges: [] });
     expect(v.canvas.nodes.size).toBe(0);
     v.canvas.zoomToBbox({ minX: 0, minY: 0, maxX: 1600, maxY: 1200 });
-    expect(v.canvas.scale).toBeCloseTo(600 / 1280); // fits the height of the 800x600 viewport with 40px padding
+    expect(v.canvas.scale).toBeCloseTo((600 - 80 - 24) / 1200); // the height of the 800x600 viewport limits: 40px padding, 24px for labels
   });
 
   it("creates Untitled.canvas from the command, ribbon and folder menu", async () => {

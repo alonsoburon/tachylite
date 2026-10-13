@@ -329,12 +329,13 @@ export class Canvas {
   }
   /** Re-centre after the container was resized. */
   onResize(): void { this.applyViewport(); }
+  /** Fit `b` with `pad` screen pixels around it (plus room above for the card and group labels). */
   zoomToBbox(b: BBox, pad = 40): void {
     const { width, height } = this.viewportSize();
-    const w = Math.max(1, b.maxX - b.minX + pad * 2), h = Math.max(1, b.maxY - b.minY + pad * 2);
-    const k = Math.min(width / w, height / h, 1);
+    const top = 24;
+    const k = Math.min((width - pad * 2) / Math.max(1, b.maxX - b.minX), (height - pad * 2 - top) / Math.max(1, b.maxY - b.minY), 1);
     const c = bboxCenter(b);
-    this.setViewport(c.x, c.y, Math.log2(k));
+    this.setViewport(c.x, c.y - top / 2 / Math.max(k, 1e-3), Math.log2(Math.max(k, 1e-3)));
   }
   getContentBBox(): BBox | null { return unionBBox([...this.nodes.values()].map((n) => n.getBBox())); }
   zoomToFit(): void { const b = this.getContentBBox(); if (b) this.zoomToBbox(b); else this.setViewport(0, 0, 0); }
@@ -392,6 +393,8 @@ export class Canvas {
   private installInteraction(): void {
     const w = this.wrapperEl;
     this.on(w, "pointerdown", (e) => this.onPointerDown(e));
+    // Focusing an editor inside a card makes the browser scroll the (overflow: hidden) wrapper; the viewport is ours.
+    this.on(w, "scroll", () => { if (w.scrollTop || w.scrollLeft) { w.scrollTop = 0; w.scrollLeft = 0; } });
     this.on(w, "dblclick", (e) => this.onDoubleClick(e));
     this.on(w, "wheel", (e) => this.onWheel(e), { passive: false });
     this.on(w, "keydown", (e) => this.onKeyDown(e));

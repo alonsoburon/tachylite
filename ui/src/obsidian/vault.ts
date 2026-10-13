@@ -160,6 +160,13 @@ export class Vault extends Events {
   getName(): string { return this.name; }
   getRoot(): TFolder { return this.root; }
   getAbstractFileByPath(path: string): TAbstractFile | null { return this.fileMap[path] ?? this.fileMap[normalizePath(path)] ?? null; }
+  /** Internal API (Excalidraw): exact match first, else the first path equal ignoring case. */
+  getAbstractFileByPathInsensitive(path: string): TAbstractFile | null {
+    const exact = this.getAbstractFileByPath(path);
+    if (exact) return exact;
+    const lc = normalizePath(path).toLowerCase();
+    return Object.values(this.fileMap).find((f) => f.path.toLowerCase() === lc) ?? null;
+  }
   getFileByPath(path: string): TFile | null { const f = this.getAbstractFileByPath(path); return f instanceof TFile ? f : null; }
   getFolderByPath(path: string): TFolder | null { const f = this.getAbstractFileByPath(path); return f instanceof TFolder ? f : null; }
   getAllLoadedFiles(): TAbstractFile[] { return Object.values(this.fileMap); }

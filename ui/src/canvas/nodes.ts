@@ -3,6 +3,7 @@
 // internal canvas objects; the implementation is our own.
 import { Component, TFile, setIcon, MarkdownRenderer } from "../obsidian";
 import { EmbeddedEditView } from "../obsidian/embeds";
+import { editorInfoField } from "../obsidian/editor";
 import { resolveSubpath } from "../obsidian/util";
 import {
   arrowPoints, autoSides, cssColor, edgeGeometry, rectBBox, sideNormal, sidePoint, SIDES,
@@ -32,6 +33,15 @@ export function applyColor(el: Element, color: CanvasColor | undefined): void {
 const IMAGE = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "avif"]);
 const AUDIO = new Set(["mp3", "wav", "m4a", "ogg", "3gp", "flac", "opus"]);
 const VIDEO = new Set(["mp4", "webm", "ogv", "mov", "mkv"]);
+
+/** Card editor: plugins' editor extensions find a MarkdownFileInfo-like owner in editorInfoField, as in note editors. */
+class CardEditView extends EmbeddedEditView {
+  buildLocalExtensions() {
+    const child = this.owner as NodeMarkdownChild;
+    const info = { get app() { return child.app; }, get file() { return child.file ?? child.node.canvas.app.vault.getFileByPath(child.node.canvas.sourcePath); }, get editor() { return child.editMode?.editor; }, hoverPopover: null };
+    return [editorInfoField.init(() => info), ...super.buildLocalExtensions()];
+  }
+}
 
 /**
  * Markdown shown inside a card: rendered preview, or an embedded editor while editing.
@@ -63,7 +73,7 @@ export class NodeMarkdownChild extends Component {
     this.text = await this.io.read();
     this.containerEl.empty();
     const host = this.containerEl.createDiv({ cls: "markdown-source-view cm-s-obsidian mod-cm6 is-live-preview" });
-    const view = (this.editMode = new EmbeddedEditView(this.app, host, this));
+    const view = (this.editMode = new CardEditView(this.app, host, this));
     view.load();
     view.set(this.text, true);
     view.changeListener = () => { const t = view.get(); if (t !== this.text) { this.text = t; this.io.write!(t); } };
@@ -305,7 +315,10 @@ export class CanvasFileNode extends CanvasNode {
   detach(): void { if (this.writeTimer) { clearTimeout(this.writeTimer); this.writeTimer = null; } super.detach(); }
 }
 
-/** Only plain web pages are framed, sandboxed without same-origin access; anything else (local hosts, other schemes) is a card. */
+/**
+ * Only public web pages are framed (sandboxed; `allow-same-origin` only grants the page its own remote origin, never the
+ * app's); local hosts, private addresses and other schemes render as a title card.
+ */
 export function isFrameableUrl(url: string): boolean {
   let u: URL;
   try { u = new URL(url); } catch { return false; }
@@ -329,7 +342,7 @@ export class CanvasLinkNode extends CanvasNode {
     const frame = this.canvas.options.linkFrames && isFrameableUrl(this.url);
     this.nodeEl.toggleClass("is-framed", frame);
     if (frame) {
-      c.createEl("iframe", { cls: "canvas-link-frame", attr: { src: this.url, sandbox: "allow-scripts allow-forms allow-popups", referrerpolicy: "no-referrer", loading: "lazy" } });
+      c.createEl("iframe", { cls: "canvas-link-frame", attr: { src: this.url, sandbox: "allow-scripts allow-same-origin allow-forms allow-popups", referrerpolicy: "no-referrer" } }); // no loading="lazy": WebKit never loads lazy frames inside the transformed canvas
       return;
     }
     const card = c.createDiv({ cls: "canvas-link-card" });
