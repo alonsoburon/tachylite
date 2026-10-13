@@ -74,15 +74,23 @@ Community plugins start in restricted mode, as in Obsidian, until enabled in Set
 
 ## Known gaps
 
-- Not implemented: Bases, Canvas, hover page previews, Vim mode, popout windows, OS trash
-  (deleted notes go to the vault's `.trash`), Sync and Publish.
-- Plugins that need Node APIs (`child_process`, local servers) can't run in a webview, e.g.
-  `obsidian-git`, `omnisearch`. `excalidraw` needs Canvas.
-- Partial: tables in Live Preview are read-only widgets; Dataview inline queries don't render in
-  Live Preview; reading-view code blocks have no syntax highlighting.
-- Verified plugin loading in tests for 33 popular plugins; that shows they load, not that every
-  feature works. Report breakage as issues with the plugin id and version.
-- macOS and Windows are untested.
+Implemented but young (covered by tests; most were exercised in the real window only briefly, so
+expect bugs): Canvas (`.canvas`), Bases (`.base`: table, cards and list views, partial formula
+language), editable tables, Dataview-style inline and block widgets in Live Preview, code
+syntax highlighting, Vim mode, popout windows, OS trash, Templates, Daily notes, Properties,
+Note composer, File recovery, Workspaces, `tachylite://` links, and an opt-in Node bridge
+(`child_process`, real `fs`) so desktop-only plugins can run. The Node bridge gives plugins full
+user permissions, as Obsidian does, and sits behind a confirmation.
+
+Still missing or unverified:
+
+- Hover page previews and the local graph view (and graph filters/groups) are not implemented.
+- `obsidian-git`, `omnisearch` and Excalidraw have not been verified end to end.
+- Plugin compatibility is checked by loading real bundles in tests; that shows they load, not
+  that every feature works. Report breakage as issues with the plugin id and version.
+- Bases formulas and some Canvas details are incomplete.
+- Packaging and CI are configured for Linux, macOS and Windows, but only Linux has been run.
+- Sync and Publish are out of scope.
 
 ## License
 
