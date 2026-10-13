@@ -1401,7 +1401,7 @@ mod tests {
         assert_eq!(B64.decode(r["stdout"].as_str().unwrap()).unwrap(), b"HELLO");
         assert_eq!(r["status"], 0);
         let t = Instant::now();
-        let r = spawn_sync(SpawnSyncReq { spawn: sh("sleep 5"), timeout: Some(100), ..Default::default() }, d.path());
+        let r = spawn_sync(SpawnSyncReq { spawn: sh("exec sleep 5"), timeout: Some(100), ..Default::default() }, d.path());
         assert!(t.elapsed() < Duration::from_secs(3));
         assert_eq!((r["error"]["code"].as_str(), r["signal"].as_str()), (Some("ETIMEDOUT"), Some("SIGTERM")));
         let r = spawn_sync(SpawnSyncReq { spawn: sh("printf 0123456789"), max_buffer: Some(4), ..Default::default() }, d.path());
