@@ -343,7 +343,7 @@ export class Canvas {
   /** Zoom by `delta` (log2 units) keeping `at` (canvas coordinates) fixed on screen. */
   zoomBy(delta: number, at?: Point): void {
     const z = clamp(this.zoom + delta, MIN_ZOOM, MAX_ZOOM);
-    if (!at) { this.setViewport(this.x, this.y, z); return; }
+    if (!at || !isFinite(at.x) || !isFinite(at.y)) { this.setViewport(this.x, this.y, z); return; }
     const k0 = this.scale, k1 = Math.pow(2, z);
     this.setViewport(at.x - (at.x - this.x) * k0 / k1, at.y - (at.y - this.y) * k0 / k1, z);
   }

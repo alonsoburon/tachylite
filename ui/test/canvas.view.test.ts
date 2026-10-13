@@ -164,6 +164,64 @@ describe("canvas view", () => {
     expect(v.canvas.nodes.get("t1")!.x).toBe(40);
   });
 
+  it("pans with the wheel, right-drag and space+drag; zooms with ctrl+wheel around the pointer and with the controls", async () => {
+    const v = await open();
+    const cv = v.canvas, w = cv.wrapperEl;
+    w.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaX: 30, deltaY: 50 }));
+    expect([cv.x, cv.y, cv.zoom]).toEqual([30, 50, 0]);
+    // ctrl+wheel (also what trackpad pinch sends) keeps the point under the cursor fixed
+    const before = cv.posFromClient({ x: 600, y: 400 });
+    const zoomEv = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -50, clientX: 600, clientY: 400 });
+    // happy-dom's WheelEvent drops the modifier and position init fields
+    for (const [k, val] of [["ctrlKey", true], ["clientX", 600], ["clientY", 400]] as const) Object.defineProperty(zoomEv, k, { value: val });
+    w.dispatchEvent(zoomEv);
+    expect(cv.zoom).toBeCloseTo(0.5);
+    const after = cv.posFromClient({ x: 600, y: 400 });
+    expect(after.x).toBeCloseTo(before.x); expect(after.y).toBeCloseTo(before.y);
+    cv.setViewport(0, 0, 0);
+    dragFrom(w, 0, 0, -100, -50, { button: 2 });
+    expect([cv.x, cv.y]).toEqual([100, 50]);
+    w.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true })); // swallowed after a pan
+    expect(document.querySelector(".menu")).toBeNull();
+    w.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+    dragFrom(w, 0, 0, 40, 40);
+    w.dispatchEvent(new KeyboardEvent("keyup", { key: " ", bubbles: true }));
+    expect([cv.x, cv.y]).toEqual([60, 10]);
+    expect(cv.selection.size).toBe(0); // space+drag did not start a rubber band
+    (w.querySelector('.canvas-control-item[aria-label="Zoom in"]') as HTMLElement).click();
+    expect(cv.zoom).toBe(0.5);
+    (w.querySelector('.canvas-control-item[aria-label="Zoom to fit"]') as HTMLElement).click();
+    const vb = cv.getViewportBBox(), cb = cv.getContentBBox()!;
+    expect(vb.minX <= cb.minX && vb.maxX >= cb.maxX && vb.minY <= cb.minY && vb.maxY >= cb.maxY).toBe(true);
+  });
+
+  it("copies, pastes and duplicates cards with the edges between them", async () => {
+    const v = await open();
+    const cv = v.canvas, key = (k: string) => cv.wrapperEl.dispatchEvent(new KeyboardEvent("keydown", { key: k, ctrlKey: true, bubbles: true }));
+    cv.selectOnlyMany([cv.nodes.get("t1")!, cv.nodes.get("f1")!]);
+    key("c"); key("v");
+    expect(cv.nodes.size).toBe(7);
+    expect(cv.edges.size).toBe(2);
+    const pasted = [...cv.selection].filter((i) => i instanceof CanvasTextNode) as CanvasTextNode[];
+    expect(pasted.map((n) => n.text)).toEqual(["**bold** [[Note]]"]);
+    expect(pasted[0].id).not.toBe("t1");
+    key("d");
+    expect(cv.nodes.size).toBe(9);
+    key("z"); key("z");
+    expect(cv.nodes.size).toBe(5);
+  });
+
+  it("renames a group by double-clicking its label", async () => {
+    const v = await open();
+    const g = v.canvas.nodes.get("g1") as CanvasGroupNode;
+    g.labelEl.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, ...at(0, -80) }));
+    const input = v.canvas.wrapperEl.querySelector<HTMLInputElement>(".canvas-path-label-editor.mod-group")!;
+    input.value = "Renamed";
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(g.labelEl.textContent).toBe("Renamed");
+    expect((await saved(v)).nodes[0]).toMatchObject({ id: "g1", label: "Renamed" });
+  });
+
   it("resizes from a handle", async () => {
     const v = await open();
     const f1 = v.canvas.nodes.get("f1")!;
