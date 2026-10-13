@@ -982,12 +982,34 @@ pub fn bridge_activate(app: AppHandle, state: State<crate::App>, bridge: State<B
     Ok(bridge.set_active(&root, active, consented).then(|| info(&bridge, &root)))
 }
 
-/// Record the user's choice (called by the UI only after the warning modal was accepted) and apply it now.
+/// Record the user's choice (called by the UI after its warning modal was accepted) and apply it now.
+/// Turning it on also asks for a native confirmation, which code running in the webview cannot answer
+/// by itself, so a script in a note cannot silently grant plugins full access.
 #[tauri::command]
-pub fn bridge_set_enabled(app: AppHandle, state: State<crate::App>, bridge: State<Bridge>, enabled: bool) -> Res<Option<Info>> {
+pub async fn bridge_set_enabled(app: AppHandle, state: State<'_, crate::App>, bridge: State<'_, Bridge>, enabled: bool) -> Res<Option<Info>> {
     let root = vault_root(&state)?;
+    if enabled && !native_confirm(&app, &root) {
+        return Ok(None);
+    }
     consent_save(&consent_file(&app)?, &root, enabled).map_err(|e| e.to_string())?;
     Ok(bridge.set_active(&root, enabled, enabled).then(|| info(&bridge, &root)))
+}
+
+/// Blocking OS dialog. Developer automation (`TACHYLITE_DEV=1` in debug builds) skips it.
+fn native_confirm(app: &AppHandle, root: &Path) -> bool {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+    if cfg!(debug_assertions) && std::env::var("TACHYLITE_DEV").is_ok() {
+        return true;
+    }
+    let vault = root.file_name().map_or_else(|| root.to_string_lossy().into_owned(), |n| n.to_string_lossy().into_owned());
+    app.dialog()
+        .message(format!(
+            "Community plugins enabled in the vault \"{vault}\" will be able to run programs and read, change or delete any file your user account can access."
+        ))
+        .title("Allow full access for plugins?")
+        .kind(MessageDialogKind::Warning)
+        .buttons(MessageDialogButtons::OkCancelCustom("Allow full access".into(), "Cancel".into()))
+        .blocking_show()
 }
 
 #[tauri::command]

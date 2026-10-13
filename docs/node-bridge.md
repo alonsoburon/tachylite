@@ -47,6 +47,7 @@ created per app session and handed to the page only while the bridge is active.
 
 This is the same trust model as Obsidian: enabled plugins are trusted code. The switch makes that explicit, and the
 Rust gate means nothing in the webview can spawn processes or touch files outside the vault while it is off or in
-restricted mode. It does not sandbox plugins once it is on, and code already running in the webview (a plugin)
-could call the enabling command itself; the gate guards against accidents and keeps restricted mode meaningful, not
-against a malicious plugin you chose to run.
+restricted mode. Turning the switch on additionally needs a native OS confirmation dialog shown by the Rust side
+(after the in-app explanation), which code in the webview cannot answer, so a script in a note or a plugin cannot
+grant itself access silently. (Debug builds run with `TACHYLITE_DEV=1` skip that dialog for automation.) It does not
+sandbox plugins once it is on: a malicious plugin you chose to run has your user's permissions, as in Obsidian.
