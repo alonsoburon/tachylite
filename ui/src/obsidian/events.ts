@@ -92,9 +92,14 @@ export class Component {
 const nav: any = typeof navigator !== "undefined" ? navigator : { userAgent: "", platform: "" };
 const ua: string = String(nav.userAgent ?? "");
 const plat: string = String(nav.platform ?? "");
-const isMac = /Mac|iPhone|iPad/i.test(plat) || /Mac OS X/.test(ua);
-const isWin = /Win/i.test(plat) || /Windows/.test(ua);
-const isLinux = !isMac && !isWin && (/Linux|X11/i.test(plat) || /Linux|X11/.test(ua) || true);
+/** The OS: the desktop shell injects `__TACHYLITE_OS__` before any script runs; the user agent is the fallback. */
+export function detectOS(hint: unknown = (globalThis as any).__TACHYLITE_OS__, agent = ua, platform = plat): "macos" | "windows" | "linux" {
+  if (hint === "macos" || hint === "windows" || hint === "linux") return hint;
+  if (/Mac|iPhone|iPad/i.test(platform) || /Mac OS X|Macintosh/.test(agent)) return "macos";
+  if (/Win/i.test(platform) || /Windows/.test(agent)) return "windows";
+  return "linux";
+}
+const os = detectOS();
 
 export const Platform = {
   isDesktop: true,
@@ -105,11 +110,15 @@ export const Platform = {
   isAndroidApp: false,
   isPhone: false,
   isTablet: false,
-  isMacOS: isMac,
-  isWin,
-  isLinux: isLinux && !isMac && !isWin,
+  isMacOS: os === "macos",
+  isWin: os === "windows",
+  isLinux: os === "linux",
   isSafari: /Safari/.test(ua) && !/Chrome|Chromium/.test(ua),
-  resourcePathPrefix: "app://local/",
+  /** What `getResourcePath` URLs start with (Tauri's asset protocol: `asset://localhost/`, `http://asset.localhost/` on Windows). */
+  get resourcePathPrefix(): string {
+    const conv = (globalThis as any).__TAURI__?.core?.convertFileSrc ?? (globalThis as any).__TAURI_INTERNALS__?.convertFileSrc;
+    return conv ? conv("") : os === "windows" ? "http://asset.localhost/" : "asset://localhost/";
+  },
 };
 
 // ---------------------------------------------------------------- Scope & Keymap

@@ -7,6 +7,7 @@ import { ipc } from "../ipc";
 import EventEmitter from "events";
 import type { App } from "./app";
 import { nodeBridge, openPath } from "./nodeBridge";
+import { detectOS } from "./events";
 
 export { Buffer, EventEmitter };
 export const path = pathBrowserify;
@@ -31,7 +32,7 @@ export function unsupportedModule(name: string, overrides: Record<string, unknow
 }
 
 // ------------------------------------------------------------------ process
-const uaPlatform = () => { const ua = typeof navigator !== "undefined" ? navigator.userAgent : ""; return /Mac/.test(ua) ? "darwin" : /Win/.test(ua) ? "win32" : "linux"; };
+const uaPlatform = () => ({ macos: "darwin", windows: "win32", linux: "linux" } as const)[detectOS()];
 /** Platform, env, cwd and pid come from the Node bridge while it is active (see nodeBridge.ts), else browser guesses. */
 export function createProcess(): any {
   const p: any = new EventEmitter();
@@ -330,7 +331,7 @@ export function createFs(app: App): any {
   const base = () => app.vault.adapter.getBasePath().replace(/\\/g, "/").replace(/\/+$/, "");
   const toVault = (p: string | URL, syscall: string): string => {
     let s = String(p instanceof URL ? p.pathname : p).replace(/\\/g, "/");
-    if (/^file:\/\//.test(s)) s = decodeURIComponent(new URL(s).pathname);
+    if (/^file:\/\//.test(s)) s = decodeURIComponent(new URL(s).pathname).replace(/^\/([A-Za-z]:\/)/, "$1");
     const b = base();
     if (s === b) return "";
     if (s.startsWith(b + "/")) s = s.slice(b.length + 1);
