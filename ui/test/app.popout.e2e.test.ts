@@ -132,6 +132,15 @@ describe("popout windows (fake backend)", () => {
     await vi.waitFor(() => expect([...doc.head.querySelectorAll("style")].some((e) => e.textContent === ".x-later { color: green }")).toBe(true));
     later.remove();
     await vi.waitFor(() => expect([...doc.head.querySelectorAll("style")].some((e) => e.textContent?.startsWith(".x-later"))).toBe(false));
+    // the popout's own sheets (CodeMirror mounts its base theme per document, at the top) stay before the mirrored
+    // block, so app/theme CSS keeps winning over them
+    const own = doc.head.insertBefore(doc.createElement("style"), doc.head.firstChild);
+    own.textContent = ".own {}";
+    document.head.appendChild(Object.assign(document.createElement("style"), { textContent: ".x-last {}" }));
+    await vi.waitFor(() => expect([...doc.head.querySelectorAll("style")].some((e) => e.textContent === ".x-last {}")).toBe(true));
+    const sheets = [...doc.head.querySelectorAll("style")];
+    expect(sheets.indexOf(own)).toBeLessThan(sheets.findIndex((e) => e.hasAttribute("data-tachylite-mirror")));
+    expect(sheets.at(-1)?.textContent).toBe(".x-last {}");
     // the popout's tab chrome is wired like the main area's
     await vi.waitFor(() => expect(q(".workspace-tab-header-new-tab", doc as any)).toBeTruthy());
     expect(q(".workspace-tab-header-inner-close-button", doc as any)).toBeTruthy();
@@ -289,5 +298,24 @@ describe("popout windows (fake backend)", () => {
     await ws.openLinkText("A", "B.md", false);
     expect((w.leaves()[0].view as MarkdownView).file?.path).toBe("A.md");
     expect(w.leaves()).toHaveLength(1);
+  });
+
+  it("falls back to a tab when no window can be opened, and forgets windows destroyed behind its back", async () => {
+    const s = await boot(false);
+    const ws = s.app.workspace;
+    const leaf = await openA(s);
+    const { setPopoutOpener } = await import("../src/app/popout");
+    setPopoutOpener(() => null);
+    const nl = ws.openPopoutLeaf();
+    expect(nl.getRoot()).toBe(ws.rootSplit);
+    expect(ws.floatingSplit.children).toHaveLength(0);
+    expect(qa(".notice").map((e) => e.textContent)).toContain("Unable to open a new window.");
+    expect(() => ws.moveLeafToPopout(leaf)).toThrow();
+    expect(leaf.getRoot()).toBe(ws.rootSplit);
+    await pop.restore(); pop = installFakePopouts();
+    const win = ws.moveLeafToPopout(leaf);
+    v.emitEvent("popout-destroyed", s.shell.popouts.labelOf(win));
+    expect(ws.floatingSplit.children).toHaveLength(0);
+    expect(leaf.parent).toBeNull();
   });
 });

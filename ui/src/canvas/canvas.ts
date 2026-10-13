@@ -375,7 +375,7 @@ export class Canvas {
   destroy(): void { this.clear(); for (const d of this.disposers.splice(0)) d(); this.wrapperEl.remove(); }
 
   itemFromTarget(t: EventTarget | null): CanvasItem | null {
-    const el = t instanceof Element ? t : null;
+    const el = (t as Node | null)?.nodeType === 1 ? (t as Element) : null; // any window's Element (popouts)
     const nodeEl = el?.closest<HTMLElement>("[data-node-id]");
     if (nodeEl) return this.nodes.get(nodeEl.dataset.nodeId!) ?? null;
     const edgeEl = el?.closest("[data-edge-id]");
@@ -383,11 +383,11 @@ export class Canvas {
     return null;
   }
   private isEditingTarget(t: EventTarget | null): boolean {
-    const el = t instanceof Element ? t : null;
+    const el = (t as Node | null)?.nodeType === 1 ? (t as Element) : null; // any window's Element (popouts)
     return !!el && !!el.closest(".canvas-node.is-editing .canvas-node-content, input, textarea, [contenteditable='true']");
   }
   private isUiTarget(t: EventTarget | null): boolean {
-    return t instanceof Element && !!t.closest(".canvas-controls, .canvas-menu-container, .canvas-card-menu, .canvas-path-label-editor, a, audio, video, iframe");
+    return (t as Node | null)?.nodeType === 1 && !!(t as Element).closest(".canvas-controls, .canvas-menu-container, .canvas-card-menu, .canvas-path-label-editor, a, audio, video, iframe");
   }
 
   private installInteraction(): void {
@@ -416,7 +416,7 @@ export class Canvas {
       if (from && !(to && from.contains(to))) {
         const n = this.nodes.get((from as HTMLElement).dataset.nodeId!);
         // A short delay lets clicks inside the card (or a refocus) cancel it.
-        setTimeout(() => { if (n?.isEditing && !n.nodeEl.contains(document.activeElement)) n.stopEditing(); }, 0);
+        setTimeout(() => { if (n?.isEditing && !n.nodeEl.contains(n.nodeEl.ownerDocument.activeElement)) n.stopEditing(); }, 0);
       }
     });
   }

@@ -4,7 +4,7 @@
 // views moved (not re-created) between documents. This module owns the popout documents: skeleton, mirrored
 // stylesheets and body classes, per-window input handlers, titles, geometry and closing.
 import { ipc, listen } from "../ipc";
-import { installDomHelpersIn, registerAppWindow, setActiveWindow, unregisterAppWindow } from "../obsidian/dom";
+import { installDomHelpersIn, notifyWindowMigrated, registerAppWindow, setActiveWindow, unregisterAppWindow } from "../obsidian/dom";
 import type { App, WorkspaceLeaf, WorkspaceWindow, WorkspaceWindowInitData } from "../obsidian";
 
 /** Opens the OS window for a popout URL. Tests substitute one returning a second DOM window. */
@@ -16,7 +16,7 @@ export function setPopoutOpener(fn: PopoutOpener | null): void { opener = fn ?? 
 /** What the shell does for every window it renders into (keymap, focus tracking, ...); returns a cleanup. */
 export interface PopoutHost { installWindowHandlers(win: Window): () => void; flush(): void; decorate(): void }
 
-interface Popout { ws: WorkspaceWindow; win: Window; label: string; cleanups: (() => void)[] }
+interface Popout { ws: WorkspaceWindow; win: Window; label: string; doc: Document | null; cleanups: (() => void)[] }
 
 const MIRROR = "data-tachylite-mirror";
 
@@ -61,11 +61,13 @@ export class Popouts {
     if (ws.maximize || data?.maximize) q.set("maximize", "1");
     const win = opener(`about:blank#tachylite-popout?${q.toString()}`, label);
     if (!win) throw new Error("Unable to open a new window.");
-    const p: Popout = { ws, win, label, cleanups: [] };
+    const p: Popout = { ws, win, label, doc: null, cleanups: [] };
     this.open_.set(label, p);
     registerAppWindow(win);
     this.focused = win; // a new OS window takes the focus
     this.build(p);
+    // WebKit keeps the initial about:blank document; should an engine swap it for a fresh one, rebuild in it.
+    for (const ms of [100, 500, 1500]) setTimeout(() => this.check(p), ms);
     void ipc.popoutGeometry(label).then((geo) => { if (geo && !ws.geometry.width) ws.geometry = { x: geo.x, y: geo.y, width: geo.width, height: geo.height }; }).catch(() => {});
     return win;
   }
@@ -99,8 +101,9 @@ export class Popouts {
 
   // ---------------------------------------------------------------- document
   private build(p: Popout): void {
+    for (const c of p.cleanups.splice(0)) { try { c(); } catch (e) { console.error(e); } }
     const { win, ws } = p;
-    const doc = win.document;
+    const doc = (p.doc = win.document);
     installDomHelpersIn(win);
     // Same skeleton as the main window, minus ribbons and status bar.
     doc.documentElement.lang = document.documentElement.lang;
@@ -109,12 +112,12 @@ export class Popouts {
     const workspaceEl = appEl.createDiv({ cls: "horizontal-main-container" }).createDiv({ cls: "workspace mod-popout" });
     doc.body.replaceChildren(appEl);
     workspaceEl.appendChild(ws.containerEl);
+    notifyWindowMigrated(ws.containerEl);
     p.cleanups.push(this.mirrorStyles(doc));
     p.cleanups.push(this.host.installWindowHandlers(win));
     const onFocus = () => this.onFocus(win);
     const onBlur = () => this.host.flush();
-    // The OS window went away without asking (crash, external close): treat it like closing it.
-    const onGone = () => { if (this.open_.get(p.label) === p && !ws.isClosing) ws.close(); };
+    const onGone = () => setTimeout(() => this.check(p), 50);
     const onResize = () => { for (const l of ws.leaves()) l.onResize(); };
     win.addEventListener("focus", onFocus);
     win.addEventListener("blur", onBlur);
@@ -129,6 +132,16 @@ export class Popouts {
     this.scheduleTitles();
   }
 
+  /** The popout's document went away: closed without asking (crash, external close) closes it like the
+   *  close button; a replaced document gets the popout rebuilt into it. */
+  private check(p: Popout): void {
+    if (this.open_.get(p.label) !== p || p.ws.isClosing) return;
+    let doc: Document | null = null;
+    try { doc = p.win.closed ? null : p.win.document; } catch { /* navigated away: no longer ours */ }
+    if (!doc) p.ws.close();
+    else if (doc !== p.doc) this.build(p);
+  }
+
   /** Keep the popout's stylesheets, `<html>`/`<body>` classes and inline CSS variables in step with the main window. */
   private mirrorStyles(doc: Document): () => void {
     const clones = new Map<Element, { clone: Element; sig: string }>();
@@ -137,7 +150,7 @@ export class Popouts {
       const src = [...document.querySelectorAll("head > style, head > link[rel~='stylesheet'], body > style")];
       const live = new Set(src);
       for (const [el, c] of clones) if (!live.has(el)) { c.clone.remove(); clones.delete(el); }
-      let prev: Element | null = null;
+      const order: Element[] = [];
       for (const el of src) {
         const sig = sigOf(el);
         let c = clones.get(el);
@@ -151,11 +164,16 @@ export class Popouts {
           c = { clone, sig };
           clones.set(el, c);
         }
-        // Only move nodes that are out of order: re-inserting a stylesheet makes the engine re-parse it.
-        const want: ChildNode | null = prev ? prev.nextSibling : doc.head.firstChild;
-        if (c.clone !== want || c.clone.parentNode !== doc.head) doc.head.insertBefore(c.clone, want);
-        prev = c.clone;
+        order.push(c.clone);
       }
+      // One contiguous block, in the main window's order, after the popout's own sheets (CodeMirror mounts its
+      // base theme per document, at the top of <head>, and the app/theme CSS must still win over it). Only nodes
+      // out of place move: re-inserting a stylesheet makes the engine re-parse it.
+      order.forEach((c, i) => {
+        const prev = order[i - 1];
+        if (c.parentNode === doc.head && (!prev || c.previousSibling === prev)) return;
+        doc.head.insertBefore(c, prev ? prev.nextSibling : order.slice(1).find((x) => x.parentNode === doc.head) ?? null);
+      });
     };
     const syncAttrs = () => {
       for (const [from, to] of [[document.documentElement, doc.documentElement], [document.body, doc.body]] as const) {

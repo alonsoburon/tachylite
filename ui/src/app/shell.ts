@@ -2,7 +2,7 @@
 // tab chrome (close, pin, drag-reorder, drop-to-split), resize handles, sidebar toggles, layout persistence.
 import { ipc } from "../ipc";
 import {
-  FileView, Menu, TextFileView, WorkspaceParent, WorkspaceSidedock, WorkspaceSplit, WorkspaceTabs, WorkspaceWindow,
+  FileView, Menu, Notice, TextFileView, WorkspaceParent, WorkspaceSidedock, WorkspaceSplit, WorkspaceTabs, WorkspaceWindow,
   type App, type LayoutHost, type View, type WorkspaceItem, type WorkspaceLeaf, type WorkspaceWindowInitData,
 } from "../obsidian";
 import { setIcon } from "../obsidian/icons";
@@ -336,7 +336,7 @@ export class Shell implements LayoutHost {
       menu.addItem((i) => i.setSection("split").setTitle("Duplicate tab").setIcon("lucide-copy").onClick(() => { void ws.duplicateLeaf(leaf); }));
     }
     // Obsidian's wording; moving back to the main window is otherwise a tab drag (that works across windows here too).
-    menu.addItem((i) => i.setSection("window").setTitle("Move to new window").setIcon("lucide-picture-in-picture-2").onClick(() => { ws.moveLeafToPopout(leaf); }));
+    menu.addItem((i) => i.setSection("window").setTitle("Move to new window").setIcon("lucide-picture-in-picture-2").onClick(() => { try { ws.moveLeafToPopout(leaf); } catch (e) { console.error(e); new Notice("Unable to open a new window."); } }));
     menu.addItem((i) => i.setSection("window").setTitle("Open in new window").setIcon("lucide-picture-in-picture-2").onClick(() => { void ws.duplicateLeaf(leaf, "window"); }));
     if (inPopout) menu.addItem((i) => i.setSection("window").setTitle("Move to main window").setIcon("lucide-app-window").onClick(() => { this.moveToMain(leaf); }));
     const v = leaf.view;

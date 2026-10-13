@@ -91,6 +91,19 @@ pub fn on_new_window<R: Runtime>(app: &AppHandle<R>, url: Url, features: NewWind
     }
 }
 
+/// The main page (re)loads (vault switch, "Reload app"): popouts belong to the old page's realm and can no longer
+/// be driven, so destroy them; the new page restores them from workspace.json.
+pub fn on_main_page_load<R: Runtime>(app: &AppHandle<R>, event: tauri::webview::PageLoadEvent) {
+    if event != tauri::webview::PageLoadEvent::Started {
+        return;
+    }
+    for (label, w) in app.webview_windows() {
+        if is_popout(&label) {
+            let _ = w.destroy();
+        }
+    }
+}
+
 /// Logical outer position and inner size, as the UI persists them in workspace.json (`x`, `y`, `width`, `height`).
 #[derive(Serialize, Clone)]
 pub struct Geometry {

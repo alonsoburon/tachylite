@@ -6,7 +6,7 @@ import { TFile } from "./files";
 import { debounce, getLinkpath, parseLinktext, type Debouncer } from "./util";
 import { setIcon } from "./icons";
 import { notifyWindowMigrated, setActiveWindow } from "./dom";
-import { Menu } from "./ui";
+import { Menu, Notice } from "./ui";
 import { DeferredView, EmptyView, FileView, MarkdownView, View, type ViewCreator } from "./views";
 import type { App } from "./app";
 import type { EditorSuggestManager } from "./editorSuggest";
@@ -617,14 +617,15 @@ export class Workspace extends Events {
   }
   /** Open a popout window with one new empty leaf and return that leaf. */
   openPopoutLeaf(data?: WorkspaceWindowInitData): WorkspaceLeaf {
-    const win = this.openPopout(data);
+    let win: WorkspaceWindow;
+    try { win = this.openPopout(data); } catch (e) { console.error(e); new Notice("Unable to open a new window."); return this.createTab(this.activeLeaf); }
     const leaf = this.createLeafInTabs(this.firstTabs(win));
     this.setActiveLeaf(leaf, { focus: true });
     return leaf;
   }
   /** Move a leaf (its live view, not a copy) into a new popout window. */
   moveLeafToPopout(leaf: WorkspaceLeaf, data?: WorkspaceWindowInitData): WorkspaceWindow {
-    const win = this.openPopout(data);
+    const win = this.openPopout(data); // throws (nothing moved) when the window cannot be opened
     const tabs = this.firstTabs(win);
     this.moveLeaf(leaf, tabs, 0);
     return win;
@@ -634,7 +635,8 @@ export class Workspace extends Events {
     const win = new WorkspaceWindow(this.app, data);
     if (id) win.id = id;
     this.floatingSplit.insertChild(this.floatingSplit.children.length, win);
-    const w = this.host?.openPopout?.(win, data);
+    let w: Window | void;
+    try { w = this.host?.openPopout?.(win, data); } catch (e) { this.floatingSplit.removeChild(win); throw e; }
     if (w) { win.win = w; win.doc = w.document; }
     win.insertChild(0, new WorkspaceTabs(this.app));
     this.trigger("window-open", win, win.win);

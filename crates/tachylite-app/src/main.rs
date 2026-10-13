@@ -644,6 +644,7 @@ fn main() {
             let handle = app.handle().clone();
             let main = tauri::WebviewWindowBuilder::from_config(app.handle(), &conf)?
                 .on_new_window(move |url, features| popout::on_new_window(&handle, url, features))
+                .on_page_load(|w, p| popout::on_main_page_load(w.app_handle(), p.event()))
                 .build()?;
             popout::allow_script_windows(&main);
             Ok(())

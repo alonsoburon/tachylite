@@ -60,7 +60,7 @@ export function installCommands(app: App, history: History): () => void {
   // ---- popout windows (ids and names as in Obsidian)
   add({ id: "workspace:new-window", name: "New window", callback: () => { ws.openPopoutLeaf(); } });
   add({ id: "workspace:open-in-new-window", name: "Open current tab in new window", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) void ws.duplicateLeaf(l, "window"); return true; } });
-  add({ id: "workspace:move-to-new-window", name: "Move current tab to new window", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) ws.moveLeafToPopout(l); return true; } });
+  add({ id: "workspace:move-to-new-window", name: "Move current tab to new window", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) { try { ws.moveLeafToPopout(l); } catch (e) { console.error(e); new Notice("Unable to open a new window."); } } return true; } });
   add({ id: "workspace:close-window", name: "Close window", checkCallback: (c) => { const w = ws.activeLeaf?.getContainer(); if (!(w instanceof WorkspaceWindow)) return false; if (!c) w.close(); return true; } });
   add({ id: "workspace:toggle-pin", name: "Pin/unpin tab", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) l.togglePinned(); return true; } });
   add({ id: "workspace:close-others", name: "Close other tabs", checkCallback: (c) => { const t = mainTabs(); if (!t) return false; if (!c) for (const l of [...t.tabs.children] as WorkspaceLeaf[]) if (l !== t.leaf && !l.pinned) l.detach(); return true; } });

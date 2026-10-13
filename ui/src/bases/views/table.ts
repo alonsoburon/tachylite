@@ -81,16 +81,17 @@ export class TableView extends BasesView {
       evt.stopPropagation();
       const startX = evt.clientX, startW = th.getBoundingClientRect().width || MIN_COL * 2;
       let w = startW;
+      const doc = th.ownerDocument; // the table may live in a popout window
       const move = (e: MouseEvent) => { w = Math.max(MIN_COL, Math.round(startW + e.clientX - startX)); col.style.width = `${w}px`; th.style.width = `${w}px`; };
       const up = () => {
-        document.removeEventListener("mousemove", move);
-        document.removeEventListener("mouseup", up);
+        doc.removeEventListener("mousemove", move);
+        doc.removeEventListener("mouseup", up);
         const sizes = this.widths();
         sizes[prop] = w;
         this.config.set("columnSize", sizes);
       };
-      document.addEventListener("mousemove", move);
-      document.addEventListener("mouseup", up);
+      doc.addEventListener("mousemove", move);
+      doc.addEventListener("mouseup", up);
     });
   }
 

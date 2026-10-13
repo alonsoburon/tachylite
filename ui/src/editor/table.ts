@@ -423,7 +423,7 @@ export class TableWidget extends WidgetType {
       else if (e.key === "Enter" && e.shiftKey) {
         e.preventDefault();
         e.stopPropagation();
-        document.execCommand("insertText", false, "<br>");
+        cell.ownerDocument.execCommand("insertText", false, "<br>");
         return;
       } else if (e.key === "Enter") to = row < last ? { row: row + 1, col } : { row: row + 1, col, add: true };
       else if (e.key === "Escape") to = null;
@@ -445,7 +445,7 @@ export class TableWidget extends WidgetType {
       const t = e.clipboardData?.getData("text/plain");
       if (t === undefined) return;
       e.preventDefault();
-      document.execCommand("insertText", false, t.replace(/\r?\n/g, "<br>"));
+      cell.ownerDocument.execCommand("insertText", false, t.replace(/\r?\n/g, "<br>"));
     });
     cell.addEventListener("blur", () => { if (s.active) this.finish(view, undefined); });
     (s as any).detach = () => cell.removeEventListener("keydown", onKey);
