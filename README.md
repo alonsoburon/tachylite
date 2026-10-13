@@ -74,20 +74,35 @@ Community plugins start in restricted mode, as in Obsidian, until enabled in Set
 
 ## Known gaps
 
-Implemented but young (covered by tests; most were exercised in the real window only briefly, so
-expect bugs): Canvas (`.canvas`), Bases (`.base`: table, cards and list views, partial formula
+Implemented but young (covered by tests and exercised in the real Linux window, so expect
+rough edges): Canvas (`.canvas`), Bases (`.base`: table, cards and list views, partial formula
 language), editable tables, Dataview-style inline and block widgets in Live Preview, code
 syntax highlighting, Vim mode, popout windows, OS trash, Templates, Daily notes, Properties,
-Note composer, File recovery, Workspaces, `tachylite://` links, and an opt-in Node bridge
-(`child_process`, real `fs`) so desktop-only plugins can run. The Node bridge gives plugins full
-user permissions, as Obsidian does, and sits behind a confirmation.
+Note composer, File recovery, Workspaces, Page preview (hover popovers, nested, per-source
+Ctrl/Cmd setting, the `hover-link` API that Hover Editor builds on), the graph view (global and
+local graph, filters, colour groups, display and force settings in `graph.json`; stays
+interactive at 5k notes), `tachylite://` links, and an opt-in Node bridge (`child_process`, real
+`fs`) so desktop-only plugins can run. The Node bridge gives plugins full user permissions, as
+Obsidian does, and sits behind a confirmation.
+
+Community plugins run end to end in the real window (current releases): obsidian-git (status
+view, stage, commit, history, through the Node bridge), Excalidraw (create, edit through its
+API, reopen, embed), Omnisearch (index, search modal, in-file search), Calendar, Templater
+(templates with user scripts), Dataview (queries and inline queries in Live Preview and reading
+view), Tasks (queries, completing tasks), Kanban (boards, adding cards) and QuickAdd (capture
+choices), plus Hover Editor.
 
 Still missing or unverified:
 
-- Hover page previews and the local graph view (and graph filters/groups) are not implemented.
-- `obsidian-git`, `omnisearch` and Excalidraw have not been verified end to end.
-- Plugin compatibility is checked by loading real bundles in tests; that shows they load, not
-  that every feature works. Report breakage as issues with the plugin id and version.
+- Omnisearch's local HTTP server cannot listen (there are no sockets in the webview); the rest
+  of the plugin works.
+- Templater's `<% %>` syntax highlighting is off: Obsidian's editor is a CM5-mode parser that
+  Templater overlays, ours is a Lezer parser, so its highlighter is ignored.
+- The graph is drawn on a 2D canvas (Obsidian uses WebGL); it was measured with 5k notes, larger
+  vaults lay out more slowly.
+- Plugin compatibility beyond the plugins above is checked by loading real bundles in tests;
+  that shows they load, not that every feature works. Report breakage as issues with the plugin
+  id and version.
 - Bases formulas and some Canvas details are incomplete.
 - Packaging and CI are configured for Linux, macOS and Windows, but only Linux has been run.
 - Sync and Publish are out of scope.
