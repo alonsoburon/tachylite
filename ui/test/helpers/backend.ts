@@ -1,11 +1,60 @@
 // A fake Tauri backend over a real temp directory (node fs), implementing the commands in crates/tachylite-app.
+import cproc from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import * as yaml from "js-yaml";
-import { setBackend, setListenBackend } from "../../src/ipc";
+import { setBackend, setListenBackend, setSyncBackend } from "../../src/ipc";
 
-export interface FakeVault { root: string; /** where "system" trash moves files; set `systemTrashFails` to simulate an unavailable OS trash */ systemTrash: string; systemTrashFails: boolean; calls: { cmd: string; args: any }[]; emit(ev: { kind: string; path: string }): void; cleanup(): void; write(rel: string, data: string): void; backend: (cmd: string, args?: any) => Promise<unknown> }
+/** Node bridge emulation state (bridge.rs): `consent` is the persisted per-vault choice, `active` the session gate. */
+export interface FakeBridge { consent: boolean; active: boolean; opened: { path: string; reveal: boolean }[]; procs: Map<number, cproc.ChildProcess> }
+export interface FakeVault {
+  root: string; /** where "system" trash moves files; set `systemTrashFails` to simulate an unavailable OS trash */ systemTrash: string; systemTrashFails: boolean;
+  calls: { cmd: string; args: any }[]; emit(ev: { kind: string; path: string }): void; emitEvent(name: string, payload: unknown): void;
+  cleanup(): void; write(rel: string, data: string): void; backend: (cmd: string, args?: any) => Promise<unknown>; bridge: FakeBridge;
+}
+
+const BRIDGE_DISABLED = "ERR_BRIDGE_DISABLED: plugins are not allowed to run programs or access files outside the vault";
+/** Node error -> the JSON string bridge.rs returns. */
+function nodeErrJson(e: any): string {
+  const m = /^[A-Z]+: (.*?), /.exec(String(e?.message ?? ""));
+  return JSON.stringify({ code: e.code, errno: e.errno, message: m ? m[1] : String(e?.message), syscall: e.syscall, path: e.path, dest: e.dest });
+}
+const kindOf = (d: fs.Dirent | fs.Stats) => (d.isSymbolicLink() ? "symlink" : d.isDirectory() ? "dir" : d.isFile() ? "file" : "other");
+/** bridge.rs `fs_op` on top of node:fs (same op names and result shapes). */
+export function fakeFsOp(op: any): unknown {
+  const b = (d: string) => Buffer.from(d, "base64");
+  try {
+    switch (op.op) {
+      case "readFile": return fs.readFileSync(op.path).toString("base64");
+      case "writeFile": fs.writeFileSync(op.path, b(op.data), { flag: op.flag ?? "w", mode: op.mode }); return null;
+      case "readdir": return fs.readdirSync(op.path, { withFileTypes: true }).map((d) => ({ name: d.name, kind: kindOf(d) })).sort((x, y) => (x.name < y.name ? -1 : 1));
+      case "stat": { const s = op.lstat ? fs.lstatSync(op.path) : fs.statSync(op.path); return { kind: kindOf(s), dev: s.dev, ino: s.ino, mode: s.mode, nlink: s.nlink, uid: s.uid, gid: s.gid, rdev: s.rdev, size: s.size, blksize: s.blksize, blocks: s.blocks, atimeMs: s.atimeMs, mtimeMs: s.mtimeMs, ctimeMs: s.ctimeMs, birthtimeMs: s.birthtimeMs }; }
+      case "exists": return fs.existsSync(op.path);
+      case "access": fs.accessSync(op.path, op.mode ?? 0); return null;
+      case "mkdir": return fs.mkdirSync(op.path, { recursive: !!op.recursive }) ?? null;
+      case "rm": fs.rmSync(op.path, { recursive: !!op.recursive, force: !!op.force }); return null;
+      case "rmdir": if (op.recursive) fs.rmSync(op.path, { recursive: true }); else fs.rmdirSync(op.path); return null;
+      case "unlink": fs.unlinkSync(op.path); return null;
+      case "rename": fs.renameSync(op.from, op.to); return null;
+      case "copyFile": fs.copyFileSync(op.from, op.to, op.excl ? fs.constants.COPYFILE_EXCL : 0); return null;
+      case "cp": fs.cpSync(op.from, op.to, { recursive: !!op.recursive, force: op.force !== false }); return null;
+      case "realpath": return fs.realpathSync(op.path);
+      case "readlink": return fs.readlinkSync(op.path);
+      case "symlink": fs.symlinkSync(op.target, op.path); return null;
+      case "chmod": fs.chmodSync(op.path, op.mode); return null;
+      case "truncate": fs.truncateSync(op.path, op.len ?? 0); return null;
+      case "utimes": fs.utimesSync(op.path, op.atime, op.mtime); return null;
+      case "mkdtemp": return fs.mkdtempSync(op.prefix);
+      default: throw new Error(`fake bridge: unknown fs op ${op.op}`);
+    }
+  } catch (e: any) { throw e?.code ? nodeErrJson(e) : e; }
+}
+function fakeSpawnSync(r: any, root: string): unknown {
+  const res = cproc.spawnSync(r.file, r.args ?? [], { cwd: r.cwd ? path.resolve(root, r.cwd) : root, env: r.env, input: r.input ? Buffer.from(r.input, "base64") : undefined, timeout: r.timeout, killSignal: r.killSignal, maxBuffer: r.maxBuffer, stdio: r.stdio as any });
+  const err: any = res.error;
+  return { pid: res.pid, status: res.status, signal: res.signal, stdout: (res.stdout ?? Buffer.alloc(0)).toString("base64"), stderr: (res.stderr ?? Buffer.alloc(0)).toString("base64"), error: err ? { code: err.code, errno: err.errno, message: "", syscall: err.syscall } : null };
+}
 
 function walk(root: string, rel = "", out: { files: any[]; folders: string[] } = { files: [], folders: [] }) {
   for (const ent of fs.readdirSync(path.join(root, rel), { withFileTypes: true })) {
@@ -81,7 +130,7 @@ function canvasMeta(text: string): any {
   return { links };
 }
 
-export function makeVault(files: Record<string, string> = {}, opts: { plugins?: Record<string, { manifest?: any; main: string; styles?: string; data?: any }>; enabled?: string[]; root?: string; copyFrom?: string } = {}): FakeVault {
+export function makeVault(files: Record<string, string> = {}, opts: { plugins?: Record<string, { manifest?: any; main: string; styles?: string; data?: any }>; enabled?: string[]; root?: string; copyFrom?: string; bridgeConsent?: boolean } = {}): FakeVault {
   const root = opts.root ?? fs.mkdtempSync(path.join(os.tmpdir(), "tachy-"));
   if (opts.copyFrom) fs.cpSync(opts.copyFrom, root, { recursive: true });
   const write = (rel: string, data: string | Buffer) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), data); };
@@ -95,7 +144,15 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
   }
   if (opts.enabled) write(".obsidian/community-plugins.json", JSON.stringify(opts.enabled));
   const calls: { cmd: string; args: any }[] = [];
-  const listeners = new Set<(p: unknown) => void>();
+  const listeners = new Map<string, Set<(p: unknown) => void>>();
+  const emitEvent = (name: string, payload: unknown) => listeners.get(name)?.forEach((l) => l(payload));
+  const bridge: FakeBridge = { consent: !!opts.bridgeConsent, active: false, opened: [], procs: new Map() };
+  const gate = () => { if (!bridge.active) throw BRIDGE_DISABLED; };
+  const bridgeInfo = () => ({
+    platform: process.platform, arch: process.arch, cwd: root, homedir: os.homedir(), tmpdir: os.tmpdir(), hostname: os.hostname(), username: os.userInfo().username,
+    env: Object.fromEntries(Object.entries(process.env).filter(([, v]) => typeof v === "string")), pid: process.pid, syncUrl: "fake-bridge://", token: "fake",
+  });
+  const watchers = new Map<number, fs.FSWatcher>();
   const abs = (rel: string) => {
     const p = path.join(root, rel === "/" ? "" : rel);
     if (!p.startsWith(root)) throw new Error("outside vault");
@@ -207,16 +264,62 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
           req.end();
         });
       }
+      case "bridge_status": return { enabled: bridge.consent, active: bridge.active };
+      case "bridge_activate": bridge.active = !!a.active && bridge.consent; if (!bridge.active) bridge.procs.forEach((p) => p.kill("SIGKILL")); return bridge.active ? bridgeInfo() : null;
+      case "bridge_set_enabled": bridge.consent = bridge.active = !!a.enabled; return bridge.active ? bridgeInfo() : null;
+      case "bridge_fs": gate(); return fakeFsOp(a.op);
+      case "bridge_spawn_sync": gate(); return fakeSpawnSync(a.req, root);
+      case "bridge_spawn": {
+        gate();
+        const r = a.req, id = r.id;
+        const child = cproc.spawn(r.file, r.args, { cwd: r.cwd ? path.resolve(root, r.cwd) : root, env: r.env, stdio: (r.stdio ?? ["pipe", "pipe", "pipe"]) as any, windowsVerbatimArguments: r.windowsVerbatimArguments });
+        return await new Promise((resolve) => {
+          child.once("error", (e: any) => resolve({ error: { code: e.code, errno: e.errno, message: "", syscall: e.syscall, path: e.path } }));
+          child.once("spawn", () => {
+            bridge.procs.set(id, child);
+            child.stdout?.on("data", (d: Buffer) => emitEvent("bridge-process", { kind: "stdout", id, data: d.toString("base64") }));
+            child.stderr?.on("data", (d: Buffer) => emitEvent("bridge-process", { kind: "stderr", id, data: d.toString("base64") }));
+            child.on("exit", (code, signal) => emitEvent("bridge-process", { kind: "exit", id, code, signal }));
+            child.on("close", (code, signal) => { bridge.procs.delete(id); emitEvent("bridge-process", { kind: "close", id, code, signal }); });
+            resolve({ pid: child.pid });
+          });
+        });
+      }
+      case "bridge_stdin": {
+        gate();
+        const c = bridge.procs.get(a.id);
+        if (!c?.stdin) throw "no such process";
+        if (a.data) await new Promise<void>((res, rej) => c.stdin!.write(Buffer.from(a.data, "base64"), (e) => (e ? rej(String(e)) : res())));
+        if (a.end) c.stdin.end();
+        return null;
+      }
+      case "bridge_kill": gate(); return bridge.procs.get(a.id)?.kill(a.signal as NodeJS.Signals) ?? false;
+      case "bridge_watch": {
+        gate();
+        const w = fs.watch(a.path, { recursive: !!a.recursive }, (eventType, filename) => emitEvent("bridge-watch", { id: a.id, eventType, filename }));
+        watchers.set(a.id, w);
+        return null;
+      }
+      case "bridge_unwatch": watchers.get(a.id)?.close(); watchers.delete(a.id); return null;
+      case "bridge_open_path": gate(); bridge.opened.push({ path: a.path, reveal: !!a.reveal }); return null;
       default: throw new Error(`fake backend: unhandled command ${cmd}`);
     }
   };
   setBackend(backend);
-  setListenBackend(async (_e, cb) => { listeners.add(cb); return () => listeners.delete(cb); });
+  setListenBackend(async (e, cb) => {
+    if (!listeners.has(e)) listeners.set(e, new Set());
+    listeners.get(e)!.add(cb);
+    return () => listeners.get(e)?.delete(cb);
+  });
+  setSyncBackend((req: any) => {
+    if (!bridge.active) return { err: BRIDGE_DISABLED };
+    try { return { ok: req.call === "fs" ? fakeFsOp(req.op) : fakeSpawnSync(req.req, root) }; } catch (e) { return { err: typeof e === "string" ? e : String(e) }; }
+  });
   const systemTrash = fs.mkdtempSync(path.join(os.tmpdir(), "tachy-trash-"));
   const fake: FakeVault = {
-    root, calls, backend, write, systemTrash, systemTrashFails: false,
-    emit: (ev) => listeners.forEach((l) => l(ev)),
-    cleanup: () => { fs.rmSync(root, { recursive: true, force: true }); fs.rmSync(systemTrash, { recursive: true, force: true }); },
+    root, calls, backend, write, bridge, emitEvent, systemTrash, systemTrashFails: false,
+    emit: (ev) => emitEvent("vault-event", ev),
+    cleanup: () => { bridge.procs.forEach((p) => p.kill("SIGKILL")); watchers.forEach((w) => w.close()); fs.rmSync(root, { recursive: true, force: true }); fs.rmSync(systemTrash, { recursive: true, force: true }); },
   };
   return fake;
 }

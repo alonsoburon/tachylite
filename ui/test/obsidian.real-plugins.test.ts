@@ -3,6 +3,7 @@
 // without the variable they are skipped.
 import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import cp from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { makeApp, makeVault, type FakeVault } from "./helpers/backend";
@@ -10,6 +11,7 @@ import type { App } from "../src/obsidian/app";
 import { MarkdownPreviewRenderer } from "../src/obsidian/markdown";
 import { CACHE_DIR } from "../scripts/real-plugins.mjs";
 import { canvas as canvasCore } from "../src/app/core/canvas";
+import { nodeBridge } from "../src/obsidian/nodeBridge";
 
 const ENABLED = process.env.TACHYLITE_REAL_PLUGINS === "1";
 const dirOf = (id: string) => path.join(CACHE_DIR, id);
@@ -25,10 +27,10 @@ if (!(document.styleSheets as any).item) Object.defineProperty(document, "styleS
   const o = document.createElement("option"); o.textContent = text; if (value !== undefined) o.value = value; if (selected) o.selected = true; return o;
 };
 
-interface Spec { id: string; dir: string; minCommands?: number; settingsTab?: boolean; views?: number; openViews?: string[]; minPostProcessors?: number; /** errors that are inherent to a webview (no Node runtime) */ allowErrors?: RegExp }
+interface Spec { id: string; dir: string; minCommands?: number; settingsTab?: boolean; views?: number; openViews?: string[]; minPostProcessors?: number; /** errors that are inherent to a webview (no Node runtime) */ allowErrors?: RegExp; /** Node bridge allowed + the vault is a git repo */ bridge?: boolean }
 const PLUGINS: Spec[] = [
   { id: "dataview", dir: dirOf("dataview"), minCommands: 3, settingsTab: true, minPostProcessors: 1 },
-  { id: "obsidian-git", dir: dirOf("obsidian-git"), settingsTab: true, openViews: ["git-view"], allowErrors: /child_process\.\w+ is not supported/ },
+  { id: "obsidian-git", dir: dirOf("obsidian-git"), settingsTab: true, openViews: ["git-view"], bridge: true, allowErrors: /AbortError/ /* it aborts its fs.promises.watch on unload; Node rejects the iterator with AbortError and the plugin logs it */ },
   { id: "calendar", dir: dirOf("calendar"), settingsTab: true, views: 1 },
   { id: "templater-obsidian", dir: dirOf("templater-obsidian"), minCommands: 1, settingsTab: true },
   { id: "obsidian-tasks-plugin", dir: dirOf("obsidian-tasks-plugin"), minCommands: 1, settingsTab: true, minPostProcessors: 1 },
@@ -51,7 +53,9 @@ for (const id of ["nldates-obsidian", "obsidian-outliner", "obsidian-linter", "o
 }
 
 let v: FakeVault | undefined, app: App | undefined, offCanvas: (() => void) | undefined;
-afterEach(async () => { offCanvas?.(); offCanvas = undefined; await app?.stop(); v?.cleanup(); document.body.innerHTML = ""; document.head.innerHTML = ""; v = app = undefined; });
+const git = (root: string, ...args: string[]) => cp.execFileSync("git", ["-C", root, ...args], { encoding: "utf8", env: { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t" } });
+const initRepo = (root: string) => { git(root, "init", "-q", "-b", "main"); git(root, "config", "user.name", "t"); git(root, "config", "user.email", "t@t"); git(root, "add", "-A"); git(root, "commit", "-qm", "initial"); };
+afterEach(async () => { offCanvas?.(); offCanvas = undefined; await app?.stop(); v?.cleanup(); nodeBridge.reset(); document.body.innerHTML = ""; document.head.innerHTML = ""; v = app = undefined; });
 
 for (const spec of PLUGINS) {
   const have = fs.existsSync(path.join(spec.dir, "main.js")) && fs.existsSync(path.join(spec.dir, "manifest.json"));
@@ -64,8 +68,9 @@ for (const spec of PLUGINS) {
       process.on("unhandledRejection", onRej);
       v = makeVault(
         { "Home.md": "---\ntitle: Home\ntags: [a]\n---\n# Home\n- [ ] task one\nSee [[Note]]\n```dataview\nLIST\n```\n", "Note.md": "# Note\nhello #tag", "Daily/2024-01-01.md": "daily" },
-        { plugins: { [spec.id]: { manifest: JSON.parse(read("manifest.json")!), main: read("main.js")!, styles: read("styles.css") } }, enabled: [spec.id] },
+        { plugins: { [spec.id]: { manifest: JSON.parse(read("manifest.json")!), main: read("main.js")!, styles: read("styles.css") } }, enabled: [spec.id], bridgeConsent: !!spec.bridge },
       );
+      if (spec.bridge) initRepo(v.root);
       // The Canvas core plugin is installed as in the app (Excalidraw builds headless canvases through it).
       app = await makeApp(v, { onCoreReady: (a) => { offCanvas = canvasCore.install(a) || undefined; } });
       document.body.appendChild(app.dom.appContainerEl); // the shell mounts this; plugins query .app-container
@@ -99,6 +104,9 @@ for (const spec of PLUGINS) {
         expect(leaf.view.getViewType(), `view ${t} instantiated`).toBe(t);
         expect(leaf.view.constructor.name).not.toBe("DeferredView");
       }
+      // obsidian-git retries its askpass watcher 5 s after unloading (a plugin quirk, same in Obsidian); keep it out of later tests.
+      const gm = (app.plugins.getPlugin(spec.id) as any)?.gitManager;
+      if (gm?.askpass) gm.askpass = async () => {};
       await app.plugins.disablePlugin(spec.id);
       expect(Object.keys(app.commands.commands).filter((c) => c.startsWith(spec.id + ":"))).toEqual([]);
       expect(app.setting.pluginTabs).toHaveLength(0);
@@ -181,4 +189,25 @@ describe.skipIf(!ENABLED || !fs.existsSync(path.join(dvDir, "main.js")))("real p
       }, { timeout: 5000 });
     } finally { undo(); undoWorkers(); }
   }, 30_000);
+});
+
+const gitDir = dirOf("obsidian-git");
+describe.skipIf(!ENABLED || !fs.existsSync(path.join(gitDir, "main.js")))("real plugin: obsidian-git through the Node bridge", () => {
+  it("sees the repository, lists changes and commits them with git", async () => {
+    const read = (f: string) => fs.readFileSync(path.join(gitDir, f), "utf8");
+    v = makeVault({ "Note.md": "# Note\n" }, { plugins: { "obsidian-git": { manifest: JSON.parse(read("manifest.json")), main: read("main.js"), styles: read("styles.css") } }, enabled: ["obsidian-git"], bridgeConsent: true });
+    fs.writeFileSync(path.join(v.root, ".gitignore"), ".obsidian/\n");
+    initRepo(v.root);
+    app = await makeApp(v);
+    document.body.appendChild(app.dom.appContainerEl);
+    const plugin: any = app.plugins.getPlugin("obsidian-git");
+    await vi.waitFor(() => expect(plugin.gitReady).toBe(true), { timeout: 10_000 });
+    fs.writeFileSync(path.join(v.root, "Note.md"), "# Note\nedited\n");
+    const status = await plugin.gitManager.status();
+    expect(status.changed.map((f: any) => f.vaultPath ?? f.path)).toContain("Note.md");
+    expect(app.commands.executeCommandById("obsidian-git:commit")).toBe(true);
+    await vi.waitFor(() => expect(git(v!.root, "rev-list", "--count", "HEAD").trim()).toBe("2"), { timeout: 10_000 });
+    expect(git(v.root, "show", "--stat", "--format=", "HEAD")).toContain("Note.md");
+    plugin.gitManager.askpass = async () => {}; // see above: no retry after unload
+  }, 60_000);
 });

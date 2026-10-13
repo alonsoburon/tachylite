@@ -18,6 +18,9 @@ export interface CatalogTheme { [k: string]: unknown }
 export interface HttpReq { url: string; method?: string; headers?: Record<string, string>; body?: number[] | null }
 export interface HttpResp { status: number; headers: Record<string, string>; body: number[] }
 export type TrashMode = "system" | "local" | "permanent";
+/** Node bridge (crates/tachylite-app/src/bridge.rs): platform facts handed out only while the bridge is active. */
+export interface BridgeInfo { platform: string; arch: string; cwd: string; homedir: string; tmpdir: string; hostname: string; username: string; env: Record<string, string>; pid: number; syncUrl: string; token: string }
+export interface BridgeSpawnReq { id: number; file: string; args: string[]; cwd?: string; env?: Record<string, string>; stdio?: string[]; windowsVerbatimArguments?: boolean }
 export type VaultEventKind = "create" | "modify" | "delete" | "config-changed";
 export interface VaultEvent { kind: VaultEventKind; path: string }
 
@@ -37,6 +40,12 @@ let listenBackend: ListenFn = async (event, cb) => {
   if (!l) return () => {};
   return await l(event, (e: { payload: unknown }) => cb(e.payload));
 };
+
+/** Synchronous channel of the Node bridge (`fs.*Sync`, `execSync`): a sync XHR in the app, a plain function in tests. */
+export type SyncFn = (req: Record<string, unknown>) => { ok?: unknown; err?: string };
+let syncBackend: SyncFn | null = null;
+export function setSyncBackend(fn: SyncFn | null): void { syncBackend = fn; }
+export function getSyncBackend(): SyncFn | null { return syncBackend; }
 
 /** Replace the backend (vitest / storybook). */
 export function setBackend(fn: InvokeFn): void { backend = fn; }
@@ -125,6 +134,18 @@ export const ipc = {
   logFrontend: (level: string, message: string) => call<void>("log_frontend", { level, message }),
   // network
   httpRequest: (req: HttpReq) => call<HttpResp>("http_request", { req }),
+  // Node bridge for desktop plugins (gated in Rust; see bridge.rs)
+  bridgeStatus: () => call<{ enabled: boolean; active: boolean }>("bridge_status"),
+  bridgeActivate: (active: boolean) => call<BridgeInfo | null>("bridge_activate", { active }),
+  bridgeSetEnabled: (enabled: boolean) => call<BridgeInfo | null>("bridge_set_enabled", { enabled }),
+  bridgeFs: (op: Record<string, unknown>) => call<any>("bridge_fs", { op }),
+  bridgeSpawn: (req: BridgeSpawnReq) => call<{ pid?: number; error?: any }>("bridge_spawn", { req }),
+  bridgeSpawnSync: (req: Record<string, unknown>) => call<any>("bridge_spawn_sync", { req }),
+  bridgeStdin: (id: number, data: string | null, end: boolean) => call<void>("bridge_stdin", { id, data, end }),
+  bridgeKill: (id: number, signal: string) => call<boolean>("bridge_kill", { id, signal }),
+  bridgeWatch: (id: number, path: string, recursive: boolean) => call<void>("bridge_watch", { id, path, recursive }),
+  bridgeUnwatch: (id: number) => call<void>("bridge_unwatch", { id }),
+  bridgeOpenPath: (path: string, reveal: boolean) => call<void>("bridge_open_path", { path, reveal }),
 };
 
 /** Subscribe to filesystem events emitted by the Rust watcher. Returns an unlisten function. */

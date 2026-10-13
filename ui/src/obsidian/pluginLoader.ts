@@ -18,6 +18,7 @@ import type { App } from "./app";
 import { Events } from "./events";
 import { Plugin as PluginBase, type Plugin, type PluginManifest } from "./plugin";
 import * as shims from "./shims";
+import { createBridgeChildProcess, createBridgeFs, nodeBridge } from "./nodeBridge";
 import { Notice } from "./ui";
 import { apiVersion, requireApiVersion } from "./util";
 import { Platform } from "./events";
@@ -34,6 +35,23 @@ export function setObsidianModule(m: ObsidianModule | null): void { obsidianModu
 const BUILTIN_EMPTY = ["constants", "module", "vm", "worker_threads", "readline", "net", "tls", "dns", "dgram", "http2", "cluster", "inspector", "repl", "v8", "async_hooks", "diagnostics_channel", "domain", "punycode", "tty", "zlib", "http", "https", "perf_hooks", "trace_events"];
 
 export type RequireFn = (id: string) => any;
+
+/** Modules whose implementation depends on the Node bridge: resolved on every require, never cached. */
+const BRIDGED = new Set(["fs", "fs/promises", "child_process"]);
+let bridgeFs: any = null, bridgeCp: any = null;
+let warnedDisabled = false;
+/** `child_process` while the bridge is off: requiring works, every call throws a clear error (and hints once per session). */
+function disabledChildProcess(): any {
+  return shims.unsupportedModule("child_process", Object.fromEntries(["spawn", "exec", "execFile", "fork", "spawnSync", "execSync", "execFileSync"].map((m) => [m, () => {
+    if (!warnedDisabled) {
+      warnedDisabled = true;
+      new Notice("A plugin tried to run a program. To allow this, turn on \"Allow plugins to run programs and access files outside the vault\" in Settings > Community plugins.", 10000);
+    }
+    const e: any = new Error(`child_process.${m} is not supported: plugins are not allowed to run programs in this vault (Settings > Community plugins > "Allow plugins to run programs and access files outside the vault")`);
+    e.code = "ERR_BRIDGE_DISABLED";
+    throw e;
+  }])));
+}
 
 /**
  * Obsidian's classes are ES5 functions, so plugins compiled to ES5 subclass them with `_super.call(this, ...)`.
@@ -87,8 +105,8 @@ export function createRequire(app: App): RequireFn {
     path: () => shims.path,
     "path/posix": () => shims.path,
     "path/win32": () => (shims.path as any).win32 ?? shims.path,
-    fs: () => shims.createFs(app),
-    "fs/promises": () => shims.createFs(app).promises,
+    fs: () => (nodeBridge.active ? (bridgeFs ??= createBridgeFs()) : shims.createFs(app)),
+    "fs/promises": () => (nodeBridge.active ? (bridgeFs ??= createBridgeFs()).promises : shims.createFs(app).promises),
     os: () => shims.createOs(),
     url: () => shims.createUrl(),
     querystring: () => shims.createQuerystring(),
@@ -98,7 +116,7 @@ export function createRequire(app: App): RequireFn {
     events: () => shims.EventEmitter,
     buffer: () => ({ Buffer: shims.Buffer, kMaxLength: 2 ** 31 - 1, constants: {} }),
     crypto: () => shims.createCrypto(),
-    child_process: () => shims.unsupportedModule("child_process"),
+    child_process: () => (nodeBridge.active ? (bridgeCp ??= createBridgeChildProcess()) : disabledChildProcess()),
     stream: () => shims.createStream(),
     "stream/promises": () => shims.unsupportedModule("stream/promises"),
     string_decoder: () => shims.createStringDecoder(),
@@ -108,6 +126,7 @@ export function createRequire(app: App): RequireFn {
   };
   const resolve = (raw: string): unknown => {
     const id = raw.startsWith("node:") ? raw.slice(5) : raw;
+    if (BRIDGED.has(id)) return factories[id]();
     if (cache.has(id)) return cache.get(id);
     let mod: unknown;
     if (factories[id]) mod = factories[id]();
@@ -168,11 +187,20 @@ export class PluginManager extends Events {
     this.restrictedMode = true;
     await this.unloadAll();
     this.enabledPlugins.clear();
+    await nodeBridge.activate(false);
+  }
+  /** Unload and load every enabled plugin again (after the Node bridge was switched, so plugins see the new modules). */
+  async reloadCommunityPlugins(): Promise<void> {
+    await this.unloadAll();
+    this.enabledPlugins.clear();
+    await this.initialize();
   }
 
   async initialize(): Promise<void> {
     await this.loadManifests();
     if (this.restrictedMode) return;
+    // Real fs / child_process for desktop plugins, only if the user allowed it for this vault (enforced in Rust too).
+    await nodeBridge.activate(true);
     let ids: string[] = [];
     try {
       const v = await ipc.configRead("community-plugins.json");

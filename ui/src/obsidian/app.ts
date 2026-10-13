@@ -10,7 +10,7 @@ import { MarkdownRenderer } from "./markdown";
 import { PluginManager, createRequire } from "./pluginLoader";
 import { Commands, HotkeyManager, ViewRegistry } from "./plugin";
 import { SettingManager } from "./setting";
-import { createProcess } from "./shims";
+import { Buffer, createProcess } from "./shims";
 import { Vault } from "./vault";
 import { EditorSuggestManager } from "./editorSuggest";
 import { EmbedRegistry, registerDefaultEmbeds } from "./embeds";
@@ -102,6 +102,8 @@ export class App {
     installLegacyGlobals();
     // Obsidian (Electron) exposes window.require; plugins call window.require("electron") etc.
     Object.defineProperty(globalThis, "require", { value: createRequire(this), configurable: true, writable: true, enumerable: false });
+    // Electron's renderer also has a global Buffer; bundles read `global.Buffer` (obsidian-git's isomorphic-git, simple-git).
+    if (!(globalThis as any).Buffer) Object.defineProperty(globalThis, "Buffer", { value: Buffer, configurable: true, writable: true, enumerable: false });
     if (opts.installGlobalHandlers !== false) this.installGlobalHandlers();
   }
 
