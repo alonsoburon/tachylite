@@ -39,6 +39,8 @@ export type { RequestUrlParam, RequestUrlResponse, RequestUrlResponsePromise } f
 export { MarkdownRenderer, MarkdownRenderChild, MarkdownPreviewRenderer } from "./markdown";
 export type { MarkdownPostProcessor, MarkdownPostProcessorContext, MarkdownSectionInformation } from "./markdown";
 export * from "./values";
+export { BasesEntry, BasesEntryGroup, BasesQueryResult, BasesViewConfig, BasesView, QueryController, parsePropertyId } from "../bases/api";
+export type { BasesPropertyId, BasesViewRegistration } from "../bases/api";
 export * from "./util";
 export { addIcon, removeIcon, getIcon, getIconIds, setIcon } from "./icons";
 

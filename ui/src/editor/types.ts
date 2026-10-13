@@ -31,8 +31,8 @@ export interface EditorHost {
   openTag?(tag: string): void;
   /** Save the note now (Vim `:w`). */
   save?(sourcePath: string): void;
-  /** See RenderContext.getEmbedRenderer (embeds of extensions registered in app.embedRegistry, e.g. canvas). */
-  getEmbedRenderer?: RenderContext["getEmbedRenderer"];
+  /** See RenderContext.renderFileEmbed (embeds of non-markdown file types registered in app.embedRegistry: `.canvas`, `.base`, plugin types). */
+  renderFileEmbed?(el: HTMLElement, path: string, subpath: string, linktext: string, sourcePath: string): boolean | Promise<boolean>;
   openExternal?(url: string): void;
   /** Languages of fenced blocks that plugins render themselves (code-block processors). */
   codeBlockLanguages?(): string[];
