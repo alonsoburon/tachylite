@@ -2,6 +2,8 @@
 //! to the webview over Tauri commands. The command signatures below are the contract the UI and the
 //! Obsidian-API shim in `ui/` are written against.
 
+mod bridge;
+
 use notify::{RecursiveMode, Watcher};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -612,6 +614,8 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(App::default())
+        .manage(bridge::Bridge::default())
+        .register_asynchronous_uri_scheme_protocol(bridge::SCHEME, |ctx, req, responder| bridge::protocol(ctx.app_handle(), req, responder))
         .on_window_event(|window, event| {
             // Give the frontend a chance to flush unsaved notes and the layout; exit anyway if it does not answer.
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -671,6 +675,17 @@ fn main() {
             theme_catalog,
             theme_install,
             http_request,
+            bridge::bridge_status,
+            bridge::bridge_activate,
+            bridge::bridge_set_enabled,
+            bridge::bridge_fs,
+            bridge::bridge_spawn,
+            bridge::bridge_spawn_sync,
+            bridge::bridge_stdin,
+            bridge::bridge_kill,
+            bridge::bridge_watch,
+            bridge::bridge_unwatch,
+            bridge::bridge_open_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tachylite");
