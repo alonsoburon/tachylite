@@ -3,8 +3,10 @@
 // (never silently succeeds), but requiring the module itself always works so plugins can load.
 import pathBrowserify from "path-browserify";
 import { Buffer } from "buffer";
+import { ipc } from "../ipc";
 import EventEmitter from "events";
 import type { App } from "./app";
+import { nodeBridge, openPath } from "./nodeBridge";
 
 export { Buffer, EventEmitter };
 export const path = pathBrowserify;
@@ -29,14 +31,21 @@ export function unsupportedModule(name: string, overrides: Record<string, unknow
 }
 
 // ------------------------------------------------------------------ process
+const uaPlatform = () => { const ua = typeof navigator !== "undefined" ? navigator.userAgent : ""; return /Mac/.test(ua) ? "darwin" : /Win/.test(ua) ? "win32" : "linux"; };
+/** Platform, env, cwd and pid come from the Node bridge while it is active (see nodeBridge.ts), else browser guesses. */
 export function createProcess(): any {
-  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-  const platform = /Mac/.test(ua) ? "darwin" : /Win/.test(ua) ? "win32" : "linux";
   const p: any = new EventEmitter();
+  let envOverride: Record<string, string> | null = null;
+  Object.defineProperties(p, {
+    platform: { get: () => nodeBridge.info?.platform ?? uaPlatform(), enumerable: true, configurable: true },
+    arch: { get: () => nodeBridge.info?.arch ?? "x64", enumerable: true, configurable: true },
+    pid: { get: () => nodeBridge.info?.pid ?? 1, enumerable: true, configurable: true },
+    env: { get: () => envOverride ?? nodeBridge.env, set: (v) => { envOverride = v; }, enumerable: true, configurable: true },
+  });
   Object.assign(p, {
-    platform, arch: "x64", env: {}, argv: [], execPath: "", pid: 1, title: "tachylite", version: "v20.0.0",
+    argv: [], execPath: "", title: "tachylite", version: "v20.0.0",
     versions: { node: "20.0.0" }, browser: true,
-    cwd: () => "/", chdir() {}, umask: () => 0,
+    cwd: () => nodeBridge.info?.cwd ?? "/", chdir() {}, umask: () => 0,
     nextTick: (fn: (...a: any[]) => void, ...args: any[]) => queueMicrotask(() => fn(...args)),
     hrtime: Object.assign((prev?: [number, number]) => {
       const t = performance.now(), s = Math.floor(t / 1000), n = Math.floor((t % 1000) * 1e6);
@@ -54,13 +63,17 @@ export function createProcess(): any {
 // ------------------------------------------------------------------ os
 export function createOs(): any {
   const proc = createProcess();
-  return {
-    platform: () => proc.platform, arch: () => "x64", type: () => (proc.platform === "win32" ? "Windows_NT" : proc.platform === "darwin" ? "Darwin" : "Linux"),
-    release: () => "0.0.0", hostname: () => "tachylite", homedir: () => "/", tmpdir: () => "/tmp",
-    EOL: proc.platform === "win32" ? "\r\n" : "\n", endianness: () => "LE", cpus: () => [], totalmem: () => 0, freemem: () => 0,
+  const b = () => nodeBridge.info;
+  const os: any = {
+    platform: () => proc.platform, arch: () => proc.arch, type: () => (proc.platform === "win32" ? "Windows_NT" : proc.platform === "darwin" ? "Darwin" : "Linux"),
+    release: () => "0.0.0", hostname: () => b()?.hostname ?? "tachylite", homedir: () => b()?.homedir ?? "/", tmpdir: () => b()?.tmpdir ?? "/tmp",
+    endianness: () => "LE", cpus: () => [], totalmem: () => 0, freemem: () => 0,
     uptime: () => 0, loadavg: () => [0, 0, 0], networkInterfaces: () => ({}),
-    userInfo: () => ({ username: "user", uid: -1, gid: -1, shell: null, homedir: "/" }), constants: {},
+    userInfo: () => ({ username: b()?.username ?? "user", uid: -1, gid: -1, shell: null, homedir: b()?.homedir ?? "/" }), constants: {},
   };
+  Object.defineProperty(os, "EOL", { get: () => (proc.platform === "win32" ? "\r\n" : "\n"), enumerable: true });
+  Object.defineProperty(os, "devNull", { get: () => (proc.platform === "win32" ? "\\\\.\\nul" : "/dev/null"), enumerable: true });
+  return os;
 }
 
 // ------------------------------------------------------------------ url / querystring / util / assert
@@ -106,7 +119,8 @@ export function createUtil(): any {
     const seen = new WeakSet();
     try { return typeof v === "string" ? v : JSON.stringify(v, (_k, x) => { if (typeof x === "object" && x) { if (seen.has(x)) return "[Circular]"; seen.add(x); } return typeof x === "function" ? `[Function ${x.name}]` : typeof x === "bigint" ? `${x}n` : x; }, 2) ?? String(v); } catch { return String(v); }
   };
-  const promisify = (fn: (...a: any[]) => any) => (...args: any[]) => new Promise((res, rej) => fn(...args, (err: unknown, ...vals: unknown[]) => (err ? rej(err) : res(vals.length > 1 ? vals : vals[0]))));
+  // Honours `fn[util.promisify.custom]` like Node (child_process.exec resolves `{ stdout, stderr }`).
+  const promisify = (fn: (...a: any[]) => any) => (typeof (fn as any)?.[promisify.custom] === "function" ? (fn as any)[promisify.custom] : (...args: any[]) => new Promise((res, rej) => fn(...args, (err: unknown, ...vals: unknown[]) => (err ? rej(err) : res(vals.length > 1 ? vals : vals[0])))));
   promisify.custom = Symbol.for("nodejs.util.promisify.custom");
   const isDeepStrictEqual = (a: any, b: any): boolean => {
     if (Object.is(a, b)) return true;
@@ -310,6 +324,8 @@ function fsError(code: string, syscall: string, p: string, msg?: string): Error 
   return e;
 }
 
+const OUTSIDE = 'access outside the vault is not permitted by Tachylite (allow it in Settings > Community plugins > "Allow plugins to run programs and access files outside the vault")';
+/** Vault-confined `fs` used while the Node bridge is off. */
 export function createFs(app: App): any {
   const base = () => app.vault.adapter.getBasePath().replace(/\\/g, "/").replace(/\/+$/, "");
   const toVault = (p: string | URL, syscall: string): string => {
@@ -318,9 +334,9 @@ export function createFs(app: App): any {
     const b = base();
     if (s === b) return "";
     if (s.startsWith(b + "/")) s = s.slice(b.length + 1);
-    else if (s.startsWith("/") || /^[A-Za-z]:\//.test(s)) throw fsError("EACCES", syscall, String(p), "access outside the vault is not permitted by Tachylite");
+    else if (s.startsWith("/") || /^[A-Za-z]:\//.test(s)) throw fsError("EACCES", syscall, String(p), OUTSIDE);
     const norm = pathBrowserify.normalize(s).replace(/^\.\/?/, "").replace(/\/$/, "");
-    if (norm === ".." || norm.startsWith("../")) throw fsError("EACCES", syscall, String(p), "access outside the vault is not permitted by Tachylite");
+    if (norm === ".." || norm.startsWith("../")) throw fsError("EACCES", syscall, String(p), OUTSIDE);
     return norm === "." ? "" : norm;
   };
   const ad = () => app.vault.adapter;
@@ -427,8 +443,11 @@ export function createElectron(app: App | null): any {
   const ipcRenderer: any = new EventEmitter();
   Object.assign(ipcRenderer, { send: noop, sendSync: noop, invoke: async () => undefined, sendTo: noop, sendToHost: noop });
   const shell = {
-    openExternal: async (url: string) => { window.open(url, "_blank", "noopener"); },
-    openPath: async () => "", showItemInFolder: noop, trashItem: async () => {}, beep: noop,
+    openExternal: async (url: string) => { if (/^(https?|mailto):/i.test(url)) await ipc.openUrl(url).catch(() => window.open(url, "_blank", "noopener")); else window.open(url, "_blank", "noopener"); },
+    // Opening local files needs the Node bridge (it can launch any program registered for the file type).
+    openPath: async (p: string) => (nodeBridge.active ? openPath(p, false) : "Opening files is not allowed: turn on \"Allow plugins to run programs and access files outside the vault\" in Settings > Community plugins"),
+    showItemInFolder: (p: string) => { if (nodeBridge.active) void openPath(p, true); },
+    trashItem: async () => {}, beep: noop,
   };
   const win: any = Object.assign(new EventEmitter(), {
     isMaximized: () => false, isFullScreen: () => false, isFocused: () => document.hasFocus(), isDestroyed: () => false, isMinimized: () => false,
@@ -442,7 +461,7 @@ export function createElectron(app: App | null): any {
     showMessageBox: async () => ({ response: 0, checkboxChecked: false }), showErrorBox: noop,
   };
   const appObj = {
-    getPath: (n: string) => (n === "userData" || n === "appData" ? "/" : n === "temp" ? "/tmp" : "/"),
+    getPath: (n: string) => (n === "home" ? nodeBridge.info?.homedir ?? "/" : n === "temp" ? nodeBridge.info?.tmpdir ?? "/tmp" : "/"),
     getVersion: () => "1.14.4", getName: () => "Tachylite", getLocale: () => navigator.language, getAppPath: () => "/", isPackaged: true,
     on: noop, once: noop, quit: noop, relaunch: noop, focus: noop,
   };

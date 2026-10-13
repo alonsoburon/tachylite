@@ -1,9 +1,34 @@
 // "Community plugins" settings tab: restricted mode, browser, update check and the installed list.
-import { Setting, SettingTab, type App } from "../../obsidian";
+import { Modal, Setting, SettingTab, type App } from "../../obsidian";
+import { nodeBridge } from "../../obsidian/nodeBridge";
 import { confirmDialog } from "../dialogs";
 import { PluginBrowserModal } from "./pluginBrowser";
 import { checkForUpdates, updatePlugin, type UpdateInfo } from "./updates";
 import { errMsg, heading, notify } from "./util";
+
+export const NODE_BRIDGE_SETTING = "Allow plugins to run programs and access files outside the vault";
+
+/** The warning shown before plugins get real fs / child_process. Resolves true only on the explicit "allow" button. */
+export function confirmNodeBridge(app: App): Promise<boolean> {
+  return new Promise((resolve) => {
+    const m = new Modal(app);
+    m.modalEl.addClass("mod-confirmation", "mod-node-bridge-warning");
+    m.setTitle("Give plugins full access to your computer?");
+    let done = false;
+    const finish = (v: boolean) => { if (done) return; done = true; resolve(v); m.close(); };
+    const p = (text: string) => m.contentEl.createEl("p", { text });
+    p("Some desktop plugins, such as Git integration or Templater system commands, need to run programs and read or write files anywhere on your computer, as they can in Obsidian.");
+    p("If you allow this, every community plugin enabled in this vault runs with the full permissions of your user account: it can start any program, and read, change or delete any file you can, including files outside this vault. A malicious or broken plugin could damage or leak your data.");
+    p("Only allow this if you trust every plugin enabled in this vault. The choice is remembered for this vault on this computer, and you can turn it off at any time in Settings > Community plugins.");
+    const bar = m.contentEl.createDiv({ cls: "modal-button-container" });
+    bar.createEl("button", { cls: "mod-warning", text: "Allow full access" }).addEventListener("click", () => finish(true));
+    const cancel = bar.createEl("button", { text: "Cancel" });
+    cancel.addEventListener("click", () => finish(false));
+    m.setCloseCallback(() => finish(false));
+    m.open();
+    setTimeout(() => cancel.focus(), 0);
+  });
+}
 
 export class CommunityPluginsSettingTab extends SettingTab {
   id = "community-plugins";
@@ -45,6 +70,18 @@ export class CommunityPluginsSettingTab extends SettingTab {
         app.saveLocalStorage("enable-plugin", false);
         await pl.turnOffCommunityPlugins();
         this.updates = null;
+        this.display();
+      }));
+    new Setting(el).setName(NODE_BRIDGE_SETTING)
+      .setDesc(nodeBridge.active
+        ? "On: plugins can run programs and read or write any file your user account can (needed by plugins like Git)."
+        : "Off: plugins are limited to this vault and cannot run programs. Turning this on asks for confirmation first.")
+      .addToggle((t) => t.setValue(nodeBridge.active).onChange(async (on) => {
+        try {
+          if (on && !(await confirmNodeBridge(app))) { this.display(); return; }
+          await nodeBridge.setEnabled(on);
+          await pl.reloadCommunityPlugins();
+        } catch (e) { notify(`Could not change plugin permissions: ${errMsg(e)}`, 6000); }
         this.display();
       }));
     new Setting(el).setName("Browse community plugins").setDesc("Find, install and enable plugins made by the community.")
