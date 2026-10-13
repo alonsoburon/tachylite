@@ -209,6 +209,37 @@ function footnoteRefRule(state: StateInline, silent: boolean): boolean {
   return true;
 }
 
+const INLINE_COUNT = Symbol("inlineFootnotes");
+
+/** Inline footnote `^[text]` (balanced brackets): registers an anonymous footnote, numbered with the others in document order. */
+function inlineFootnoteRule(state: StateInline, silent: boolean): boolean {
+  const src = state.src;
+  const start = state.pos;
+  if (src.charCodeAt(start) !== 0x5e || src.charCodeAt(start + 1) !== 0x5b) return false;
+  let depth = 0;
+  let end = -1;
+  for (let i = start + 1; i < state.posMax; i++) {
+    const c = src.charCodeAt(i);
+    if (c === 0x5c) { i++; continue; }
+    if (c === 0x5b) depth++;
+    else if (c === 0x5d && --depth === 0) { end = i; break; }
+  }
+  if (end < 0 || end === start + 2) return false;
+  if (!silent) {
+    const env = state.env as unknown as MdEnv;
+    const fn = env.footnotes;
+    if (!fn) return false;
+    const n = ((env[INLINE_COUNT] as number | undefined) ?? 0) + 1;
+    env[INLINE_COUNT] = n;
+    const id = `inline-${n}`;
+    fn.defs.set(id, src.slice(start + 2, end));
+    const t = state.push("footnote_ref", "sup", 0);
+    t.meta = { id };
+  }
+  state.pos = end + 1;
+  return true;
+}
+
 function renderMath(tex: string, display: boolean): string {
   try {
     return katex.renderToString(tex, { displayMode: display, throwOnError: false, output: "htmlAndMathml" });
@@ -304,6 +335,7 @@ export function createMarkdownIt(opts: { strictLineBreaks: boolean }): MdType {
   const md = new MarkdownIt({ html: true, linkify: true, breaks: !opts.strictLineBreaks, typographer: false });
 
   md.inline.ruler.before("link", "footnote_ref", footnoteRefRule);
+  md.inline.ruler.before("link", "footnote_inline", inlineFootnoteRule);
   md.inline.ruler.before("link", "wikilink", wikilinkRule);
   md.inline.ruler.before("image", "embed", embedRule);
   md.inline.ruler.push("tag", tagRule);

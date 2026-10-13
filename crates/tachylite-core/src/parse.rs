@@ -11,6 +11,9 @@ use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
+mod footnotes;
+pub use footnotes::{FootnoteCache, FootnoteRefCache};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct Loc {
     pub line: usize,
@@ -105,6 +108,10 @@ pub struct CachedMetadata {
     pub frontmatter_position: Option<Pos>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub frontmatter_links: Vec<FrontmatterLinkCache>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub footnotes: Vec<FootnoteCache>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub footnote_refs: Vec<FootnoteRefCache>,
 }
 
 /// Maps byte offsets of the source text to (line, utf16 col, utf16 offset).
@@ -386,11 +393,17 @@ pub fn parse(text: &str) -> CachedMetadata {
             "table"
         } else if t.trim_start().starts_with('<') {
             "html"
+        } else if footnotes::is_definition(t) {
+            "footnoteDefinition"
         } else {
             "paragraph"
         };
-        let continues = cur.as_ref().is_some_and(|s| s.kind == kind || (s.kind == "list" && !prev_blank) || (s.kind == "blockquote" && kind == "paragraph"))
-            && !(prev_blank && cur.as_ref().is_some_and(|s| s.kind != "list"));
+        let continues = cur.as_ref().is_some_and(|s| {
+            (s.kind == kind && kind != "footnoteDefinition")
+                || (s.kind == "list" && !prev_blank)
+                || (s.kind == "blockquote" && kind == "paragraph")
+                || (s.kind == "footnoteDefinition" && kind == "paragraph")
+        }) && !(prev_blank && cur.as_ref().is_some_and(|s| s.kind != "list"));
         if continues {
             let s = cur.as_mut().unwrap();
             s.end = end;
@@ -418,6 +431,7 @@ pub fn parse(text: &str) -> CachedMetadata {
         meta.sections.push(SectionCache { id: s.id, kind: s.kind.into(), position });
     }
     meta.sections.sort_by_key(|s| s.position.start.offset);
+    footnotes::collect(text, body_from, &idx, &mut meta);
     meta
 }
 

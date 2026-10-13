@@ -92,3 +92,26 @@ describe("callout folding in Live Preview", () => {
     h.destroy();
   });
 });
+
+describe("inline footnotes in the editor", () => {
+  const doc = "a[^1] b^[see [[X]] here] c^[two]\n\n`^[code]`\n\n[^1]: def";
+  it("parse with balanced brackets, render as numbered superscripts, reveal raw on cursor", () => {
+    const s = mkstate(doc, doc.length);
+    const names: string[] = [];
+    ensureSyntaxTree(s, doc.length)!.iterate({ enter: (n) => { names.push(n.name); } });
+    expect(names.filter((n) => n === "InlineFootnote").length).toBe(2);
+    const parent = document.createElement("div");
+    document.body.appendChild(parent);
+    const h = createEditor(parent, { doc, host, mode: "live-preview" });
+    h.view.dispatch({ selection: { anchor: doc.length } });
+    const sups = [...parent.querySelectorAll<HTMLElement>(".cm-inline-footnote-widget")];
+    expect(sups.map((e) => e.textContent)).toEqual(["[2]", "[3]"]);
+    expect(sups[0].title).toBe("see [[X]] here");
+    expect(parent.querySelector(".cm-content")!.textContent).not.toContain("^[see");
+    h.view.dispatch({ selection: { anchor: doc.indexOf("see") } });
+    expect(parent.querySelector(".cm-content")!.textContent).toContain("^[see [[X]] here]");
+    expect(parent.querySelector(".cm-formatting-inline-footnote")).toBeTruthy();
+    expect(parent.querySelector(".cm-inline-footnote")).toBeTruthy();
+    h.destroy();
+  });
+});

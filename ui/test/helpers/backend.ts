@@ -45,7 +45,28 @@ export function parseMeta(text: string): any {
   each(/(?:^|\s)(#[\w/-]+)/g, (m) => { (meta.tags ??= []).push({ tag: m[1], position: { start: pos(text, base + m.index), end: pos(text, base + m.index + m[0].length) } }); });
   each(/\s\^([\w-]+)$/gm, (m) => { (meta.blocks ??= {})[m[1].toLowerCase()] = { id: m[1], position: { start: pos(text, base + m.index + 1), end: pos(text, base + m.index + m[0].length) } }; });
   each(/^(#{1,6})\s+(.*)$/gm, (m) => { (meta.headings ??= []).push({ heading: m[2], level: m[1].length, position: { start: pos(text, base + m.index), end: pos(text, base + m.index + m[0].length) } }); });
+  parseFootnotes(text, base, meta);
   return meta;
+}
+
+/** `footnotes` (definitions, single-line here, and inline `^[...]` content) and `footnoteRefs`, like the Rust parser. */
+function parseFootnotes(text: string, base: number, meta: any): void {
+  const body = text.slice(base);
+  const at = (a: number, b: number) => ({ start: pos(text, base + a), end: pos(text, base + b) });
+  const defs = new Set<string>();
+  const labels = new Set<number>();
+  const fns: any[] = [];
+  for (const m of body.matchAll(/^ {0,3}\[\^([^\]\s]+)\]:.*$/gm)) {
+    const from = m.index! + m[0].indexOf("[");
+    defs.add(m[1].toLowerCase());
+    labels.add(from);
+    fns.push({ id: m[1].toLowerCase(), position: at(from, m.index! + m[0].length) });
+  }
+  for (const m of body.matchAll(/\^\[([^\]\n]+)\]/g)) fns.push({ id: "", position: at(m.index! + 2, m.index! + m[0].length - 1) });
+  const refs = [...body.matchAll(/\[\^([^\]\s]+)\]/g)].filter((m) => !labels.has(m.index!) && defs.has(m[1].toLowerCase()))
+    .map((m) => ({ id: m[1].toLowerCase(), position: at(m.index!, m.index! + m[0].length) }));
+  if (fns.length) meta.footnotes = fns.sort((a, b) => a.position.start.offset - b.position.start.offset);
+  if (refs.length) meta.footnoteRefs = refs;
 }
 
 export function makeVault(files: Record<string, string> = {}, opts: { plugins?: Record<string, { manifest?: any; main: string; styles?: string; data?: any }>; enabled?: string[]; root?: string; copyFrom?: string } = {}): FakeVault {

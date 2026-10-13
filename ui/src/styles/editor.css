@@ -218,6 +218,8 @@
 .markdown-source-view .cm-math-widget.math-block { text-align: center; padding: var(--size-4-2) 0; overflow-x: auto; }
 .markdown-source-view .cm-math-widget .katex-display { margin: 0; }
 .markdown-source-view .HyperMD-footnote { color: var(--text-muted); font-size: var(--footnote-size); }
+.markdown-source-view .cm-inline-footnote:not(.cm-formatting) { color: var(--text-muted); }
+.markdown-source-view .cm-inline-footnote-widget { font-size: var(--font-smallest); line-height: 0; color: var(--text-accent); cursor: text; }
 
 /* ---- tables ---- */
 .markdown-source-view .HyperMD-table-row { font-family: var(--font-monospace); font-size: var(--font-smaller); background: var(--background-secondary); padding-inline: var(--size-4-2); }

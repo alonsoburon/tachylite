@@ -209,6 +209,19 @@ describe("markdown renderer", () => {
     expect(el.textContent).not.toContain("[^1]:");
   });
 
+  it("inline footnotes ^[...] are numbered with regular ones in document order", async () => {
+    const { el } = await render("a[^x] b^[inline **one** [[Note A]]] c[^y] d^[two] e[^x]\n\n[^y]: Y note\n[^x]: X note");
+    const refs = [...el.querySelectorAll("sup.footnote-ref")].map((s) => s.textContent);
+    expect(refs).toEqual(["1", "2", "3", "4", "1"]);
+    const lis = [...el.querySelectorAll("section.footnotes li")];
+    expect(lis.map((l) => l.textContent!.replace("↩", "").trim())).toEqual(["X note", "inline one Note A", "Y note", "two"]);
+    expect(lis[1].querySelector("strong")?.textContent).toBe("one");
+    expect(lis[1].querySelector("a.internal-link")).toBeTruthy();
+    expect(el.textContent).not.toContain("^[");
+    const { el: none } = await render("no ^[] footnote and x^2");
+    expect(none.querySelector("sup.footnote-ref")).toBeNull();
+  });
+
   it("footnotes/comments keep line structure: tight lists, one paragraph, right task lines", async () => {
     const { el } = await render("line one\nline two[^1]\n\n%%c1\nc2%%\n- [ ] a\n- [ ] b\n\n[^1]: n");
     const sec = el.querySelectorAll(".markdown-preview-section");

@@ -9,6 +9,7 @@ import {
   MathWidget, TableWidget, type WidgetEnv,
 } from "./widgets";
 import { fileExt, fullTree, selectionTouches, selectionTouchesLines, splitLink } from "./util";
+import { InlineFootnoteWidget, footnoteNumber } from "./footnotes";
 
 /** Environment (host + source path) shared by decorations, widgets, autocomplete. */
 export const envFacet = Facet.define<WidgetEnv, WidgetEnv>({
@@ -418,6 +419,17 @@ export function buildInline(
           case "FootnoteRef":
             mark(from, to, "cm-footref cm-hmd-footnote");
             return false;
+          case "InlineFootnote": {
+            const fm = node.getChildren("InlineFootnoteMark");
+            if (fm.length < 2) return false;
+            if (live && !touches(from, to)) {
+              out.push(Decoration.replace({ widget: new InlineFootnoteWidget(footnoteNumber(state, from), doc.sliceString(fm[0].to, fm[1].from)) }).range(from, to));
+              return false;
+            }
+            mark(fm[0].to, fm[1].from, "cm-inline-footnote");
+            for (const m of fm) mark(m.from, m.to, "cm-formatting cm-formatting-inline-footnote cm-inline-footnote");
+            return false;
+          }
           case "HorizontalRule": {
             const l = doc.lineAt(from);
             addLine(l.from, "HyperMD-hr");
