@@ -5,6 +5,7 @@ import { javascript } from "@codemirror/lang-javascript";
 import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
 import { inlineFootnoteSyntax } from "./footnotes";
+import { customTaskSyntax } from "./tasks";
 
 const HighlightDelim = { resolve: "Highlight", mark: "HighlightMark" };
 const TAG_RE = /^#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/u;
@@ -222,7 +223,7 @@ const htmlLang = LanguageDescription.of({ name: "html", alias: ["xml", "svg", "v
 export function obsidianMarkdown() {
   return markdown({
     base: markdownLanguage,
-    extensions: [obsidianSyntax, inlineFootnoteSyntax],
+    extensions: [obsidianSyntax, inlineFootnoteSyntax, customTaskSyntax],
     codeLanguages: [jsLang, cssLang, htmlLang],
     addKeymap: false,
   });

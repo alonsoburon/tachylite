@@ -115,3 +115,19 @@ describe("inline footnotes in the editor", () => {
     h.destroy();
   });
 });
+
+describe("custom task statuses in Live Preview", () => {
+  it("[/] and [-] become checkboxes with data-task, and clicking toggles them to [ ]", () => {
+    const doc = "- [/] doing\n- [-] dropped\n- [ ] open\n- [x] done\n\nend";
+    const parent = document.createElement("div");
+    document.body.appendChild(parent);
+    const h = createEditor(parent, { doc, host, mode: "live-preview" });
+    h.view.dispatch({ selection: { anchor: doc.length } });
+    const boxes = () => [...parent.querySelectorAll<HTMLInputElement>("input.task-list-item-checkbox")];
+    expect(boxes().map((b) => `${b.getAttribute("data-task")}${b.checked ? "+" : "-"}`)).toEqual(["/+", "-+", " -", "x+"]);
+    expect(parent.querySelector('.HyperMD-task-line[data-task="/"]')).toBeTruthy();
+    boxes()[0].dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    expect(h.getValue().split("\n")[0]).toBe("- [ ] doing");
+    h.destroy();
+  });
+});
