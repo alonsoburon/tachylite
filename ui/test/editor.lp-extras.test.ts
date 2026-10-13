@@ -57,3 +57,38 @@ describe("setext headings in Live Preview", () => {
     h.destroy();
   });
 });
+
+describe("callout folding in Live Preview", () => {
+  const doc = "> [!note]- Folded\n> body one\n> body two\n\n> [!tip]+\n> open body\n\n> [!info] plain\n> x\n\nend";
+  function mount() {
+    const parent = document.createElement("div");
+    document.body.appendChild(parent);
+    const h = createEditor(parent, { doc, host, mode: "live-preview" });
+    h.view.dispatch({ selection: { anchor: doc.length } });
+    return { parent, h, text: () => parent.querySelector(".cm-content")!.textContent ?? "" };
+  }
+  it("collapsed callouts hide their body; the chevron toggles without touching the file", () => {
+    const { parent, h, text } = mount();
+    const folds = () => [...parent.querySelectorAll<HTMLElement>(".cm-callout-fold")];
+    expect(folds().length).toBe(2); // only foldable callouts
+    expect(folds()[0].classList.contains("is-collapsed")).toBe(true);
+    expect(folds()[1].classList.contains("is-collapsed")).toBe(false);
+    expect(text()).not.toContain("body one");
+    expect(text()).toContain("open body");
+    expect(parent.querySelector(".cm-line.cm-callout-title.is-collapsed")).toBeTruthy();
+    folds()[0].dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    expect(text()).toContain("body one");
+    expect(folds()[0].classList.contains("is-collapsed")).toBe(false);
+    folds()[1].dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    expect(text()).not.toContain("open body");
+    expect(h.getValue()).toBe(doc);
+    // the fold state follows edits before the callout
+    h.view.dispatch({ changes: { from: 0, insert: "new line\n\n" }, selection: { anchor: doc.length + 10 } });
+    expect(text()).toContain("body one");
+    expect(text()).not.toContain("open body");
+    // the cursor inside a collapsed callout reveals its source
+    h.view.dispatch({ selection: { anchor: h.getValue().indexOf("open body") } });
+    expect(text()).toContain("open body");
+    h.destroy();
+  });
+});
