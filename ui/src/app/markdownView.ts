@@ -31,8 +31,9 @@ function titleEl(view: TachyMarkdownView): HTMLElement {
 class InlineTitleWidget extends WidgetType {
   eq(): boolean { return true; }
   toDOM(cm: EditorView): HTMLElement {
-    const view = cm.state.field(editorInfoField) as TachyMarkdownView | null;
-    if (!view) return createDiv();
+    // Embedded editors (canvas cards, note embeds) share the workspace extensions but have no inline title.
+    const view = cm.state.field(editorInfoField, false) as TachyMarkdownView | null | undefined;
+    if (!(view instanceof TachyMarkdownView)) return createDiv();
     const el = titleEl(view);
     (view.inlineTitleEls ??= new Set()).add(el);
     return el;

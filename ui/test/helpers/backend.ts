@@ -69,6 +69,18 @@ function parseFootnotes(text: string, base: number, meta: any): void {
   if (refs.length) meta.footnoteRefs = refs;
 }
 
+/** Links a canvas contributes (crates/tachylite-core/src/canvas.rs): file cards by path, links inside text cards. */
+function canvasMeta(text: string): any {
+  let d: any;
+  try { d = JSON.parse(text || "{}"); } catch { return {}; }
+  const links: any[] = [];
+  for (const n of Array.isArray(d?.nodes) ? d.nodes : []) {
+    if (n?.type === "file" && typeof n.file === "string" && n.file) links.push({ link: n.file });
+    if (n?.type === "text" && typeof n.text === "string") { const m = parseMeta(n.text); links.push(...(m.links ?? []), ...(m.embeds ?? [])); }
+  }
+  return { links };
+}
+
 export function makeVault(files: Record<string, string> = {}, opts: { plugins?: Record<string, { manifest?: any; main: string; styles?: string; data?: any }>; enabled?: string[]; root?: string; copyFrom?: string } = {}): FakeVault {
   const root = opts.root ?? fs.mkdtempSync(path.join(os.tmpdir(), "tachy-"));
   if (opts.copyFrom) fs.cpSync(opts.copyFrom, root, { recursive: true });
@@ -100,8 +112,8 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
   const links = () => {
     const resolved: any = {}, unresolved: any = {};
     const all = walk(root).files;
-    for (const f of all.filter((x) => x.extension === "md")) {
-      const m = parseMeta(fs.readFileSync(abs(f.path), "utf8"));
+    for (const f of all.filter((x) => x.extension === "md" || x.extension === "canvas")) {
+      const m = f.extension === "md" ? parseMeta(fs.readFileSync(abs(f.path), "utf8")) : canvasMeta(fs.readFileSync(abs(f.path), "utf8"));
       resolved[f.path] = {}; unresolved[f.path] = {};
       for (const l of [...(m.links ?? []), ...(m.embeds ?? [])]) {
         const lp = l.link.split("#")[0];
@@ -209,11 +221,11 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
   return fake;
 }
 
-export async function makeApp(v: FakeVault, opts: { start?: boolean } = {}) {
+export async function makeApp(v: FakeVault, opts: { start?: boolean; onCoreReady?: (app: any) => void } = {}) {
   const { App } = await import("../../src/obsidian/app");
   await import("../../src/obsidian/index"); // installs DOM helpers + registers the obsidian module
   const info = (await v.backend("vault_info")) as any;
-  const app = new App({ info, installGlobalHandlers: false });
+  const app: InstanceType<typeof App> = new App({ info, installGlobalHandlers: false, onCoreReady: opts.onCoreReady ? () => opts.onCoreReady!(app) : undefined });
   if (opts.start !== false) await app.start();
   return app;
 }

@@ -13,6 +13,7 @@ export function makeRenderContext(host: EditorHost, sourcePath: string): RenderC
     getResourceUrl: (p) => host.getResourceUrl(p),
     openLink: (l, s, n) => host.openLink(l, s, n),
     openTag: (t) => host.openTag?.(t),
+    getEmbedRenderer: host.getEmbedRenderer ? (ext) => host.getEmbedRenderer!(ext) : undefined,
   };
 }
 

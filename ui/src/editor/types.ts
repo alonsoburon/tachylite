@@ -1,5 +1,6 @@
 import type { Extension } from "@codemirror/state";
 import type { EditorView, ViewUpdate } from "@codemirror/view";
+import type { RenderContext } from "../markdown/types";
 
 export type EditorMode = "source" | "live-preview";
 
@@ -30,6 +31,8 @@ export interface EditorHost {
   openTag?(tag: string): void;
   /** Save the note now (Vim `:w`). */
   save?(sourcePath: string): void;
+  /** See RenderContext.getEmbedRenderer (embeds of extensions registered in app.embedRegistry, e.g. canvas). */
+  getEmbedRenderer?: RenderContext["getEmbedRenderer"];
   openExternal?(url: string): void;
   /** Languages of fenced blocks that plugins render themselves (code-block processors). */
   codeBlockLanguages?(): string[];

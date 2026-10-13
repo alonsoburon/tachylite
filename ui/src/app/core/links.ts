@@ -137,7 +137,7 @@ export class BacklinksView extends FollowView {
       const title = item.createDiv({ cls: "tree-item-self search-result-file-title is-clickable" });
       collapseIcon(title);
       title.createDiv({ cls: "tree-item-inner", text: fileLabel(sf) });
-      title.createDiv({ cls: "tree-item-flair-outer" }).createSpan({ cls: "tree-item-flair search-result-count", text: String(rows.length) });
+      title.createDiv({ cls: "tree-item-flair-outer" }).createSpan({ cls: "tree-item-flair search-result-count", text: String(rows.length || (this.app.metadataCache.resolvedLinks[src]?.[file.path] ?? 0)) });
       const matches = item.createDiv({ cls: "search-result-file-matches" });
       if (item.hasClass("is-collapsed")) matches.hide();
       title.addEventListener("click", (e) => {
@@ -169,7 +169,8 @@ export class BacklinksView extends FollowView {
           const marks = r.ranges.map(([s, e2]) => raw.slice(s, e2)).filter(Boolean);
           highlightText(body, t, marks.length ? [...new Set(marks.map((m) => m.trim()))] : [], "search-result-file-matched-text");
         });
-        if (!any) item.hide();
+        // Canvases link through their cards: no lines to show, the file entry alone is the mention.
+        if (!any && (rows.length || !nameMatch)) item.hide();
         this.updateCount(sec.flair, list);
       });
     }

@@ -16,6 +16,20 @@ export function openExternal(url: string): void {
   void ipc.openUrl(url).catch((e) => console.warn("open_url failed", e));
 }
 
+/** Embeds of extensions with a creator in app.embedRegistry that the markdown renderer does not draw itself (canvas, plugin types). */
+export function embedRenderer(app: App, sourcePath: string | (() => string), component?: { addChild(c: any): any }): NonNullable<RenderContext["getEmbedRenderer"]> {
+  return (ext) => {
+    const creator = app.embedRegistry.embedByExtension[ext.toLowerCase()];
+    if (!creator) return null;
+    return (el, target, subpath) => {
+      const src = typeof sourcePath === "function" ? sourcePath() : sourcePath;
+      const child = creator({ app, containerEl: el, linktext: target + subpath, sourcePath: src }, app.vault.getFileByPath(target), subpath);
+      component?.addChild(child);
+      if (!(child as any)._loaded) child.load();
+    };
+  };
+}
+
 export function makeEditorHost(app: App): EditorHost {
   const md = (p: string) => app.vault.getFileByPath(p);
   return {
@@ -24,6 +38,7 @@ export function makeEditorHost(app: App): EditorHost {
     openLink: (lt, src, newLeaf) => { void app.workspace.openLinkText(lt, src, newLeaf ? "tab" : false); },
     readFile: async (p) => { const f = md(p); return f ? app.vault.cachedRead(f) : app.vault.adapter.read(p); },
     openTag: (tag) => { void openTagSearch(app, tag); },
+    getEmbedRenderer: (ext) => embedRenderer(app, "")(ext),
     openExternal,
     save: (path) => {
       for (const leaf of app.workspace.getLeavesOfType("markdown")) {
@@ -106,6 +121,7 @@ export function makeRenderContext(app: App, sourcePath: string, component?: { ad
     },
     openTag: (tag) => { void openTagSearch(app, tag); },
     addChild: component ? (c) => component.addChild(c) : undefined,
+    getEmbedRenderer: embedRenderer(app, sourcePath, component),
     strictLineBreaks: !!app.vault.getConfig("strictLineBreaks"),
   };
 }
