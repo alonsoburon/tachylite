@@ -114,3 +114,18 @@ fn system_trash_and_trash_option() {
     assert!(!root.join("c.md").exists() && !root.join(".trash/c.md").exists());
     assert!(matches!(ws.delete("missing.md"), Err(tachylite_core::VaultError::NotFound(_))));
 }
+
+#[test]
+fn case_only_rename_keeps_a_distinct_target() {
+    let (d, mut ws) = vault(&[("a.md", "lower"), ("A.md", "upper"), ("Note.md", "n")]);
+    let case_sensitive = fs::read_to_string(d.path().join("a.md")).unwrap() == "lower" && fs::read_to_string(d.path().join("A.md")).unwrap() == "upper";
+    if case_sensitive {
+        // Two different files that only differ in case: renaming one onto the other is a conflict, not an overwrite.
+        assert!(ws.rename("a.md", "A.md", false).is_err());
+        assert_eq!(fs::read_to_string(d.path().join("A.md")).unwrap(), "upper");
+    }
+    ws.rename("Note.md", "note.md", false).unwrap();
+    assert!(ws.vault.get("note.md").is_some());
+    assert!(ws.vault.get("Note.md").is_none());
+    assert!(fs::read_dir(d.path()).unwrap().any(|e| e.unwrap().file_name() == "note.md"));
+}
