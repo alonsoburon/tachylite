@@ -30,11 +30,13 @@ const External = Annotation.define<boolean>();
 
 /** Code-token classes in the CodeMirror 5 naming (`cm-keyword`...) that Obsidian themes style. */
 export const codeHighlightStyle = HighlightStyle.define([
-  { tag: t.keyword, class: "cm-keyword" },
+  { tag: [t.keyword, t.self], class: "cm-keyword" },
   { tag: [t.string, t.regexp, t.special(t.string)], class: "cm-string" },
   { tag: [t.number, t.bool, t.null], class: "cm-number" },
   { tag: t.atom, class: "cm-atom" },
-  { tag: [t.lineComment, t.blockComment], class: "cm-comment" },
+  { tag: t.comment, class: "cm-comment" },
+  { tag: t.standard(t.variableName), class: "cm-builtin" },
+  { tag: t.special(t.variableName), class: "cm-variable-2" },
   { tag: [t.definition(t.variableName), t.function(t.variableName)], class: "cm-def" },
   { tag: t.variableName, class: "cm-variable" },
   { tag: t.propertyName, class: "cm-property" },

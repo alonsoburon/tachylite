@@ -365,3 +365,17 @@ pre.frontmatter { margin: 0; }
 .markdown-rendered .math.math-inline { display: inline-block; }
 .markdown-rendered .math .katex-display { margin: 0; }
 .markdown-rendered .math-error { color: var(--text-error); }
+
+/* ---- reading-view code tokens (Prism class names, which themes target) ---- */
+.markdown-rendered pre code .token.keyword { color: var(--code-keyword); }
+.markdown-rendered pre code .token:is(.string, .char, .attr-value, .inserted) { color: var(--code-string); }
+.markdown-rendered pre code .token:is(.number, .boolean, .constant) { color: var(--code-value); }
+.markdown-rendered pre code .token:is(.function, .builtin, .atrule, .class-name) { color: var(--code-function); }
+.markdown-rendered pre code .token:is(.property, .attr-name, .variable, .url, .entity) { color: var(--code-property); }
+.markdown-rendered pre code .token.operator { color: var(--code-operator); }
+.markdown-rendered pre code .token:is(.tag, .symbol, .deleted) { color: var(--code-tag); }
+.markdown-rendered pre code .token:is(.comment, .prolog, .doctype) { color: var(--code-comment); }
+.markdown-rendered pre code .token.punctuation { color: var(--code-punctuation); }
+.markdown-rendered pre code .token:is(.regex, .important) { color: var(--code-important); }
+.markdown-rendered pre code .token.bold { font-weight: var(--font-bold); }
+.markdown-rendered pre code .token.italic { font-style: italic; }

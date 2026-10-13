@@ -92,7 +92,8 @@
 .markdown-source-view .cm-keyword { color: var(--code-keyword); }
 .markdown-source-view .cm-string { color: var(--code-string); }
 .markdown-source-view .cm-number, .markdown-source-view .cm-atom { color: var(--code-value); }
-.markdown-source-view .cm-def { color: var(--code-function); }
+.markdown-source-view .cm-def, .markdown-source-view .cm-builtin { color: var(--code-function); }
+.markdown-source-view .cm-variable-2 { color: var(--code-property); }
 .markdown-source-view .cm-variable { color: var(--code-normal); }
 .markdown-source-view .cm-property { color: var(--code-property); }
 .markdown-source-view .cm-operator { color: var(--code-operator); }
