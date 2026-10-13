@@ -276,6 +276,20 @@ describe("plugin-tolerant internals", () => {
     } finally { await app.stop(); v.cleanup(); }
   });
 
+  it("embedded editors carry the editor state fields; workspace.editorSuggest is the suggest registry", async () => {
+    const { MarkdownScrollableEditView } = await import("../src/obsidian/embeds");
+    const { editorLivePreviewField, editorEditorField } = await import("../src/obsidian/editor");
+    const owner = { file: null, marker: 1 };
+    const ed = new MarkdownScrollableEditView(app, document.body.createDiv(), owner);
+    ed.load();
+    expect(ed.cm.state.field(editorInfoField)).toBe(owner);
+    expect(ed.cm.state.field(editorLivePreviewField)).toBe(true);
+    expect(ed.cm.state.field(editorEditorField)).toBe(ed.cm);
+    ed.unload();
+    expect(app.workspace.editorSuggest).toBe(app.workspace.editorSuggestManager);
+    expect(Array.isArray(app.workspace.editorSuggest!.suggests)).toBe(true);
+  });
+
   it("TextFileView.save writes view data that differs from the file even when the plugin set `data` itself (Kanban)", async () => {
     const { makeApp, makeVault } = await import("./helpers/backend");
     const { TextFileView } = await import("../src/obsidian/views");
