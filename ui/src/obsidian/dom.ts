@@ -3,6 +3,7 @@ import type {} from "obsidian"; // pulls in the global augmentations for typing 
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const INSTALLED = Symbol.for("tachylite.dom-helpers");
+const GLOBALS = Symbol.for("tachylite.dom-globals");
 
 type Info = {
   cls?: string | string[]; text?: string | DocumentFragment; attr?: Record<string, string | number | boolean | null>;
@@ -67,20 +68,70 @@ export function createSvgIn<K extends keyof SVGElementTagNameMap>(doc: Document,
 
 function docOf(n: any): Document { return n?.ownerDocument ?? (n?.nodeType === 9 ? n : document); }
 
+// ---------------------------------------------------------------- windows (popouts)
+// Popout windows are other realms (same-origin documents with their own globals). The app keeps a list of
+// them so `activeWindow`, `Node.constructorWin` and `Node.instanceOf` can reason across realms.
+
+const windows = new Set<Window>();
+/** Every window the app renders into: the main one plus open popouts. */
+export function appWindows(): Window[] { return typeof window === "undefined" ? [...windows] : [window, ...[...windows].filter((w) => w !== window)]; }
+export function registerAppWindow(win: Window): void { windows.add(win); }
+export function unregisterAppWindow(win: Window): void {
+  windows.delete(win);
+  const g = globalThis as any;
+  if (g.activeWindow === win) setActiveWindow(typeof window !== "undefined" ? window : g);
+}
+/** Point the `activeWindow` / `activeDocument` globals at the focused window. */
+export function setActiveWindow(win: Window): void {
+  const g = globalThis as any;
+  g.activeWindow = win;
+  g.activeDocument = win.document;
+}
+/** The document of the focused window (where menus, modals and notices without an anchor go). */
+export function activeDoc(): Document { return (globalThis as any).activeDocument ?? document; }
+
+type Migrator = { ref: WeakRef<Element>; fn: (win: Window) => any; last: Window | null };
+let migrators: Migrator[] = [];
+const migrationHooks: ((root: Element, win: Window) => void)[] = [];
+/** Run `hook` for every subtree that moves to another window (used for CodeMirror's `setRoot`). */
+export function addWindowMigrationHook(hook: (root: Element, win: Window) => void): void { migrationHooks.push(hook); }
+/** `root` was inserted into another window's document: fire `onWindowMigrated` listeners inside it. */
+export function notifyWindowMigrated(root: Element): void {
+  const win = root.ownerDocument?.defaultView;
+  if (!win) return;
+  for (const h of migrationHooks) { try { h(root, win); } catch (e) { console.error(e); } }
+  migrators = migrators.filter((m) => m.ref.deref());
+  for (const m of migrators.slice()) {
+    const el = m.ref.deref();
+    if (!el || m.last === win || !(el === root || root.contains(el))) continue;
+    m.last = win;
+    try { m.fn(win); } catch (e) { console.error(e); }
+  }
+}
+
 /** Install all helper globals. Safe to call repeatedly. */
 export function installDomHelpers(): void {
+  installDomHelpersIn(globalThis as any);
   const g = globalThis as any;
-  if (g[INSTALLED]) return;
-  g[INSTALLED] = true;
+  if (g[GLOBALS]) return;
+  g[GLOBALS] = true;
+  installGlobals(g);
+}
+
+/** Install the prototype helpers (createDiv, addClass, on/off, ...) into one realm: the main one or a popout's. */
+export function installDomHelpersIn(g: any): void {
+  if (Object.prototype.hasOwnProperty.call(g, INSTALLED)) return;
+  Object.defineProperty(g, INSTALLED, { value: true, configurable: true });
 
   // ---- primitives
-  def(Object, "isEmpty", (o: Record<string, any>) => { for (const k in o) if (Object.prototype.hasOwnProperty.call(o, k)) return false; return true; });
-  def(Object, "each", (o: Record<string, any>, cb: (v: any, k?: string) => boolean | void, ctx?: any) => {
+  const O = g.Object ?? Object, A = g.Array ?? Array, M = g.Math ?? Math, S = g.String ?? String, Nu = g.Number ?? Number;
+  def(O, "isEmpty", (o: Record<string, any>) => { for (const k in o) if (Object.prototype.hasOwnProperty.call(o, k)) return false; return true; });
+  def(O, "each", (o: Record<string, any>, cb: (v: any, k?: string) => boolean | void, ctx?: any) => {
     for (const k in o) if (Object.prototype.hasOwnProperty.call(o, k) && cb.call(ctx, o[k], k) === false) return false;
     return true;
   });
-  def(Array, "combine", (arrays: any[][]) => ([] as any[]).concat(...arrays));
-  const AP = Array.prototype as any;
+  def(A, "combine", (arrays: any[][]) => ([] as any[]).concat(...arrays));
+  const AP = A.prototype as any;
   def(AP, "first", function (this: any[]) { return this[0]; });
   def(AP, "last", function (this: any[]) { return this[this.length - 1]; });
   def(AP, "contains", function (this: any[], t: any) { return this.includes(t); });
@@ -91,12 +142,12 @@ export function installDomHelpers(): void {
   });
   def(AP, "unique", function (this: any[]) { return Array.from(new Set(this)); });
   if (!AP.findLastIndex) def(AP, "findLastIndex", function (this: any[], p: (v: any) => boolean) { for (let i = this.length - 1; i >= 0; i--) if (p(this[i])) return i; return -1; });
-  def(Math, "clamp", (v: number, min: number, max: number) => Math.min(Math.max(v, min), max));
-  def(Math, "square", (v: number) => v * v);
-  def(String, "isString", (o: any) => typeof o === "string" || o instanceof String);
-  def(Number, "isNumber", (o: any) => typeof o === "number");
-  def(String.prototype, "contains", function (this: string, t: string) { return this.includes(t); });
-  def(String.prototype, "format", function (this: string, ...args: string[]) {
+  def(M, "clamp", (v: number, min: number, max: number) => Math.min(Math.max(v, min), max));
+  def(M, "square", (v: number) => v * v);
+  def(S, "isString", (o: any) => typeof o === "string" || o instanceof String);
+  def(Nu, "isNumber", (o: any) => typeof o === "number");
+  def(S.prototype, "contains", function (this: string, t: string) { return this.includes(t); });
+  def(S.prototype, "format", function (this: string, ...args: string[]) {
     return this.replace(/{(\d+)}/g, (m, i) => (typeof args[+i] !== "undefined" ? args[+i] : m));
   });
 
@@ -121,10 +172,13 @@ export function installDomHelpers(): void {
     while (cur) { const next = cur.nextSibling; this.removeChild(cur); cur = next; }
   });
   def(N, "appendText", function (this: Node, val: string) { this.appendChild(docOf(this).createTextNode(val)); });
-  def(N, "instanceOf", function (this: Node, type: any) { return this instanceof type; });
+  def(N, "instanceOf", function (this: Node, type: any) { return crossRealmInstanceOf(this, type, (this as any).win); });
   getter(N, "doc", function (this: Node) { return docOf(this); });
   getter(N, "win", function (this: Node) { return docOf(this).defaultView ?? window; });
-  getter(N, "constructorWin", function (this: Node) { return docOf(this).defaultView ?? window; });
+  getter(N, "constructorWin", function (this: Node) {
+    for (const w of appWindows()) if ((w as any).Node && this instanceof (w as any).Node) return w;
+    return docOf(this).defaultView ?? window;
+  });
 
   def(E, "getText", function (this: Element) { return this.textContent ?? ""; });
   def(E, "setText", function (this: Element, v: string | DocumentFragment) {
@@ -214,7 +268,7 @@ export function installDomHelpers(): void {
   def(H, "on", addDelegated);
   def(H, "off", removeDelegated);
   // `document` may inherit from a different Document class than the global one (happy-dom), so patch its real prototype too.
-  for (const dp of new Set([g.Document?.prototype, typeof document !== "undefined" ? Object.getPrototypeOf(document) : undefined])) {
+  for (const dp of new Set([g.Document?.prototype, g.document ? Object.getPrototypeOf(g.document) : undefined])) {
     if (!dp) continue;
     def(dp, "on", addDelegated);
     def(dp, "off", removeDelegated);
@@ -232,17 +286,31 @@ export function installDomHelpers(): void {
     obs.observe(docOf(el).documentElement ?? docOf(el), { childList: true, subtree: true });
     return () => obs.disconnect();
   });
-  def(H, "onWindowMigrated", function () { return () => {}; });
+  def(H, "onWindowMigrated", function (this: HTMLElement, listener: (win: Window) => any) {
+    const m: Migrator = { ref: new WeakRef(this), fn: listener, last: docOf(this).defaultView };
+    migrators.push(m);
+    return () => { migrators = migrators.filter((x) => x !== m); };
+  });
   def(H, "trigger", function (this: HTMLElement, type: string) { this.dispatchEvent(new Event(type, { bubbles: true, cancelable: true })); });
 
   const UE = g.UIEvent?.prototype;
   if (UE) {
     getter(UE, "targetNode", function (this: Event) { return this.target as Node | null; });
-    getter(UE, "win", function (this: Event) { return ((this.target as any)?.ownerDocument?.defaultView) ?? window; });
-    getter(UE, "doc", function (this: Event) { return ((this.target as any)?.ownerDocument) ?? document; });
-    def(UE, "instanceOf", function (this: Event, type: any) { return this instanceof type; });
+    getter(UE, "win", function (this: UIEvent) { return this.view ?? ((this.target as any)?.ownerDocument?.defaultView) ?? window; });
+    getter(UE, "doc", function (this: UIEvent) { return this.view?.document ?? ((this.target as any)?.ownerDocument) ?? document; });
+    def(UE, "instanceOf", function (this: Event, type: any) { return crossRealmInstanceOf(this, type, (this as any).win); });
   }
+}
 
+/** `x instanceof type`, also true when `x` comes from another window whose constructor of the same name matches. */
+function crossRealmInstanceOf(x: object, type: any, win: any): boolean {
+  if (x instanceof type) return true;
+  const name = type?.name;
+  const alt = name && win ? win[name] : undefined;
+  return typeof alt === "function" && alt !== type && x instanceof alt;
+}
+
+function installGlobals(g: any): void {
   // ---- global functions
   g.createEl = (tag: any, o?: any, cb?: any) => createElIn(document, tag, o, cb);
   g.createDiv = (o?: any, cb?: any) => createElIn(document, "div", o, cb);
@@ -258,8 +326,8 @@ export function installDomHelpers(): void {
     if (document.readyState !== "loading") fn();
     else document.addEventListener("DOMContentLoaded", () => fn());
   };
-  g.activeWindow = typeof window !== "undefined" ? window : g;
-  g.activeDocument = document;
+  g.activeWindow ??= typeof window !== "undefined" ? window : g;
+  g.activeDocument ??= document;
   g.ajaxPromise = ajaxPromise;
   g.ajax = ajax;
 }

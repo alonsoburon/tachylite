@@ -2,11 +2,12 @@
 // tab chrome (close, pin, drag-reorder, drop-to-split), resize handles, sidebar toggles, layout persistence.
 import { ipc } from "../ipc";
 import {
-  FileView, Menu, TextFileView, WorkspaceParent, WorkspaceSidedock, WorkspaceSplit, WorkspaceTabs,
-  type App, type LayoutHost, type View, type WorkspaceItem, type WorkspaceLeaf,
+  FileView, Menu, Notice, TextFileView, WorkspaceParent, WorkspaceSidedock, WorkspaceSplit, WorkspaceTabs, WorkspaceWindow,
+  type App, type LayoutHost, type View, type WorkspaceItem, type WorkspaceLeaf, type WorkspaceWindowInitData,
 } from "../obsidian";
 import { setIcon } from "../obsidian/icons";
 import { buildFileMenu, copyText, revealInExplorer } from "./files";
+import { Popouts } from "./popout";
 
 const MIN_PANE = 90;
 type Zone = "left" | "right" | "top" | "bottom" | "center";
@@ -17,14 +18,17 @@ export class Shell implements LayoutHost {
   private leftToggle: HTMLElement;
   private rightToggle: HTMLElement;
   private cleanups: (() => void)[] = [];
+  readonly popouts: Popouts;
 
   constructor(public app: App) {
     app.workspace.host = this;
     this.leftToggle = this.makeToggle("left");
     this.rightToggle = this.makeToggle("right");
     this.buildRibbonFooter();
-    this.installFocusTracking();
+    this.cleanups.push(this.installFocusTracking(document));
     this.installSaveOnHide();
+    this.popouts = new Popouts(app, this);
+    this.cleanups.push(() => this.popouts.dispose());
   }
 
   mount(container: HTMLElement): void {
@@ -37,14 +41,29 @@ export class Shell implements LayoutHost {
     this.app.workspace.host = null;
   }
 
+  // ---------------------------------------------------------------- popout windows
+  openPopout(win: WorkspaceWindow, data?: WorkspaceWindowInitData): Window { return this.popouts.open(win, data); }
+  closePopout(win: WorkspaceWindow): void { this.popouts.close(win); }
+  focusWindow(win: WorkspaceWindow | null): void {
+    if (this.popouts.focused !== (win ? win.win : window)) this.popouts.focus(win);
+  }
+  /** Input handling for a popout document (the main one is installed by App and the constructor). */
+  installWindowHandlers(win: Window): () => void {
+    const offs = [this.app.installWindowHandlers(win.document), this.installFocusTracking(win.document)];
+    return () => { for (const o of offs) o(); };
+  }
+  /** Root elements of every window: the main app container plus each popout's window split. */
+  private roots(): HTMLElement[] { return [this.app.dom.appContainerEl, ...this.app.workspace.floatingSplit.children.map((w) => w.containerEl)]; }
+
   // ---------------------------------------------------------------- LayoutHost
   onLayoutChange(): void { this.scheduleDecorate(); }
   onSidedockToggle(): void { this.scheduleDecorate(); this.app.workspace.requestSaveLayout(); }
   onViewOpened(leaf: WorkspaceLeaf, _view: View): void { this.scheduleDecorate(); void leaf; }
   revealLeaf(leaf: WorkspaceLeaf): void { this.scheduleDecorate(); void leaf; }
   onActiveLeafChange(leaf: WorkspaceLeaf | null): void {
-    this.app.dom.appContainerEl.querySelectorAll(".workspace-tabs.mod-active").forEach((e) => e.removeClass("mod-active"));
+    for (const r of this.roots()) r.querySelectorAll(".workspace-tabs.mod-active").forEach((e) => e.removeClass("mod-active"));
     leaf?.parent?.containerEl.addClass("mod-active");
+    if (leaf && leaf.getContainer() instanceof WorkspaceWindow) return; // popout titles follow their own leaves (popout.ts)
     const v = leaf?.view;
     const f = v instanceof FileView ? v.file : null;
     document.title = f ? `${f.basename} - ${this.app.vault.getName()} - Tachylite` : `${this.app.vault.getName()} - Tachylite`;
@@ -68,11 +87,12 @@ export class Shell implements LayoutHost {
       this.ensureDockHandle(dock);
     }
     this.decorateSplit(ws.rootSplit);
+    for (const w of ws.floatingSplit.children) this.decorateSplit(w);
     this.placeToggles();
     this.app.dom.appContainerEl.toggleClass("is-left-sidedock-open", !ws.leftSplit.collapsed);
     this.app.dom.appContainerEl.toggleClass("is-right-sidedock-open", !ws.rightSplit.collapsed);
     const act = ws.activeLeaf;
-    this.app.dom.appContainerEl.querySelectorAll(".workspace-tabs.mod-active").forEach((e) => { if (e !== act?.parent?.containerEl) e.removeClass("mod-active"); });
+    for (const r of this.roots()) r.querySelectorAll(".workspace-tabs.mod-active").forEach((e) => { if (e !== act?.parent?.containerEl) e.removeClass("mod-active"); });
     act?.parent?.containerEl.addClass("mod-active");
   }
 
@@ -112,7 +132,8 @@ export class Shell implements LayoutHost {
     const total = sizes.reduce((a, b) => a + b, 0) || 1;
     const start = horiz ? e.clientX : e.clientY;
     const pair = sizes[idx - 1] + sizes[idx];
-    document.body.addClass("is-resizing");
+    const doc = split.containerEl.ownerDocument;
+    doc.body.addClass("is-resizing");
     const move = (ev: MouseEvent) => {
       const d = (horiz ? ev.clientX : ev.clientY) - start;
       const a = Math.max(MIN_PANE, Math.min(pair - MIN_PANE, sizes[idx - 1] + d));
@@ -122,14 +143,14 @@ export class Shell implements LayoutHost {
       split.children.forEach((c, i) => { c.size = (next[i] / total) * 100; c.containerEl.style.flexGrow = String(c.size); });
     };
     const up = () => {
-      document.removeEventListener("mousemove", move);
-      document.removeEventListener("mouseup", up);
-      document.body.removeClass("is-resizing");
+      doc.removeEventListener("mousemove", move);
+      doc.removeEventListener("mouseup", up);
+      doc.body.removeClass("is-resizing");
       this.app.workspace.requestSaveLayout();
       for (const l of this.app.workspace.allLeaves()) l.onResize();
     };
-    document.addEventListener("mousemove", move);
-    document.addEventListener("mouseup", up);
+    doc.addEventListener("mousemove", move);
+    doc.addEventListener("mouseup", up);
   }
 
   private ensureDockHandle(dock: WorkspaceSidedock): void {
@@ -199,7 +220,7 @@ export class Shell implements LayoutHost {
 
   // ---------------------------------------------------------------- tabs
   private decorateTabs(tabs: WorkspaceTabs): void {
-    const root = tabs.getRoot() === this.app.workspace.rootSplit;
+    const r = tabs.getRoot(), root = r === this.app.workspace.rootSplit || r instanceof WorkspaceWindow;
     if (!(tabs.containerEl as any)._shell) {
       (tabs.containerEl as any)._shell = true;
       this.wireTabGroup(tabs, root);
@@ -222,6 +243,7 @@ export class Shell implements LayoutHost {
   }
 
   private wireTabGroup(tabs: WorkspaceTabs, mainArea: boolean): void {
+    // main area and popouts get the new-tab / tab-list buttons and split drop zones; sidebars only reorder
     const bar = tabs.tabHeaderContainerEl.parentElement!;
     if (mainArea) {
       const plus = bar.createDiv({ cls: "workspace-tab-header-new-tab clickable-icon", attr: { "aria-label": "New tab" } });
@@ -293,16 +315,16 @@ export class Shell implements LayoutHost {
       e.dataTransfer?.setData("application/x-tachylite-leaf", leaf.id);
       if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
       el.addClass("is-dragging");
-      document.body.addClass("is-grabbing");
+      el.doc.body.addClass("is-grabbing");
     });
-    el.addEventListener("dragend", () => { this.drag = null; el.removeClass("is-dragging"); document.body.removeClass("is-grabbing"); this.clearDropMarks(); this.hideAllZones(); });
+    el.addEventListener("dragend", () => { this.drag = null; el.removeClass("is-dragging"); el.doc.body.removeClass("is-grabbing"); this.clearDropMarks(); this.hideAllZones(); });
   }
 
   tabMenu(leaf: WorkspaceLeaf, e: MouseEvent): void {
     const ws = this.app.workspace;
     const menu = new Menu();
     const tabs = leaf.parent as WorkspaceTabs;
-    const mainArea = leaf.getRoot() === ws.rootSplit;
+    const root = leaf.getRoot(), inPopout = root instanceof WorkspaceWindow, mainArea = root === ws.rootSplit || inPopout;
     menu.addItem((i) => i.setSection("close").setTitle("Close").setIcon("lucide-x").onClick(() => leaf.detach()));
     menu.addItem((i) => i.setSection("close").setTitle("Close others").setIcon("lucide-x").onClick(() => { for (const l of [...tabs.children] as WorkspaceLeaf[]) if (l !== leaf && !l.pinned) l.detach(); }));
     menu.addItem((i) => i.setSection("close").setTitle("Close tabs to the right").onClick(() => { const idx = tabs.children.indexOf(leaf); for (const l of tabs.children.slice(idx + 1) as WorkspaceLeaf[]) if (!l.pinned) l.detach(); }));
@@ -313,6 +335,10 @@ export class Shell implements LayoutHost {
       menu.addItem((i) => i.setSection("split").setTitle("Split down").setIcon("lucide-separator-horizontal").onClick(() => { void ws.duplicateLeaf(leaf, "split", "horizontal"); }));
       menu.addItem((i) => i.setSection("split").setTitle("Duplicate tab").setIcon("lucide-copy").onClick(() => { void ws.duplicateLeaf(leaf); }));
     }
+    // Obsidian's wording; moving back to the main window is otherwise a tab drag (that works across windows here too).
+    menu.addItem((i) => i.setSection("window").setTitle("Move to new window").setIcon("lucide-picture-in-picture-2").onClick(() => { try { ws.moveLeafToPopout(leaf); } catch (e) { console.error(e); new Notice("Unable to open a new window."); } }));
+    menu.addItem((i) => i.setSection("window").setTitle("Open in new window").setIcon("lucide-picture-in-picture-2").onClick(() => { void ws.duplicateLeaf(leaf, "window"); }));
+    if (inPopout) menu.addItem((i) => i.setSection("window").setTitle("Move to main window").setIcon("lucide-app-window").onClick(() => { this.moveToMain(leaf); }));
     const v = leaf.view;
     if (v instanceof FileView && v.file) {
       const f = v.file;
@@ -341,7 +367,7 @@ export class Shell implements LayoutHost {
     else kids[kids.length - 1]?.tabHeaderEl.addClass("mod-drop-after");
   }
   private clearDropMarks(): void {
-    this.app.dom.appContainerEl.querySelectorAll(".mod-drop-before, .mod-drop-after").forEach((e) => e.classList.remove("mod-drop-before", "mod-drop-after"));
+    for (const r of this.roots()) r.querySelectorAll(".mod-drop-before, .mod-drop-after").forEach((e) => e.classList.remove("mod-drop-before", "mod-drop-after"));
   }
   private zoneAt(tabs: WorkspaceTabs, e: DragEvent): Zone {
     const r = tabs.tabContainerEl.getBoundingClientRect();
@@ -363,7 +389,7 @@ export class Shell implements LayoutHost {
     o.className = `workspace-drop-overlay mod-${zone} is-visible`;
   }
   private hideZone(tabs: WorkspaceTabs): void { tabs.containerEl.querySelector(":scope > .workspace-drop-overlay")?.remove(); }
-  private hideAllZones(): void { this.app.dom.appContainerEl.querySelectorAll(".workspace-drop-overlay").forEach((e) => e.remove()); }
+  private hideAllZones(): void { for (const r of this.roots()) r.querySelectorAll(".workspace-drop-overlay").forEach((e) => e.remove()); }
 
   private dropOnBody(leaf: WorkspaceLeaf, tabs: WorkspaceTabs, zone: Zone): void {
     const ws = this.app.workspace;
@@ -380,7 +406,17 @@ export class Shell implements LayoutHost {
     if (holder.parent) holder.detach();
   }
 
-  /** Move a leaf to `index` of another (or the same) tab group. */
+  /** Move a popout's tab into the main window's most recent tab group. */
+  moveToMain(leaf: WorkspaceLeaf): void {
+    const ws = this.app.workspace;
+    const ref = ws.getMostRecentLeaf(ws.rootSplit);
+    const tabs = ref?.parent instanceof WorkspaceTabs ? ref.parent : ws.rootSplit.children.find((c): c is WorkspaceTabs => c instanceof WorkspaceTabs);
+    if (!tabs) return;
+    this.moveLeaf(leaf, tabs, tabs.children.length);
+    this.popouts.focus(null);
+  }
+
+  /** Move a leaf to `index` of another (or the same) tab group, possibly in another window. */
   moveLeaf(leaf: WorkspaceLeaf, target: WorkspaceTabs, index: number): void {
     const ws = this.app.workspace;
     const from = leaf.parent as WorkspaceTabs | null;
@@ -397,11 +433,11 @@ export class Shell implements LayoutHost {
       body.insertBefore(leaf.containerEl, (from.children[index + 1] as WorkspaceLeaf | undefined)?.containerEl ?? null);
       from.selectTab(leaf);
     } else {
-      // never leave the main area without a leaf
-      if (from.getRoot() === ws.rootSplit && ws.rootSplit.leaves().length === 1) return;
-      from.removeChild(leaf);
-      target.insertChild(Math.min(index, target.children.length), leaf);
-      target.selectTab(leaf);
+      // never leave the main area without a leaf (popouts may give theirs away: the window closes)
+      if (from.getRoot() === ws.rootSplit && ws.rootSplit.leaves().length === 1 && target.getRoot() !== ws.rootSplit && !(target.getRoot() instanceof WorkspaceWindow)) return;
+      ws.moveLeaf(leaf, target, index);
+      this.scheduleDecorate();
+      return;
     }
     ws.setActiveLeaf(leaf);
     ws.trigger("layout-change");
@@ -411,7 +447,7 @@ export class Shell implements LayoutHost {
 
   // ---------------------------------------------------------------- global behaviour
   /** Clicking anywhere inside a pane makes it the active leaf (sidebars included). */
-  private installFocusTracking(): void {
+  private installFocusTracking(doc: Document): () => void {
     const handler = (e: MouseEvent) => {
       const t = e.target as HTMLElement | null;
       const el = t?.closest?.(".workspace-leaf") as HTMLElement | null;
@@ -419,8 +455,8 @@ export class Shell implements LayoutHost {
       const leaf = this.app.workspace.allLeaves().find((l) => l.containerEl === el);
       if (leaf && leaf !== this.app.workspace.activeLeaf) this.app.workspace.setActiveLeaf(leaf);
     };
-    document.addEventListener("mousedown", handler, true);
-    this.cleanups.push(() => document.removeEventListener("mousedown", handler, true));
+    doc.addEventListener("mousedown", handler, true);
+    return () => doc.removeEventListener("mousedown", handler, true);
   }
 
   /** Flush pending editor saves and the layout when the window is hidden or closed. */

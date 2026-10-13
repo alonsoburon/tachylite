@@ -104,7 +104,7 @@ export class App {
     Object.defineProperty(globalThis, "require", { value: createRequire(this), configurable: true, writable: true, enumerable: false });
     // Electron's renderer also has a global Buffer; bundles read `global.Buffer` (obsidian-git's isomorphic-git, simple-git).
     if (!(globalThis as any).Buffer) Object.defineProperty(globalThis, "Buffer", { value: Buffer, configurable: true, writable: true, enumerable: false });
-    if (opts.installGlobalHandlers !== false) this.installGlobalHandlers();
+    if (opts.installGlobalHandlers !== false) this.teardown.push(this.installWindowHandlers(document));
   }
 
   get pluginProcess(): any { return (this._process ??= createProcess()); }
@@ -122,8 +122,8 @@ export class App {
     else localStorage.setItem(k, JSON.stringify(data));
   }
 
-  private installGlobalHandlers(): void {
-    const doc = document;
+  /** Keyboard (scopes, hotkeys) and `lastEvent` tracking for one document: the main one or a popout's. */
+  installWindowHandlers(doc: Document): () => void {
     const track = (e: Event) => { this.lastEvent = e as UIEventLike; };
     for (const t of ["click", "mousedown", "keydown", "contextmenu", "pointerdown"]) doc.addEventListener(t, track, true);
     const key = (e: KeyboardEvent) => {
@@ -134,10 +134,10 @@ export class App {
       this.hotkeyManager.handleKeydown(e);
     };
     doc.addEventListener("keydown", key);
-    this.teardown.push(() => {
+    return () => {
       for (const t of ["click", "mousedown", "keydown", "contextmenu", "pointerdown"]) doc.removeEventListener(t, track, true);
       doc.removeEventListener("keydown", key);
-    });
+    };
   }
 
   /** Boot sequence: config, metadata, core/community plugins, then layout-ready. */

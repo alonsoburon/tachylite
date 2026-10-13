@@ -14,7 +14,7 @@ export {
   Workspace, WorkspaceLeaf, WorkspaceItem, WorkspaceParent, WorkspaceSplit, WorkspaceTabs, WorkspaceContainer, WorkspaceRoot, WorkspaceWindow,
   WorkspaceFloating, WorkspaceMobileDrawer, WorkspaceSidedock, WorkspaceRibbon,
 } from "./workspace";
-export type { OpenViewState, ViewState, SplitDirection, PaneType, Side, LayoutHost } from "./workspace";
+export type { OpenViewState, ViewState, SplitDirection, PaneType, Side, LayoutHost, WorkspaceWindowInitData } from "./workspace";
 export { View, ItemView, FileView, EditableFileView, TextFileView, MarkdownView, MarkdownPreviewView, MarkdownEditView } from "./views";
 export type { ViewCreator, ViewStateResult, MarkdownViewModeType } from "./views";
 export { Editor, editorEditorField, editorInfoField, editorViewField, editorLivePreviewField, livePreviewState } from "./editor";

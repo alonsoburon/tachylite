@@ -132,6 +132,10 @@ export const ipc = {
   quitApp: () => call<void>("quit_app"),
   openUrl: (url: string) => call<void>("open_url", { url }),
   logFrontend: (level: string, message: string) => call<void>("log_frontend", { level, message }),
+  // popout windows (crates/tachylite-app/src/popout.rs); the windows themselves are opened with window.open
+  popoutClose: (label: string) => call<void>("popout_close", { label }),
+  popoutFocus: (label: string) => call<void>("popout_focus", { label }),
+  popoutGeometry: (label: string) => call<{ label: string; x: number; y: number; width: number; height: number; maximize: boolean } | null>("popout_geometry", { label }),
   // network
   httpRequest: (req: HttpReq) => call<HttpResp>("http_request", { req }),
   // Node bridge for desktop plugins (gated in Rust; see bridge.rs)

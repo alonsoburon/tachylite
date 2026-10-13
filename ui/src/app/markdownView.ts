@@ -24,7 +24,7 @@ function titleEl(view: TachyMarkdownView): HTMLElement {
     else if (e.key === "Escape") { el.textContent = view.file?.basename ?? ""; el.blur(); }
   });
   el.addEventListener("blur", () => { void commit(); });
-  el.addEventListener("paste", (e) => { e.preventDefault(); document.execCommand("insertText", false, (e.clipboardData?.getData("text/plain") ?? "").replace(/\n/g, " ")); });
+  el.addEventListener("paste", (e) => { e.preventDefault(); el.ownerDocument.execCommand("insertText", false, (e.clipboardData?.getData("text/plain") ?? "").replace(/\n/g, " ")); });
   return el;
 }
 
@@ -136,7 +136,7 @@ export class TachyMarkdownView extends MarkdownView {
     this.titleParentEl.toggle(!!parent);
     const els = (this.inlineTitleEls ??= new Set());
     for (const el of [...els]) if (!el.isConnected) els.delete(el);
-    for (const el of els) if (el.isConnected && document.activeElement !== el) el.textContent = f?.basename ?? "";
+    for (const el of els) if (el.isConnected && el.ownerDocument.activeElement !== el) el.textContent = f?.basename ?? "";
     this.updateModeAction();
   }
   setNavState(canBack: boolean, canForward: boolean): void {
@@ -156,8 +156,8 @@ export class TachyMarkdownView extends MarkdownView {
     const el = this.getMode() === "preview" ? els.find((e) => this.previewEl.contains(e)) : els.find((e) => this.sourceEl.contains(e));
     if (!el) return;
     el.focus();
-    const sel = window.getSelection();
-    if (sel) { const r = document.createRange(); r.selectNodeContents(el); sel.removeAllRanges(); sel.addRange(r); }
+    const sel = el.ownerDocument.getSelection();
+    if (sel) { const r = el.ownerDocument.createRange(); r.selectNodeContents(el); sel.removeAllRanges(); sel.addRange(r); }
   }
 
   private showMoreMenu(evt: MouseEvent): void {

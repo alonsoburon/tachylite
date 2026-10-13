@@ -140,11 +140,11 @@ export class HotkeysSettingTab extends SettingTab {
       this.renderList();
     };
     const stop = () => {
-      document.removeEventListener("keydown", onKey, true);
+      prompt.doc.removeEventListener("keydown", onKey, true);
       prompt.remove();
       if (this.stopCapture === stop) this.stopCapture = null;
     };
-    document.addEventListener("keydown", onKey, true);
+    prompt.doc.addEventListener("keydown", onKey, true);
     this.stopCapture = stop;
   }
 }

@@ -6,7 +6,7 @@ import { EditorView } from "@codemirror/view";
 import { history } from "@codemirror/commands";
 import { makeApp, makeVault, type FakeVault } from "./helpers/backend";
 import {
-  ItemView, MarkdownView, FileView, TextFileView, WorkspaceLeaf, WorkspaceSidedock, WorkspaceTabs, WorkspaceSplit, WorkspaceRoot, WorkspaceItem, WorkspaceParent, Plugin,
+  ItemView, MarkdownView, FileView, TextFileView, WorkspaceLeaf, WorkspaceSidedock, WorkspaceTabs, WorkspaceSplit, WorkspaceRoot, WorkspaceItem, WorkspaceParent, WorkspaceWindow, Plugin,
   EditorSuggest, Editor, editorInfoField, TFile, Menu,
 } from "../src/obsidian";
 import { CMEditor, setEditorFactory } from "../src/obsidian/editor";
@@ -263,5 +263,43 @@ describe("plugin-tolerant internals", () => {
       (view as any).requestSave = null; // Excalidraw does this while closing
       await expect((view as any).onClose()).resolves.toBeUndefined();
     } finally { await app.stop(); v.cleanup(); }
+  });
+});
+
+describe("popout windows (model)", () => {
+  it("without a shell, popouts are detached WorkspaceWindows in floatingSplit; layout round-trips under `floating`", async () => {
+    const ws = app.workspace; const events: string[] = [];
+    ws.on("window-open", (w: any, win: Window) => events.push(`open:${w instanceof WorkspaceWindow}:${win === window}`)); ws.on("window-close", () => events.push("close"));
+    const leaf = ws.openPopoutLeaf({ x: 10, y: 20, size: { width: 700, height: 500 } });
+    const win = leaf.getContainer() as WorkspaceWindow;
+    expect(win).toBeInstanceOf(WorkspaceWindow); expect(leaf.getRoot()).toBe(win); expect(win.parent).toBe(ws.floatingSplit); expect(ws.floatingSplit.children).toEqual([win]);
+    expect(win.geometry).toEqual({ x: 10, y: 20, width: 700, height: 500 }); expect(ws.activeLeaf).toBe(leaf);
+    const roots: WorkspaceLeaf[] = []; ws.iterateRootLeaves((l) => roots.push(l)); expect(roots).toContain(leaf); expect(ws.getLeafById(leaf.id)).toBe(leaf);
+    await leaf.openFile(app.vault.getFileByPath("A.md")!);
+    const layout = ws.getLayout() as any;
+    expect(layout.floating).toMatchObject({ type: "floating", children: [{ type: "window", id: win.id, x: 10, y: 20, width: 700, height: 500, children: [{ type: "tabs", children: [{ type: "leaf", id: leaf.id }] }] }] });
+    await ws.changeLayout(JSON.parse(JSON.stringify(layout)));
+    const back = ws.floatingSplit.children; expect(back).toHaveLength(1); expect(back[0].id).toBe(win.id); expect(back[0].geometry.width).toBe(700);
+    expect((back[0].leaves()[0].view as MarkdownView).file?.path).toBe("A.md"); expect(ws.activeLeaf).toBe(back[0].leaves()[0]);
+    back[0].close();
+    expect(ws.floatingSplit.children).toHaveLength(0); expect(ws.activeLeaf?.getRoot()).toBe(ws.rootSplit); expect((ws.getLayout() as any).floating).toBeUndefined();
+    expect(events).toEqual(["open:true:true", "close", "open:true:true", "close"]);
+  });
+  it("moving a leaf to another document fires onWindowMigrated, re-roots CodeMirror and keeps the view; Node helpers see the window", async () => {
+    const { Window } = await import("happy-dom");
+    const other = new Window({ url: "about:blank" }) as unknown as Window;
+    const host: LayoutHost = { openPopout: (w) => { other.document.body.appendChild(w.containerEl); return other; } };
+    app.workspace.host = host;
+    const leaf = app.workspace.getLeaf(false); await leaf.openFile(app.vault.getFileByPath("A.md")!, { active: true }); const view = leaf.view as MarkdownView;
+    const seen: Window[] = []; const off = view.containerEl.onWindowMigrated((w) => seen.push(w));
+    const win = app.workspace.moveLeafToPopout(leaf);
+    expect(win.win).toBe(other); expect(leaf.view).toBe(view); expect(view.containerEl.ownerDocument).toBe(other.document);
+    expect(seen).toEqual([other]); expect((view.editor as any).cm.root).toBe(other.document);
+    expect(view.containerEl.doc).toBe(other.document); expect(view.containerEl.win).toBe(other); expect(view.containerEl.instanceOf(HTMLDivElement)).toBe(true);
+    expect(activeDocument).toBe(other.document); expect(activeWindow).toBe(other);
+    expect(app.workspace.rootSplit.leaves()).toHaveLength(1); // the main area got a fresh empty tab
+    off(); win.close(); app.workspace.host = null;
+    expect(activeWindow).toBe(window);
+    await (other as any).happyDOM.close();
   });
 });

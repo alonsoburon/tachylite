@@ -1,6 +1,7 @@
 // Settings UI: Setting + components, SettingTab family and the settings dialog (`app.setting`).
 import moment from "moment";
 import { setIcon } from "./icons";
+import { activeDoc } from "./dom";
 import { Modal, setTooltip, type TooltipOptions } from "./ui";
 import type { App } from "./app";
 import type { Plugin } from "./plugin";
@@ -492,7 +493,7 @@ export class SettingManager {
     const tabs = modal.createDiv({ cls: "vertical-tabs-container" });
     this.tabHeaderEl = tabs.createDiv({ cls: "vertical-tab-header" });
     this.contentEl = tabs.createDiv({ cls: "vertical-tab-content-container" });
-    document.body.appendChild(c);
+    activeDoc().body.appendChild(c);
     this.renderNav();
     const first = this.settingTabs[0] ?? this.pluginTabs[0];
     if (first) this.openTab(first);

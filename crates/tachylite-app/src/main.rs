@@ -3,6 +3,7 @@
 //! Obsidian-API shim in `ui/` are written against.
 
 mod bridge;
+mod popout;
 
 use notify::{RecursiveMode, Watcher};
 use serde::Serialize;
@@ -535,14 +536,19 @@ fn open_url(url: String) -> Res<()> {
     std::process::Command::new(opener).arg(url).spawn().map(|_| ()).map_err(e)
 }
 
-/// Developer automation: render the webview to a PNG (Linux, debug builds, `TACHYLITE_DEV=1`).
+/// Developer automation: render a webview to a PNG (Linux, debug builds, `TACHYLITE_DEV=1`). Snapshots the
+/// calling window, or the window `label` (e.g. a popout, which has no IPC of its own).
 /// Works on locked/headless desktops where grabbing the screen does not.
 #[cfg(all(target_os = "linux", debug_assertions))]
 #[tauri::command]
-async fn dev_screenshot(window: tauri::WebviewWindow, path: String) -> Res<()> {
+async fn dev_screenshot(app: AppHandle, window: tauri::WebviewWindow, path: String, label: Option<String>) -> Res<()> {
     if std::env::var("TACHYLITE_DEV").is_err() {
         return Err("dev_screenshot requires TACHYLITE_DEV=1".into());
     }
+    let window = match label {
+        Some(l) => app.get_webview_window(&l).ok_or_else(|| format!("no window {l}"))?,
+        None => window,
+    };
     let (tx, rx) = std::sync::mpsc::channel::<Result<(), String>>();
     window
         .with_webview(move |wv| {
@@ -562,8 +568,23 @@ async fn dev_screenshot(window: tauri::WebviewWindow, path: String) -> Res<()> {
 }
 #[cfg(not(all(target_os = "linux", debug_assertions)))]
 #[tauri::command]
-async fn dev_screenshot(_path: String) -> Res<()> {
+async fn dev_screenshot(_path: String, _label: Option<String>) -> Res<()> {
     Err("dev_screenshot is only available in Linux debug builds".into())
+}
+
+/// Developer automation: ask a window to close as its title-bar button does (runs the `CloseRequested` path).
+#[cfg(debug_assertions)]
+#[tauri::command]
+fn dev_request_close(app: AppHandle, label: String) -> Res<()> {
+    if std::env::var("TACHYLITE_DEV").is_err() {
+        return Err("dev_request_close requires TACHYLITE_DEV=1".into());
+    }
+    app.get_webview_window(&label).ok_or_else(|| format!("no window {label}"))?.close().map_err(e)
+}
+#[cfg(not(debug_assertions))]
+#[tauri::command]
+fn dev_request_close(_label: String) -> Res<()> {
+    Err("dev_request_close is only available in debug builds".into())
 }
 
 // ---------- network (plugins' requestUrl; bypasses webview CORS) ----------
@@ -617,7 +638,21 @@ fn main() {
         .manage(App::default())
         .manage(bridge::Bridge::default())
         .register_asynchronous_uri_scheme_protocol(bridge::SCHEME, |ctx, req, responder| bridge::protocol(ctx.app_handle(), req, responder))
+        .setup(|app| {
+            // The main window is built here (not from tauri.conf.json) so it can answer `window.open` with popouts.
+            let conf = app.config().app.windows.iter().find(|w| w.label == popout::MAIN).cloned().ok_or("no main window config")?;
+            let handle = app.handle().clone();
+            let main = tauri::WebviewWindowBuilder::from_config(app.handle(), &conf)?
+                .on_new_window(move |url, features| popout::on_new_window(&handle, url, features))
+                .on_page_load(|w, p| popout::on_main_page_load(w.app_handle(), p.event()))
+                .build()?;
+            popout::allow_script_windows(&main);
+            Ok(())
+        })
         .on_window_event(|window, event| {
+            if popout::on_window_event(window, event) {
+                return;
+            }
             // Give the frontend a chance to flush unsaved notes and the layout; exit anyway if it does not answer.
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
@@ -650,6 +685,7 @@ fn main() {
             open_url,
             quit_app,
             dev_screenshot,
+            dev_request_close,
             adapter_exists,
             adapter_read,
             adapter_read_binary,
@@ -687,6 +723,9 @@ fn main() {
             bridge::bridge_watch,
             bridge::bridge_unwatch,
             bridge::bridge_open_path,
+            popout::popout_close,
+            popout::popout_focus,
+            popout::popout_geometry,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tachylite");
