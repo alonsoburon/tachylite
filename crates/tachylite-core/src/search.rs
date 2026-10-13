@@ -31,11 +31,11 @@ struct Clause {
 fn tokenize(q: &str) -> Vec<Vec<Clause>> {
     // OR-separated groups of AND clauses.
     let mut groups: Vec<Vec<Clause>> = vec![vec![]];
-    let mut chars = q.chars().peekable();
+    let chars = q.chars().peekable();
     let mut cur = String::new();
     let mut in_quote = false;
     let mut toks: Vec<String> = vec![];
-    while let Some(c) = chars.next() {
+    for c in chars {
         match c {
             '"' => {
                 in_quote = !in_quote;
@@ -89,7 +89,7 @@ pub fn search(vault: &Vault, meta: &MetadataCache, query: &str) -> Vec<SearchHit
         let lpath = f.path.to_lowercase();
         let body = if f.is_markdown() { vault.read(&f.path).unwrap_or_default() } else { String::new() };
         let lbody = body.to_lowercase();
-        let tags: Vec<String> = meta.get(&f.path).map(|m| all_tags(m)).unwrap_or_default();
+        let tags: Vec<String> = meta.get(&f.path).map(all_tags).unwrap_or_default();
         let mut matched_lines: Vec<(usize, String)> = vec![];
         let ok = groups.iter().any(|g| {
             g.iter().all(|c| {

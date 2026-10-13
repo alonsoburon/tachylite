@@ -37,10 +37,7 @@ pub fn strip_ext(p: &str) -> &str {
 /// Collapse repeated separators and trim leading/trailing ones.
 pub fn normalize(p: &str) -> String {
     let p = p.replace('\\', "/");
-    p.split('/')
-        .filter(|s| !s.is_empty() && *s != ".")
-        .collect::<Vec<_>>()
-        .join("/")
+    p.split('/').filter(|s| !s.is_empty() && *s != ".").collect::<Vec<_>>().join("/")
 }
 
 /// True when any segment starts with a dot (hidden by the vault indexer).

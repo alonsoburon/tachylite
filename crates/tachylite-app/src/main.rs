@@ -66,11 +66,7 @@ fn recents_path(app: &AppHandle) -> Res<PathBuf> {
 }
 
 fn read_recents(app: &AppHandle) -> Vec<String> {
-    recents_path(app)
-        .ok()
-        .and_then(|p| fs::read_to_string(p).ok())
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default()
+    recents_path(app).ok().and_then(|p| fs::read_to_string(p).ok()).and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default()
 }
 
 #[tauri::command]
@@ -134,7 +130,11 @@ fn start_watcher(app: &AppHandle, state: &State<App>, root: PathBuf) -> Res<()> 
             let kind = if rel.starts_with(CONFIG_DIR) {
                 "config-changed"
             } else if p.exists() {
-                if matches!(ev.kind, notify::EventKind::Create(_)) { "create" } else { "modify" }
+                if matches!(ev.kind, notify::EventKind::Create(_)) {
+                    "create"
+                } else {
+                    "modify"
+                }
             } else {
                 "delete"
             };
@@ -212,11 +212,13 @@ fn fs_rename(state: State<App>, from: String, to: String, update_links: Option<b
 /// `None` follows the vault's `trashOption` (like `fs_delete`).
 #[tauri::command]
 fn fs_trash(state: State<App>, path: String, mode: Option<String>) -> Res<()> {
-    state.with(|ws| match mode.as_deref() {
-        None => ws.delete(&path),
-        Some(m) => ws.delete_mode(&path, matches!(m, "permanent" | "none")),
-    }
-    .map_err(e))
+    state.with(|ws| {
+        match mode.as_deref() {
+            None => ws.delete(&path),
+            Some(m) => ws.delete_mode(&path, matches!(m, "permanent" | "none")),
+        }
+        .map_err(e)
+    })
 }
 
 // ---------- adapter (raw access, includes dot-folders like .obsidian) ----------
@@ -277,9 +279,8 @@ struct AdapterStat {
 fn adapter_stat(state: State<App>, path: String) -> Res<Option<AdapterStat>> {
     state.with(|ws| {
         let Ok(m) = fs::metadata(adapter_abs(ws, &path)?) else { return Ok(None) };
-        let ms = |t: std::io::Result<std::time::SystemTime>| {
-            t.ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0, |d| d.as_millis() as u64)
-        };
+        let ms =
+            |t: std::io::Result<std::time::SystemTime>| t.ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0, |d| d.as_millis() as u64);
         Ok(Some(AdapterStat { kind: if m.is_dir() { "folder" } else { "file" }, ctime: ms(m.created()), mtime: ms(m.modified()), size: m.len() }))
     })
 }
@@ -305,7 +306,11 @@ fn adapter_list(state: State<App>, path: String) -> Res<Listing> {
             let ent = ent.map_err(e)?;
             let name = ent.file_name().to_string_lossy().into_owned();
             let full = if base.is_empty() { name } else { format!("{base}/{name}") };
-            if ent.path().is_dir() { out.folders.push(full) } else { out.files.push(full) }
+            if ent.path().is_dir() {
+                out.folders.push(full)
+            } else {
+                out.files.push(full)
+            }
         }
         out.files.sort();
         out.folders.sort();
@@ -485,7 +490,11 @@ struct Launch {
 #[tauri::command]
 fn launch_args() -> Launch {
     let args: Vec<String> = std::env::args().collect();
-    let from_cli = args.iter().position(|a| a == "--vault").and_then(|i| args.get(i + 1).cloned()).or_else(|| args.iter().find_map(|a| a.strip_prefix("--vault=").map(String::from)));
+    let from_cli = args
+        .iter()
+        .position(|a| a == "--vault")
+        .and_then(|i| args.get(i + 1).cloned())
+        .or_else(|| args.iter().find_map(|a| a.strip_prefix("--vault=").map(String::from)));
     let vault = from_cli.or_else(|| std::env::var("TACHYLITE_VAULT").ok()).filter(|p| !p.is_empty());
     let script = std::env::var("TACHYLITE_SCRIPT").ok().and_then(|p| fs::read_to_string(p).ok());
     Launch { vault, script }
@@ -513,7 +522,13 @@ fn open_url(url: String) -> Res<()> {
     if !(url.starts_with("http://") || url.starts_with("https://") || url.starts_with("mailto:")) {
         return Err("unsupported url scheme".into());
     }
-    let opener = if cfg!(target_os = "macos") { "open" } else if cfg!(target_os = "windows") { "explorer" } else { "xdg-open" };
+    let opener = if cfg!(target_os = "macos") {
+        "open"
+    } else if cfg!(target_os = "windows") {
+        "explorer"
+    } else {
+        "xdg-open"
+    };
     std::process::Command::new(opener).arg(url).spawn().map(|_| ()).map_err(e)
 }
 
@@ -540,9 +555,7 @@ async fn dev_screenshot(window: tauri::WebviewWindow, path: String) -> Res<()> {
             });
         })
         .map_err(e)?;
-    tauri::async_runtime::spawn_blocking(move || rx.recv_timeout(Duration::from_secs(20)).map_err(|e| e.to_string())?)
-        .await
-        .map_err(e)?
+    tauri::async_runtime::spawn_blocking(move || rx.recv_timeout(Duration::from_secs(20)).map_err(|e| e.to_string())?).await.map_err(e)?
 }
 #[cfg(not(all(target_os = "linux", debug_assertions)))]
 #[tauri::command]

@@ -14,13 +14,7 @@ fn vault(files: &[(&str, &str)]) -> (tempfile::TempDir, Workspace) {
 
 #[test]
 fn shortest_path_prefers_source_folder_then_shortest() {
-    let (_d, ws) = vault(&[
-        ("a/Note.md", ""),
-        ("b/deep/Note.md", ""),
-        ("Note.md", ""),
-        ("b/src.md", ""),
-        ("a/src.md", ""),
-    ]);
+    let (_d, ws) = vault(&[("a/Note.md", ""), ("b/deep/Note.md", ""), ("Note.md", ""), ("b/src.md", ""), ("a/src.md", "")]);
     // Unique-by-name does not apply (3 candidates); exact root path wins for a bare name.
     assert_eq!(ws.meta.first_linkpath_dest("Note", "b/src.md").as_deref(), Some("Note.md"));
     // Path-qualified links match as suffixes, nearest folder first.
@@ -43,11 +37,7 @@ fn resolved_unresolved_and_backlinks() {
 
 #[test]
 fn rename_updates_links_keeping_alias_and_subpath() {
-    let (d, mut ws) = vault(&[
-        ("A.md", "see [[B|bee]] and [[B#Head]] and ![[B]] and [md](B.md) and [[C]]"),
-        ("B.md", "# Head"),
-        ("C.md", ""),
-    ]);
+    let (d, mut ws) = vault(&[("A.md", "see [[B|bee]] and [[B#Head]] and ![[B]] and [md](B.md) and [[C]]"), ("B.md", "# Head"), ("C.md", "")]);
     let changed = ws.rename("B.md", "Folder/Bravo.md", true).unwrap();
     assert_eq!(changed, ["A.md"]);
     let a = fs::read_to_string(d.path().join("A.md")).unwrap();

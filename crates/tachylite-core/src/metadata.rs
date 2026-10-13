@@ -92,9 +92,12 @@ impl MetadataCache {
         for (src, meta) in &self.cache {
             let mut r: BTreeMap<String, usize> = BTreeMap::new();
             let mut u: BTreeMap<String, usize> = BTreeMap::new();
-            let refs = meta.links.iter().map(|l| l.link.as_str()).chain(meta.embeds.iter().map(|l| l.link.as_str())).chain(
-                meta.frontmatter_links.iter().map(|l| l.link.as_str()),
-            );
+            let refs = meta
+                .links
+                .iter()
+                .map(|l| l.link.as_str())
+                .chain(meta.embeds.iter().map(|l| l.link.as_str()))
+                .chain(meta.frontmatter_links.iter().map(|l| l.link.as_str()));
             for link in refs {
                 let (p, _) = split_subpath(link);
                 match self.first_linkpath_dest(p, src) {
@@ -169,7 +172,11 @@ impl MetadataCache {
         for c in cands {
             let lc = c.to_lowercase();
             if lc.ends_with(&target) {
-                if lc.starts_with(&dir_prefix) { near.push(c.clone()) } else { far.push(c.clone()) }
+                if lc.starts_with(&dir_prefix) {
+                    near.push(c.clone())
+                } else {
+                    far.push(c.clone())
+                }
             }
         }
         near.sort_by_key(String::len);
@@ -180,10 +187,7 @@ impl MetadataCache {
 
     /// Files linking to `path`, with how many links each contains.
     pub fn backlinks(&self, path: &str) -> BTreeMap<String, usize> {
-        self.resolved_links
-            .iter()
-            .filter_map(|(src, targets)| targets.get(path).map(|n| (src.clone(), *n)))
-            .collect()
+        self.resolved_links.iter().filter_map(|(src, targets)| targets.get(path).map(|n| (src.clone(), *n))).collect()
     }
 
     /// Every tag in the vault (body and frontmatter) with usage counts. Nested tags also count toward parents.
@@ -216,7 +220,11 @@ impl MetadataCache {
         }
         let short = if md { vault.get(target).map_or_else(|| basename(target).to_string(), |f| f.basename.clone()) } else { basename(target).to_string() };
         let dests = self.linkpath_dest(&short, source);
-        if dests.len() == 1 && dests[0] == target { short } else { full }
+        if dests.len() == 1 && dests[0] == target {
+            short
+        } else {
+            full
+        }
     }
 }
 
@@ -226,7 +234,9 @@ pub fn all_tags(meta: &CachedMetadata) -> Vec<String> {
     if let Some(fm) = &meta.frontmatter {
         for key in ["tags", "tag"] {
             match fm.get(key) {
-                Some(serde_json::Value::String(s)) => raw.extend(s.split([',', ' ']).filter(|x| !x.is_empty()).map(|x| format!("#{}", x.trim_start_matches('#')))),
+                Some(serde_json::Value::String(s)) => {
+                    raw.extend(s.split([',', ' ']).filter(|x| !x.is_empty()).map(|x| format!("#{}", x.trim_start_matches('#'))))
+                }
                 Some(serde_json::Value::Array(a)) => raw.extend(a.iter().filter_map(|v| v.as_str()).map(|x| format!("#{}", x.trim_start_matches('#')))),
                 _ => {}
             }

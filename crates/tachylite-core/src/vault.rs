@@ -50,9 +50,7 @@ impl VaultFile {
 
 fn stat_of(abs: &Path) -> io::Result<FileStat> {
     let m = fs::metadata(abs)?;
-    let ms = |t: io::Result<std::time::SystemTime>| {
-        t.ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map_or(0, |d| d.as_millis() as u64)
-    };
+    let ms = |t: io::Result<std::time::SystemTime>| t.ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map_or(0, |d| d.as_millis() as u64);
     Ok(FileStat { ctime: ms(m.created()), mtime: ms(m.modified()), size: m.len() })
 }
 
@@ -220,7 +218,11 @@ impl Vault {
             return Err(VaultError::NotFound(rel));
         }
         if permanent {
-            if abs.is_dir() { fs::remove_dir_all(&abs)? } else { fs::remove_file(&abs)? }
+            if abs.is_dir() {
+                fs::remove_dir_all(&abs)?
+            } else {
+                fs::remove_file(&abs)?
+            }
         } else {
             let mut dest = self.root.join(".trash").join(path::basename(&rel));
             let mut n = 1;

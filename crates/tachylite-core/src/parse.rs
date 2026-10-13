@@ -363,12 +363,7 @@ pub fn parse(text: &str) -> CachedMetadata {
             list_stack.push((indent, line_no));
             let id = re_block_id().captures(t).map(|b| b[1].to_string());
             let marker_start = ln.start + c[1].len();
-            meta.list_items.push(ListItemCache {
-                id: id.clone(),
-                position: idx.pos(marker_start, end),
-                parent,
-                task,
-            });
+            meta.list_items.push(ListItemCache { id: id.clone(), position: idx.pos(marker_start, end), parent, task });
             if let (Some(id), Some(s)) = (id, cur.as_mut()) {
                 s.id = Some(id);
             }
@@ -382,7 +377,11 @@ pub fn parse(text: &str) -> CachedMetadata {
 
         // Continuation or new block.
         let kind = if t.trim_start().starts_with('>') {
-            if t.trim_start().trim_start_matches('>').trim_start().starts_with("[!") { "callout" } else { "blockquote" }
+            if t.trim_start().trim_start_matches('>').trim_start().starts_with("[!") {
+                "callout"
+            } else {
+                "blockquote"
+            }
         } else if t.trim_start().starts_with('|') {
             "table"
         } else if t.trim_start().starts_with('<') {
@@ -390,9 +389,8 @@ pub fn parse(text: &str) -> CachedMetadata {
         } else {
             "paragraph"
         };
-        let continues = cur.as_ref().is_some_and(|s| {
-            s.kind == kind || (s.kind == "list" && !prev_blank) || (s.kind == "blockquote" && kind == "paragraph")
-        }) && !(prev_blank && cur.as_ref().is_some_and(|s| s.kind != "list"));
+        let continues = cur.as_ref().is_some_and(|s| s.kind == kind || (s.kind == "list" && !prev_blank) || (s.kind == "blockquote" && kind == "paragraph"))
+            && !(prev_blank && cur.as_ref().is_some_and(|s| s.kind != "list"));
         if continues {
             let s = cur.as_mut().unwrap();
             s.end = end;
@@ -415,10 +413,7 @@ pub fn parse(text: &str) -> CachedMetadata {
     for s in sections {
         let position = idx.pos(s.start, s.end);
         if let Some(id) = &s.id {
-            meta.blocks.insert(
-                id.clone(),
-                BlockCache { id: id.clone(), position },
-            );
+            meta.blocks.insert(id.clone(), BlockCache { id: id.clone(), position });
         }
         meta.sections.push(SectionCache { id: s.id, kind: s.kind.into(), position });
     }
@@ -546,7 +541,7 @@ fn scan_inline(idx: &Index, line: &str, line_start: usize, meta: &mut CachedMeta
                     let inner = &line[open + 2..open + 2 + rel];
                     if !inner.is_empty() && !inner.contains("[[") {
                         let end = open + 2 + rel + 2;
-                        let sep = if in_table { split_unescaped_pipe(inner) } else { inner.split_once('|').map(|(a, b)| (a, b)) };
+                        let sep = if in_table { split_unescaped_pipe(inner) } else { inner.split_once('|') };
                         let (target, alias) = match sep {
                             Some((a, b)) => (a, Some(b)),
                             None => (inner, None),
@@ -559,7 +554,11 @@ fn scan_inline(idx: &Index, line: &str, line_start: usize, meta: &mut CachedMeta
                             display_text: Some(alias.map_or(target, str::trim).to_string()),
                             position: idx.pos(line_start + i, line_start + end),
                         };
-                        if embed { meta.embeds.push(link) } else { meta.links.push(link) }
+                        if embed {
+                            meta.embeds.push(link)
+                        } else {
+                            meta.links.push(link)
+                        }
                         i = end;
                         continue;
                     }
@@ -577,7 +576,11 @@ fn scan_inline(idx: &Index, line: &str, line_start: usize, meta: &mut CachedMeta
                                 display_text: Some(text.to_string()),
                                 position: idx.pos(line_start + i, line_start + end),
                             };
-                            if embed { meta.embeds.push(link) } else { meta.links.push(link) }
+                            if embed {
+                                meta.embeds.push(link)
+                            } else {
+                                meta.links.push(link)
+                            }
                         }
                         i = end;
                         continue;
@@ -598,10 +601,7 @@ fn scan_inline(idx: &Index, line: &str, line_start: usize, meta: &mut CachedMeta
                     let name = name.trim_end_matches('/');
                     if !name.is_empty() && !name.contains("//") {
                         let end = i + 1 + name.len();
-                        meta.tags.push(TagCache {
-                            tag: format!("#{name}"),
-                            position: idx.pos(line_start + i, line_start + end),
-                        });
+                        meta.tags.push(TagCache { tag: format!("#{name}"), position: idx.pos(line_start + i, line_start + end) });
                         i = end;
                         continue;
                     }
@@ -717,7 +717,7 @@ mod tests {
         assert_eq!(m.list_items.len(), 3);
         assert_eq!(m.list_items[0].task.as_deref(), Some(" "));
         assert_eq!(m.list_items[1].parent, 0);
-        assert_eq!(m.list_items[2].parent, 0 - 0);
+        assert_eq!(m.list_items[2].parent, 0);
         assert!(m.blocks.contains_key("blk") && m.blocks.contains_key("p1"));
     }
 

@@ -133,10 +133,7 @@ impl AppConfig {
 pub fn core_plugin_state(root: &Path) -> Vec<(String, bool)> {
     let saved = read_json(&root.join(CONFIG_DIR).join("core-plugins.json"));
     match saved {
-        Some(Value::Object(m)) => CORE_PLUGINS
-            .iter()
-            .map(|(id, d)| ((*id).to_string(), m.get(*id).and_then(Value::as_bool).unwrap_or(*d)))
-            .collect(),
+        Some(Value::Object(m)) => CORE_PLUGINS.iter().map(|(id, d)| ((*id).to_string(), m.get(*id).and_then(Value::as_bool).unwrap_or(*d))).collect(),
         Some(Value::Array(a)) => {
             let on: Vec<&str> = a.iter().filter_map(Value::as_str).collect();
             CORE_PLUGINS.iter().map(|(id, _)| ((*id).to_string(), on.contains(id))).collect()
@@ -154,8 +151,5 @@ pub fn enabled_community_plugins(root: &Path) -> Vec<String> {
 }
 
 pub fn set_enabled_community_plugins(root: &Path, ids: &[String]) -> io::Result<()> {
-    write_json(
-        &root.join(CONFIG_DIR).join("community-plugins.json"),
-        &Value::Array(ids.iter().cloned().map(Value::String).collect()),
-    )
+    write_json(&root.join(CONFIG_DIR).join("community-plugins.json"), &Value::Array(ids.iter().cloned().map(Value::String).collect()))
 }

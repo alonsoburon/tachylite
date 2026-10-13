@@ -6,7 +6,10 @@
 //! * install location: `<vault>/.obsidian/plugins/<id>/`, enabled via `community-plugins.json`
 
 use serde::{Deserialize, Serialize};
-use std::{fs, io, path::{Path, PathBuf}};
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
 use tachylite_core::config::{enabled_community_plugins, set_enabled_community_plugins, CONFIG_DIR};
 use thiserror::Error;
 
@@ -42,10 +45,7 @@ pub trait Http {
 pub struct UreqHttp;
 impl Http for UreqHttp {
     fn get(&self, url: &str) -> Result<Vec<u8>> {
-        let resp = ureq::get(url)
-            .set("User-Agent", "tachylite")
-            .call()
-            .map_err(|e| Error::Http(url.into(), e.to_string()))?;
+        let resp = ureq::get(url).set("User-Agent", "tachylite").call().map_err(|e| Error::Http(url.into(), e.to_string()))?;
         let mut buf = vec![];
         io::Read::read_to_end(&mut resp.into_reader(), &mut buf)?;
         Ok(buf)
@@ -130,11 +130,7 @@ impl<H: Http> Registry<H> {
 
     pub fn search(&self, query: &str) -> Result<Vec<CatalogPlugin>> {
         let q = query.to_lowercase();
-        Ok(self
-            .plugins()?
-            .into_iter()
-            .filter(|p| [&p.id, &p.name, &p.author, &p.description].iter().any(|s| s.to_lowercase().contains(&q)))
-            .collect())
+        Ok(self.plugins()?.into_iter().filter(|p| [&p.id, &p.name, &p.author, &p.description].iter().any(|s| s.to_lowercase().contains(&q))).collect())
     }
 
     /// Pick the release to install: the manifest at HEAD when compatible, otherwise the newest
@@ -279,7 +275,7 @@ mod tests {
         assert!(plugin_dir(dir.path(), "demo").join("main.js").exists());
         assert!(!plugin_dir(dir.path(), "demo").join("styles.css").exists());
         set_enabled(dir.path(), "demo", true).unwrap();
-        assert_eq!(installed(dir.path())[0].1, true);
+        assert!(installed(dir.path())[0].1);
         uninstall(dir.path(), "demo").unwrap();
         assert!(installed(dir.path()).is_empty());
     }
