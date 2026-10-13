@@ -1,0 +1,5 @@
+# Fixtures and sources must be byte-identical on every platform (offsets and rewrites are asserted).
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.icns binary

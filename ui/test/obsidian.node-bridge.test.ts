@@ -87,7 +87,7 @@ describe("child_process", () => {
     await bridged();
     const { exec } = req("child_process");
     const run = (cmd: string, o: object) => new Promise<any[]>((r) => exec(cmd, o, (...a: any[]) => r(a)));
-    const [e1] = await run("sleep 5", { timeout: 100 });
+    const [e1] = await run("exec sleep 5", { timeout: 100 });
     expect(e1).toMatchObject({ killed: true, signal: "SIGTERM", code: null });
     const [e2, so2] = await run("printf 0123456789", { maxBuffer: 4 });
     expect(e2).toMatchObject({ code: "ERR_CHILD_PROCESS_STDIO_MAXBUFFER" });
