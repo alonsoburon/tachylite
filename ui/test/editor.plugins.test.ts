@@ -71,6 +71,16 @@ describe("HyperMD-compatible syntax nodes", () => {
     expect(nodes("a `b").some((x) => x.name === "InlineCode")).toBe(false);
   });
 
+  it("keeps the markdown parser when a plugin adds its own language with high precedence (Templater)", () => {
+    const req = createRequire({} as any);
+    const { StreamLanguage } = req("@codemirror/language");
+    const { Prec } = req("@codemirror/state");
+    const foreign = Prec.high(StreamLanguage.define({ token: (st: any) => { st.skipToEnd(); return null; }, startState: () => ({}) }));
+    const ed = mount("# Title\n\ntext", host(), [foreign], 12);
+    expect(ed.view.contentDOM.querySelector(".HyperMD-header-1")).not.toBeNull();
+    ed.destroy();
+  });
+
   it("is what plugins get as `tokenClassNodeProp` from @codemirror/language", () => {
     const req = createRequire({} as any);
     expect(req("@codemirror/language").tokenClassNodeProp).toBe(tokenClassNodeProp);

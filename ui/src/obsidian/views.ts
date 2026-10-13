@@ -152,6 +152,8 @@ export abstract class EditableFileView extends FileView {}
 
 export abstract class TextFileView extends EditableFileView {
   data = "";
+  /** What the file held when last loaded or saved; a save writes when the view data differs from it. */
+  lastSavedData: string | null = null;
   requestSave: Debouncer<[], Promise<void>>;
   private saving = false;
   private dirty = false;
@@ -167,7 +169,7 @@ export abstract class TextFileView extends EditableFileView {
       if (f !== this.file || this.saving || this.dirty) return;
       // A save that starts while the file is being read makes that read stale: keep the newer view data.
       const gen = this.saveGen;
-      void this.app.vault.read(f).then((d) => { if (d !== this.data && !this.dirty && !this.saving && gen === this.saveGen) { this.data = d; this.setViewData(d, false); } });
+      void this.app.vault.read(f).then((d) => { if (d !== this.lastSavedData && !this.dirty && !this.saving && gen === this.saveGen) { this.data = d; this.lastSavedData = d; this.setViewData(d, false); } });
     }));
   }
   async onUnloadFile(file: TFile): Promise<void> {
@@ -175,10 +177,12 @@ export abstract class TextFileView extends EditableFileView {
     if (this.dirty && file) await this.save();
     this.clear();
     this.data = "";
+    this.lastSavedData = null;
   }
   async onLoadFile(file: TFile): Promise<void> {
     const data = await this.app.vault.read(file);
     this.data = data;
+    this.lastSavedData = data;
     this.dirty = false;
     this.setViewData(data, true);
   }
@@ -187,10 +191,11 @@ export abstract class TextFileView extends EditableFileView {
     const file = this.file;
     if (!file) return;
     const data = this.getViewData();
-    if (this.dirty || data !== this.data) {
+    // Plugins (Kanban) set `this.data` themselves and call requestSave: compare with what is on disk, not with `data`.
+    if (this.dirty || data !== this.lastSavedData) {
       this.saving = true;
       this.saveGen++;
-      try { await this.app.vault.modify(file, data); this.data = data; this.dirty = false; }
+      try { await this.app.vault.modify(file, data); this.data = data; this.lastSavedData = data; this.dirty = false; }
       finally { this.saving = false; }
     }
     if (clear) this.clear();

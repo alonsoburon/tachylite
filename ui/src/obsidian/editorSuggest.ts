@@ -43,7 +43,8 @@ export class EditorSuggestManager {
   constructor(public app: App) {}
   add(s: EditorSuggest<any>): void { this.suggests.push(s); }
   remove(s: EditorSuggest<any>): void {
-    this.suggests = this.suggests.filter((x) => x !== s);
+    const i = this.suggests.indexOf(s);
+    if (i >= 0) this.suggests.splice(i, 1);
     if (this.current === s) { s.close(); this.current = null; }
   }
   get isOpen(): boolean { return !!this.current?.isOpen; }

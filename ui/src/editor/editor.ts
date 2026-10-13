@@ -17,6 +17,7 @@ import { tags as t } from "@lezer/highlight";
 
 import type { EditorHandle, EditorMode, EditorOptions } from "./types";
 import { obsidianMarkdown } from "./parser";
+const markdownLang = obsidianMarkdown();
 import { blockField, envFacet, inlinePlugin } from "./decorations";
 import { setextField } from "./setext";
 import { calloutFoldField } from "./calloutFold";
@@ -195,7 +196,9 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
     vimC.of(vimExt()),
     vimSaveFacet.of(() => opts.host.save?.(cur.sourcePath)),
     envFacet.of(env),
-    obsidianMarkdown(),
+    // Ours stays the document language even if a plugin adds its own (Templater registers a CM5-mode StreamLanguage
+    // that, in Obsidian, overlays the CM5 markdown mode; here it would replace the markdown parser entirely).
+    Prec.highest(markdownLang.language.extension), markdownLang,
     EditorState.languageData.of(() => [{ closeBrackets: { brackets: ["(", "[", "{", "`"] } }]),
     hist.ext,
     drawSelection(),

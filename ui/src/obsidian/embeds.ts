@@ -5,7 +5,7 @@ import { MarkdownRenderer } from "./markdown";
 import { resolveSubpath } from "./util";
 import type { Extension } from "@codemirror/state";
 import { EditorView, type ViewUpdate } from "@codemirror/view";
-import { CMEditor, getEditorFactory } from "./editor";
+import { CMEditor, editorEditorField, editorInfoField, editorLivePreviewField, getEditorFactory, setEditorView } from "./editor";
 import type { App } from "./app";
 
 export interface EmbedContext { app: App; containerEl: HTMLElement; linktext?: string; sourcePath?: string; depth?: number }
@@ -53,6 +53,8 @@ export class MarkdownScrollableEditView extends MarkdownBaseView {
   /** Extensions for this editor; subclasses override and call super. */
   buildLocalExtensions(): Extension[] {
     return [
+      // Every Obsidian editor carries these fields; plugin extensions read them (Dataview, Tasks, Kanban...).
+      editorInfoField.init(() => this.owner ?? this), editorEditorField, editorLivePreviewField,
       ...this.app.workspace.editorExtensions,
       EditorView.updateListener.of((u) => { if (u.docChanged || u.selectionSet) this.onUpdate(u, u.docChanged); }),
     ];
@@ -61,6 +63,7 @@ export class MarkdownScrollableEditView extends MarkdownBaseView {
   get cm(): EditorView {
     if (!this._cm) {
       this._cm = getEditorFactory().create({ parent: this.containerEl, doc: "", extensions: this.buildLocalExtensions() });
+      this._cm.dispatch({ effects: setEditorView.of(this._cm) });
       this._editor = new CMEditor(this._cm);
       (this._editor as any).cm = this._cm;
     }

@@ -431,6 +431,8 @@ export class Workspace extends Events {
   requestSaveLayout: Debouncer<[], Promise<void>>;
   editorExtensions: any[] = [];
   editorSuggestManager: EditorSuggestManager | null = null;
+  /** Obsidian's name for the editor suggest registry (`workspace.editorSuggest.suggests`; Kanban reads it). */
+  get editorSuggest(): EditorSuggestManager | null { return this.editorSuggestManager; }
   hoverLinkSources: Record<string, { display: string; defaultMod: boolean }> = {};
   private readyCbs: (() => any)[] = [];
   private recent: WorkspaceLeaf[] = [];

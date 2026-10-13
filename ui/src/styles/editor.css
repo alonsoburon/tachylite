@@ -19,14 +19,18 @@
   font-size: var(--font-text-size);
   line-height: var(--line-height-normal);
   overflow: auto;
-  padding: var(--file-margins-y, 16px) 0;
 }
 .markdown-source-view .cm-content {
   box-sizing: border-box;
+  caret-color: var(--caret-color);
+}
+/* Page margins, readable line width and scrolling past the end belong to a note's own editor, not to editors that
+   plugins embed in their views (Kanban card inputs, canvas cards, table cells). */
+.view-content > .markdown-source-view .cm-scroller { padding: var(--file-margins-y, 16px) 0; }
+.view-content > .markdown-source-view .cm-content {
   max-width: var(--file-line-width);
   margin-inline: auto;
   padding: 0 var(--file-margins-x, 32px) 40vh;
-  caret-color: var(--caret-color);
 }
 .markdown-source-view:not(.is-live-preview) .cm-content,
 .markdown-source-view:not(.is-live-preview) .cm-scroller {

@@ -275,6 +275,25 @@ describe("plugin-tolerant internals", () => {
       await expect((view as any).onClose()).resolves.toBeUndefined();
     } finally { await app.stop(); v.cleanup(); }
   });
+
+  it("TextFileView.save writes view data that differs from the file even when the plugin set `data` itself (Kanban)", async () => {
+    const { makeApp, makeVault } = await import("./helpers/backend");
+    const { TextFileView } = await import("../src/obsidian/views");
+    const v = makeVault({ "board.md": "old" });
+    const app = await makeApp(v);
+    try {
+      class V extends TextFileView { getViewType() { return "v"; } getViewData() { return this.data; } setViewData(d: string) { this.data = d; } clear() {} }
+      const leaf = app.workspace.getLeaf(true);
+      const view = new V(leaf);
+      await leaf.open(view);
+      await view.onLoadFile(app.vault.getFileByPath("board.md")!);
+      (view as any).file = app.vault.getFileByPath("board.md");
+      view.data = "new board";
+      await view.save();
+      expect(fs.readFileSync(path.join(v.root, "board.md"), "utf8")).toBe("new board");
+      expect(view.lastSavedData).toBe("new board");
+    } finally { await app.stop(); v.cleanup(); }
+  });
 });
 
 describe("popout windows (model)", () => {
