@@ -209,6 +209,15 @@ describe("markdown renderer", () => {
     expect(el.textContent).not.toContain("[^1]:");
   });
 
+  it("footnotes/comments keep line structure: tight lists, one paragraph, right task lines", async () => {
+    const { el } = await render("line one\nline two[^1]\n\n%%c1\nc2%%\n- [ ] a\n- [ ] b\n\n[^1]: n");
+    const sec = el.querySelectorAll(".markdown-preview-section");
+    expect(el.querySelectorAll("p").length).toBe(2); // the paragraph + the footnote body
+    expect(el.querySelector("ul > li > p")).toBeNull(); // still a tight list
+    expect([...el.querySelectorAll("input.task-list-item-checkbox")].map((b) => b.getAttribute("data-line"))).toEqual(["5", "6"]);
+    expect(sec.length).toBeGreaterThan(1);
+  });
+
   it("fenced code: pre > code.language-x and copy button", async () => {
     const { el } = await render("```ts\nconst a = 1 < 2;\n```");
     const code = el.querySelector("pre > code.language-ts")!;

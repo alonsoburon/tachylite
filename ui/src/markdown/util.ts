@@ -46,7 +46,7 @@ export function splitFences(md: string): { text: string; code: boolean }[] {
   let curCode = false;
   let fence: string | null = null;
   const flush = () => {
-    if (cur.length) out.push({ text: cur.join("\n"), code: curCode });
+    if (cur.length) out.push({ text: cur.join(""), code: curCode });
     cur = [];
   };
   lines.forEach((line, i) => {
@@ -84,7 +84,8 @@ export function splitFences(md: string): { text: string; code: boolean }[] {
 export function stripComments(md: string): string {
   if (!md.includes("%%")) return md;
   return splitFences(md)
-    .map((s) => (s.code ? s.text : s.text.replace(/%%[\s\S]*?%%/g, "")))
+    // keep the comment's line breaks so source line numbers (sections, task data-line) stay right
+    .map((s) => (s.code ? s.text : s.text.replace(/%%[\s\S]*?%%/g, (c) => c.replace(/[^\n]/g, ""))))
     .join("");
 }
 
