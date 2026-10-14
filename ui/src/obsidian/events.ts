@@ -147,6 +147,19 @@ export function eventModifiers(evt: { ctrlKey?: boolean; metaKey?: boolean; shif
   if (evt.shiftKey) m.push("Shift");
   return m.sort().join(",");
 }
+/**
+ * `evt.key`, or a name derived from `evt.code` when the key is not usable for a shortcut: the engine reports
+ * "Unidentified" (WebKitGTK does for Shift+Tab, an ISO_Left_Tab) or a non-Latin layout types a letter such as "з"
+ * on the physical P key, so Ctrl+P must still match.
+ */
+export function eventKey(evt: { key?: string; code?: string }): string {
+  const k = evt.key ?? "";
+  if (k && k !== "Unidentified" && !(k.length === 1 && /\p{L}/u.test(k) && !/\p{Script=Latin}/u.test(k))) return k;
+  const c = evt.code ?? "";
+  if (/^Key[A-Z]$/.test(c)) return c.slice(3).toLowerCase();
+  if (/^Digit[0-9]$/.test(c)) return c.slice(5);
+  return c || k;
+}
 export function normalizeKey(key: string): string {
   const k = key === " " ? "Space" : key;
   return k.length === 1 ? k.toUpperCase() : k.toLowerCase();
@@ -170,7 +183,7 @@ export class Scope {
   /** Returns true if some handler returned false (event consumed). */
   handleKey(evt: KeyboardEvent): boolean {
     const mods = eventModifiers(evt);
-    const key = normalizeKey(evt.key ?? "");
+    const key = normalizeKey(eventKey(evt));
     for (const h of this.keys.slice()) {
       if (h.modifiers !== null && h.modifiers !== mods) continue;
       if (h.key !== null && normalizeKey(h.key) !== key) continue;
@@ -224,7 +237,7 @@ export class Keymap {
 /** Parse the "Mod+Shift+K" style used in UIs into a Hotkey. */
 export interface Hotkey { modifiers: Modifier[]; key: string }
 export function hotkeyMatches(h: Hotkey, evt: KeyboardEvent): boolean {
-  return normMods(h.modifiers) === eventModifiers(evt) && normalizeKey(h.key) === normalizeKey(evt.key ?? "");
+  return normMods(h.modifiers) === eventModifiers(evt) && normalizeKey(h.key) === normalizeKey(eventKey(evt));
 }
 export function hotkeyToString(h: Hotkey): string {
   return [...h.modifiers, h.key].join("+");
