@@ -2,6 +2,7 @@
 import moment from "moment";
 import { setIcon } from "./icons";
 import { activeDoc } from "./dom";
+import { Scope } from "./events";
 import { Modal, setTooltip, type TooltipOptions } from "./ui";
 import type { App } from "./app";
 import type { Plugin } from "./plugin";
@@ -471,7 +472,11 @@ export class SettingManager {
   /** Shells can override how the dialog is shown. */
   host: { open?(): void; close?(): void } | null = null;
   isOpen = false;
-  constructor(public app: App) {}
+  private scope: Scope;
+  constructor(public app: App) {
+    this.scope = new Scope(app.scope);
+    this.scope.register([], "Escape", () => { this.close(); return false; });
+  }
 
   addSettingTab(tab: SettingTab): void {
     if (!this.pluginTabs.includes(tab)) this.pluginTabs.push(tab);
@@ -493,8 +498,9 @@ export class SettingManager {
     if (this.isOpen) this.renderNav();
   }
   open(): void {
-    if (this.host?.open) { this.host.open(); this.isOpen = true; return; }
     if (this.isOpen) return;
+    this.app.keymap.pushScope(this.scope);
+    if (this.host?.open) { this.host.open(); this.isOpen = true; return; }
     this.isOpen = true;
     const c = (this.containerEl = createDiv({ cls: "modal-container mod-dim" }));
     c.createDiv({ cls: "modal-bg" }).addEventListener("click", () => this.close());
@@ -545,6 +551,7 @@ export class SettingManager {
   close(): void {
     if (!this.isOpen) return;
     this.isOpen = false;
+    this.app.keymap.popScope(this.scope);
     if (this.host?.close) this.host.close();
     this.activeTab?.hide();
     this.activeTab = null;
