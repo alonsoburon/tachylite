@@ -144,7 +144,7 @@ export class App {
     const track = (e: Event) => { this.lastEvent = e as UIEventLike; };
     for (const t of ["click", "mousedown", "keydown", "contextmenu", "pointerdown"]) doc.addEventListener(t, track, true);
     const key = (e: KeyboardEvent) => {
-      if (this.keymap.handleEvent(e)) return;
+      if (this.keymap.handleEvent(e) || e.defaultPrevented) return;
       const t = e.target as HTMLElement | null;
       const typing = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
       if (typing && !(e.ctrlKey || e.metaKey || e.altKey)) return;

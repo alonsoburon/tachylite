@@ -17,3 +17,4 @@ export { headingFold, listFold } from "./folding";
 export { buildSetext, setextField } from "./setext";
 export { calloutFoldField, setCalloutFold } from "./calloutFold";
 export { vimAdapter, vimExtension, vimSaveFacet, Vim, getCM } from "./vim";
+export * from "./blockCommands";

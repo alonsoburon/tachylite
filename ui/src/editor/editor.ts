@@ -221,7 +221,8 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
     keymap.of([
       ...closeBracketsKeymap,
       ...completionKeymap,
-      ...searchKeymap,
+      // Mod-g (and Shift-Mod-g) are Obsidian's graph/app hotkeys, not find-next; F3 / Shift-F3 stay.
+      ...searchKeymap.filter((k) => k.key !== "Mod-g" && k.key !== "Shift-Mod-g"),
       ...foldKeymap,
       ...historyKeymap,
       ...defaultKeymap,

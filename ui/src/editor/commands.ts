@@ -109,7 +109,7 @@ export const insertLink: StateCommand = ({ state, dispatch }) => {
 const TASK_RE = /^(\s*(?:>\s*)*(?:[-*+]|\d+[.)]))(\s+)\[(.)\](\s|$)/;
 const LIST_RE = /^(\s*(?:>\s*)*(?:[-*+]|\d+[.)]))(\s+)/;
 
-function selectedLines(state: EditorState) {
+export function selectedLines(state: EditorState) {
   const seen = new Set<number>();
   const out: { from: number; to: number; text: string; number: number }[] = [];
   for (const r of state.selection.ranges) {

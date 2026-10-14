@@ -14,7 +14,7 @@ export const graph: CoreModule = {
     app.viewRegistry.registerView(LOCAL_GRAPH_VIEW, (leaf) => new LocalGraphView(leaf));
     const stop = whileCoreEnabled(app, "graph", () => {
       const offs = [
-        addCommand(app, { id: "graph:open", name: "Graph view: Open graph view", icon: "lucide-git-fork", callback: () => { void openGraph(app); } }),
+        addCommand(app, { id: "graph:open", name: "Graph view: Open graph view", icon: "lucide-git-fork", hotkeys: [{ modifiers: ["Mod"], key: "g" }], callback: () => { void openGraph(app); } }),
         addCommand(app, { id: "graph:open-local", name: "Graph view: Open local graph", icon: "lucide-git-fork", checkCallback: (checking) => {
           if (!app.workspace.getActiveFile()) return false;
           if (!checking) void openLocalGraph(app);

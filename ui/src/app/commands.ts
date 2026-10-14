@@ -3,7 +3,13 @@ import { FileView, MarkdownView, Notice, WorkspaceTabs, WorkspaceWindow, type Ap
 import {
   indentListLess, indentListMore, insertLink, toggleBold, toggleChecklist, toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough,
 } from "../editor";
+import {
+  deleteParagraph, insertCallout, insertCodeBlock, insertEmbed, insertHorizontalRule, insertMathBlock, insertTable, insertTag, insertWikilink,
+  setHeading, toggleBlockquote, toggleBulletList, toggleNumberedList,
+} from "../editor";
 import { foldAll, toggleFold, unfoldAll } from "@codemirror/language";
+import { moveLineDown, moveLineUp } from "@codemirror/commands";
+import { openSearchPanel } from "@codemirror/search";
 import type { EditorView } from "@codemirror/view";
 import { copyText, deleteWithPrompt, newNote, promptRename, revealInExplorer } from "./files";
 import type { History } from "./history";
@@ -75,7 +81,7 @@ export function installCommands(app: App, history: History): () => void {
   add({ id: "editor:focus", name: "Focus on last note", checkCallback: (c) => { const l = ws.getMostRecentLeaf(); if (!l) return false; if (!c) ws.setActiveLeaf(l, { focus: true }); return true; } });
 
   // ---- editor formatting (hotkeys come from the editor's own keymap)
-  const ed = (id: string, name: string, run: (v: EditorView) => boolean) => add({ id, name, editorCallback: (e) => { run(cm(e as any)); } });
+  const ed = (id: string, name: string, run: (v: EditorView) => boolean, hotkeys?: Hotkey[]) => add({ id, name, hotkeys, editorCallback: (e) => { run(cm(e as any)); } });
   ed("editor:toggle-bold", "Toggle bold", toggleBold);
   ed("editor:toggle-italics", "Toggle italics", toggleItalic);
   ed("editor:toggle-strikethrough", "Toggle strikethrough", toggleStrikethrough);
@@ -88,6 +94,41 @@ export function installCommands(app: App, history: History): () => void {
   ed("editor:fold-all", "Fold all headings and lists", foldAll);
   ed("editor:unfold-all", "Unfold all headings and lists", unfoldAll);
   ed("editor:toggle-fold", "Toggle fold on the current line", toggleFold);
+  ed("editor:toggle-bullet-list", "Toggle bullet list", toggleBulletList);
+  ed("editor:toggle-numbered-list", "Toggle numbered list", toggleNumberedList);
+  ed("editor:toggle-blockquote", "Toggle blockquote", toggleBlockquote);
+  ed("editor:set-heading-0", "Remove heading", setHeading(0));
+  for (let n = 1; n <= 6; n++) ed(`editor:set-heading-${n}`, `Toggle heading ${n}`, setHeading(n));
+  ed("editor:insert-wikilink", "Add internal link", insertWikilink);
+  ed("editor:insert-embed", "Add embed", insertEmbed);
+  ed("editor:insert-tag", "Add tag", insertTag);
+  ed("editor:insert-callout", "Insert callout", insertCallout);
+  ed("editor:insert-codeblock", "Insert code block", insertCodeBlock);
+  ed("editor:insert-horizontal-rule", "Insert horizontal rule", insertHorizontalRule);
+  ed("editor:insert-table", "Insert table", insertTable);
+  ed("editor:insert-mathblock", "Insert math block", insertMathBlock);
+  ed("editor:delete-paragraph", "Delete paragraph", deleteParagraph);
+  ed("editor:swap-line-up", "Move line up", moveLineUp);
+  ed("editor:swap-line-down", "Move line down", moveLineDown);
+  ed("editor:open-search", "Search current file", openSearchPanel, mod("f"));
+  ed("editor:open-search-replace", "Search and replace in current file", openSearchPanel, mod("h"));
+
+  // Jump to the Nth tab of the current tab group (Ctrl/Cmd+1..8) or the last one (Ctrl/Cmd+9).
+  const tabsHere = () => { const l = ws.activeLeaf; return l && l.parent instanceof WorkspaceTabs ? l.parent : null; };
+  for (let n = 1; n <= 8; n++) {
+    add({ id: `workspace:goto-tab-${n}`, name: `Go to tab #${n}`, hotkeys: mod(String(n)), checkCallback: (c) => {
+      const t = tabsHere()?.children[n - 1] as WorkspaceLeaf | undefined;
+      if (!t) return false;
+      if (!c) ws.setActiveLeaf(t, { focus: true });
+      return true;
+    } });
+  }
+  add({ id: "workspace:goto-last-tab", name: "Go to last tab", hotkeys: mod("9"), checkCallback: (c) => {
+    const kids = tabsHere()?.children;
+    if (!kids?.length) return false;
+    if (!c) ws.setActiveLeaf(kids[kids.length - 1] as WorkspaceLeaf, { focus: true });
+    return true;
+  } });
 
   const disposers: (() => void)[] = [
     // core plugins whose commands live here
