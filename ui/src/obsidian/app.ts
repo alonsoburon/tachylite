@@ -29,18 +29,21 @@ export interface AppOptions {
   onCoreReady?: () => void | Promise<void>;
 }
 
-function createProtocolHandlers(): Map<string, (params: any) => any> & Record<string, (params: any) => any> {
-  const map = new Map<string, (params: any) => any>();
-  return new Proxy(map, {
-    get(t, prop) {
-      if (typeof prop === "string" && !(prop in t)) return t.get(prop);
-      const v = Reflect.get(t, prop, t);
-      return typeof v === "function" ? v.bind(t) : v;
-    },
-    set(t, prop, value) { if (typeof prop === "string") t.set(prop, value); return true; },
-    deleteProperty(t, prop) { return typeof prop === "string" ? t.delete(prop) || true : true; },
-    has(t, prop) { return prop in t || (typeof prop === "string" && t.has(prop)); },
-  }) as any;
+type ProtocolHandler = (params: any) => any;
+/** `obsidian://` action handlers: a Map (plugins call `.has` / `.get`) whose entries are also readable as properties. */
+class ProtocolHandlers extends Map<string, ProtocolHandler> {
+  set(action: string, handler: ProtocolHandler): this {
+    super.set(action, handler);
+    if (!(action in Map.prototype)) (this as any)[action] = handler;
+    return this;
+  }
+  delete(action: string): boolean {
+    if (!(action in Map.prototype)) delete (this as any)[action];
+    return super.delete(action);
+  }
+  clear(): void {
+    for (const k of [...this.keys()]) this.delete(k);
+  }
 }
 
 export class App {
@@ -69,7 +72,7 @@ export class App {
   statusBar: { containerEl: HTMLElement };
   dom: { appContainerEl: HTMLElement; horzSplitEl?: HTMLElement; rootEl?: HTMLElement };
   /** `obsidian://` action handlers: a Map (plugins call `.has` / `.get`) that also reads and writes like an object. */
-  protocolHandlers: Map<string, (params: any) => any> & Record<string, (params: any) => any> = createProtocolHandlers();
+  protocolHandlers: ProtocolHandlers & Record<string, ProtocolHandler> = new ProtocolHandlers() as ProtocolHandlers & Record<string, ProtocolHandler>;
   cliHandlers: Record<string, { description: string; flags: unknown; handler: (p: any) => any }> = {};
   /** Bases view types by id: built-in (table, cards, list) and Plugin.registerBasesView. */
   basesViews: Record<string, BasesViewRegistration> = {};

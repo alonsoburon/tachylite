@@ -43,3 +43,19 @@ describe("openExternal", () => {
     await vi.waitFor(() => expect(opened).toEqual(["https://example.com/"]));
   });
 });
+
+describe("app.protocolHandlers", () => {
+  it("is a Map plugins can query, also reachable from the workspace, with entries readable as properties", async () => {
+    const host = document.body.appendChild(document.createElement("div"));
+    session = await startSession((await v.backend("vault_info")) as any, host);
+    const app = session.app;
+    const fn = () => "ok";
+    app.protocolHandlers.set("my-action", fn);
+    expect(app.protocolHandlers.has("my-action")).toBe(true);
+    expect(app.workspace.protocolHandlers.has("my-action")).toBe(true);
+    expect(app.protocolHandlers["my-action"]).toBe(fn);
+    expect(app.protocolHandlers.delete("my-action")).toBe(true);
+    expect(app.protocolHandlers.has("my-action")).toBe(false);
+    expect(app.protocolHandlers["my-action"]).toBeUndefined();
+  });
+});
