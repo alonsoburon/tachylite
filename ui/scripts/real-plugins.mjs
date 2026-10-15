@@ -1,5 +1,5 @@
 // Pinned community plugin releases used by test/obsidian.real-plugins.test.ts.
-// `node scripts/real-plugins.mjs` (or `TACHYLITE_REAL_PLUGINS=1 npx vitest run`) downloads them from GitHub
+// `node scripts/real-plugins.mjs` (or `TACHYLITE_REAL_PLUGINS=1 bunx vitest run`) downloads them from GitHub
 // releases into ui/.cache/real-plugins/<id>/ (gitignored). Bump a version here to test a newer release.
 import fs from "node:fs";
 import path from "node:path";

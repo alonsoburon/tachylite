@@ -79,7 +79,7 @@ variable set. On macOS the schemes are fixed in the signed app bundle, so this i
 
 ## Packages
 
-`cd crates/tachylite-app && npx @tauri-apps/cli@2 build` (after `cd ui && npm run build`) produces, on Linux, a
+`cd crates/tachylite-app && bunx @tauri-apps/cli@2 build` (after `cd ui && bun run build`) produces, on Linux, a
 .deb, an .rpm and an AppImage under `target/release/bundle/`; `--bundles deb,appimage` limits it. On macOS the same
 command gives `.app`/`.dmg`, on Windows `.msi` and an NSIS `-setup.exe` (current-user install, WebView2 bootstrapper);
 neither is signed or notarized. No file associations are registered: claiming `.md` would take Markdown files away

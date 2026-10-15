@@ -19,7 +19,7 @@ Thanks for helping. This project is only useful if it stays legally clean, so th
 
 ```
 cargo test --workspace && cargo clippy --workspace --all-targets
-cd ui && npx tsc --noEmit && npx vitest run && npm run build
+cd ui && bun run typecheck && bun run test && bun run build
 ```
 
 Compatibility bugs are the most valuable contributions: a vault that behaves differently, or a

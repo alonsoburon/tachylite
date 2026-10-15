@@ -620,25 +620,18 @@ struct HttpResp {
 #[tauri::command]
 async fn http_request(req: HttpReq) -> Res<HttpResp> {
     tauri::async_runtime::spawn_blocking(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(60)).build();
-        let mut r = agent.request(req.method.as_deref().unwrap_or("GET"), &req.url);
+        // Non-2xx is a normal response for plugins (they inspect `status`), so statuses are not errors here.
+        let config = ureq::Agent::config_builder().timeout_global(Some(Duration::from_secs(60))).http_status_as_error(false).build();
+        let agent = ureq::Agent::new_with_config(config);
+        let mut builder = ureq::http::Request::builder().method(req.method.as_deref().unwrap_or("GET")).uri(&req.url);
         for (k, v) in req.headers.unwrap_or_default() {
-            r = r.set(&k, &v);
+            builder = builder.header(k, v);
         }
-        let resp = match req.body {
-            Some(b) => r.send_bytes(&b),
-            None => r.call(),
-        };
-        // Non-2xx is a normal response for plugins (they inspect `status`).
-        let resp = match resp {
-            Ok(r) => r,
-            Err(ureq::Error::Status(_, r)) => r,
-            Err(err) => return Err(err.to_string()),
-        };
-        let headers = resp.headers_names().into_iter().filter_map(|n| resp.header(&n).map(|v| (n.to_lowercase(), v.to_string()))).collect();
-        let status = resp.status();
-        let mut body = vec![];
-        std::io::Read::read_to_end(&mut resp.into_reader(), &mut body).map_err(e)?;
+        let request = builder.body(req.body.unwrap_or_default()).map_err(e)?;
+        let mut resp = agent.run(request).map_err(e)?;
+        let headers = resp.headers().iter().map(|(n, v)| (n.as_str().to_lowercase(), String::from_utf8_lossy(v.as_bytes()).into_owned())).collect();
+        let status = resp.status().as_u16();
+        let body = resp.body_mut().with_config().limit(512 * 1024 * 1024).read_to_vec().map_err(e)?;
         Ok(HttpResp { status, headers, body })
     })
     .await

@@ -45,10 +45,9 @@ pub trait Http {
 pub struct UreqHttp;
 impl Http for UreqHttp {
     fn get(&self, url: &str) -> Result<Vec<u8>> {
-        let resp = ureq::get(url).set("User-Agent", "tachylite").call().map_err(|e| Error::Http(url.into(), e.to_string()))?;
-        let mut buf = vec![];
-        io::Read::read_to_end(&mut resp.into_reader(), &mut buf)?;
-        Ok(buf)
+        let mut resp = ureq::get(url).header("User-Agent", "tachylite").call().map_err(|e| Error::Http(url.into(), e.to_string()))?;
+        // Plugin bundles and themes can be several MB; lift ureq's 10 MB default.
+        resp.body_mut().with_config().limit(512 * 1024 * 1024).read_to_vec().map_err(|e| Error::Http(url.into(), e.to_string()))
     }
 }
 

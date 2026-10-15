@@ -64,18 +64,18 @@ code or assets, ever.
 
 ## Build and run
 
-You need Rust, Node 20+, and on Linux the WebKitGTK 4.1 and GTK 3 dev packages
+You need Rust, bun, Node 20+, and on Linux the WebKitGTK 4.1 and GTK 3 dev packages
 (`webkit2gtk-4.1` and friends; on Fedora that's `webkit2gtk4.1-devel gtk3-devel libsoup3-devel`).
 Only Linux has actually been run so far.
 
 ```
-cd ui && npm install --legacy-peer-deps && npm run build
+cd ui && bun install && bun run build
 cd .. && cargo run -p tachylite-app                  # vault picker
 cargo run -p tachylite-app -- --vault /path/to/vault # open a vault directly
-cargo test --workspace && (cd ui && npx vitest run)
+cargo test --workspace && (cd ui && bun run test)
 ```
 
-(`--legacy-peer-deps` is needed, yes, it's annoying.)
+The UI uses [bun](https://bun.sh) for installs and scripts (Node is still needed because Vitest runs on it).
 
 Community plugins start in restricted mode like in Obsidian, until you enable them in Settings.
 `tachy <vault> plugin-search <query>` and `tachy <vault> plugin-install <id>` work headlessly.
