@@ -138,7 +138,7 @@ export function installCommands(app: App, history: History): () => void {
       const link = linkAt(editor.getLine(cur.line), cur.ch);
       if (!link) return false;
       if (!checking) {
-        if (link.external) openExternal(link.target);
+        if (link.external) openExternal(link.target, app);
         else void app.workspace.openLinkText(link.kind === "markdown" ? safeDecode(link.target) : link.target, ctx?.file?.path ?? "", false);
       }
       return true;

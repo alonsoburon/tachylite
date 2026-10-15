@@ -5,8 +5,8 @@ import { StateField, type Extension } from "@codemirror/state";
 import { FRONTMATTER_RE, Menu, MarkdownView, Notice, type App, type WorkspaceLeaf } from "../obsidian";
 import { editorInfoField, setLivePreview } from "../obsidian/editor";
 import { setIcon } from "../obsidian/icons";
-import { editorHandles } from "./bridge";
-import { buildFileMenu, renameTo } from "./files";
+import { editorHandles, openExternal } from "./bridge";
+import { buildFileMenu, copyText, renameTo } from "./files";
 import { metadataEditorIn } from "./properties/embed";
 
 function titleEl(view: TachyMarkdownView): HTMLElement {
@@ -114,6 +114,14 @@ export class TachyMarkdownView extends MarkdownView {
     const link = target.closest<HTMLElement>(".cm-hmd-internal-link[data-href]");
     if (link && this.file) {
       app.workspace.handleLinkContextMenu(menu, link.getAttribute("data-href") ?? "", this.file.path, this.leaf);
+      menu.addSeparator();
+    }
+    const ext = target.closest<HTMLElement>(".cm-link[data-url]");
+    if (ext) {
+      const url = ext.getAttribute("data-url") ?? "";
+      menu.addItem((i) => i.setSection("url").setTitle("Open link").setIcon("lucide-external-link").onClick(() => openExternal(url, app)));
+      menu.addItem((i) => i.setSection("url").setTitle("Copy URL").setIcon("lucide-copy").onClick(() => copyText(url)));
+      app.workspace.trigger("url-menu", menu, url);
       menu.addSeparator();
     }
     const hasSel = ed.somethingSelected();

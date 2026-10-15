@@ -10,7 +10,7 @@ const qa = (s: string, r: ParentNode = document) => [...r.querySelectorAll<HTMLE
 
 beforeEach(() => {
   document.body.innerHTML = ""; localStorage.clear();
-  v = makeVault({ "Note.md": "hello world\n", "Other.md": "# Other\n" });
+  v = makeVault({ "Note.md": "hello world\n", "Other.md": "# Other\n", "Web.md": "see [site](https://example.com/p) now\n" });
   setBackend(async (cmd, a) => {
     switch (cmd) {
       case "meta_backlinks": case "meta_tags": return {};
@@ -63,6 +63,23 @@ describe("editor context menu", () => {
     item("Bold").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await vi.waitFor(() => expect(cm.state.doc.toString()).toBe("**hello** world\n"));
     void view;
+  });
+
+  it("an external link gets Open link and Copy URL, and plugins extend it through url-menu", async () => {
+    const host = document.body.appendChild(document.createElement("div"));
+    session = await startSession((await v.backend("vault_info")) as any, host);
+    const app = session.app;
+    await app.workspace.openLinkText("Web", "", false);
+    const view = app.workspace.activeLeaf!.view as any;
+    await vi.waitFor(() => expect(view.file?.basename).toBe("Web"));
+    view.editor.focus = () => {};
+    const link = await vi.waitFor(() => { const l = view.contentEl.querySelector(".cm-link[data-url]"); if (!l) throw new Error("no link"); return l as HTMLElement; });
+    const urls: string[] = [];
+    app.workspace.on("url-menu", (menu: any, url: string) => { urls.push(url); menu.addItem((i: any) => i.setTitle("Plugin url item")); });
+    link.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(titles()).toContain("Plugin url item"));
+    expect(titles()).toEqual(expect.arrayContaining(["Open link", "Copy URL"]));
+    expect(urls).toEqual(["https://example.com/p"]);
   });
 
   it("leaves the properties area and inline title alone", async () => {

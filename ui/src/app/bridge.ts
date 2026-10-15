@@ -6,6 +6,7 @@ import { createEditor, splitFence, type EditorHandle, type EditorHost, type Edit
 import { renderMarkdown, type RenderContext } from "../markdown";
 import { ipc } from "../ipc";
 import { Component, MarkdownPreviewRenderer, MarkdownPreviewView, MarkdownRenderer, Menu, Platform, prepareFuzzySearch, type App } from "../obsidian";
+import { handleUri } from "./uri";
 import { propertiesMode, renderPropertiesTable } from "./properties/embed";
 import { editorInfoField, setEditorFactory } from "../obsidian/editor";
 import { createPostProcessorContext, runCodeBlockProcessor, setMarkdownRenderer } from "../obsidian/markdown";
@@ -13,7 +14,12 @@ import { createPostProcessorContext, runCodeBlockProcessor, setMarkdownRenderer 
 /** CM6 view -> handle of the real editor (mode switching, source path). */
 export const editorHandles = new WeakMap<EditorView, EditorHandle>();
 
-export function openExternal(url: string): void {
+export function openExternal(url: string, app?: App): void {
+  // obsidian:// and tachylite:// links (open, search, daily, ...) are this app's own; only unknown ones go to the OS.
+  if (app && /^(obsidian|tachylite):/i.test(url)) {
+    void handleUri(app, url).then((handled) => { if (!handled) openExternal(url); }).catch((e) => console.warn("uri failed", e));
+    return;
+  }
   if (!/^(https?:|mailto:|obsidian:)/i.test(url)) return;
   void ipc.openUrl(url).catch((e) => console.warn("open_url failed", e));
 }
@@ -48,7 +54,7 @@ export function makeEditorHost(app: App): EditorHost {
     openLink: (lt, src, newLeaf) => { void app.workspace.openLinkText(lt, src, newLeaf === true ? "tab" : newLeaf); },
     readFile: async (p) => { const f = md(p); return f ? app.vault.cachedRead(f) : app.vault.adapter.read(p); },
     openTag: (tag) => { void openTagSearch(app, tag); },
-    openExternal,
+    openExternal: (u) => openExternal(u, app),
     editorEvent: (name, e, view) => {
       const info = view.state.field(editorInfoField, false);
       if (info) app.workspace.trigger(name, e, info.editor, info);
@@ -164,7 +170,7 @@ export function makeRenderContext(app: App, sourcePath: string, component?: { ad
     getResourceUrl: (p) => app.vault.adapter.getResourcePath(p),
     getFrontmatter: (p) => app.metadataCache.getCache(p)?.frontmatter ?? null,
     openLink: (lt, src, newLeaf) => {
-      if (/^[a-z][a-z0-9+.-]*:/i.test(lt) && !/^[a-z]:[\\/]/i.test(lt)) { openExternal(lt); return; }
+      if (/^[a-z][a-z0-9+.-]*:/i.test(lt) && !/^[a-z]:[\\/]/i.test(lt)) { openExternal(lt, app); return; }
       void app.workspace.openLinkText(lt, src, newLeaf === true ? "tab" : newLeaf);
     },
     openTag: (tag) => { void openTagSearch(app, tag); },
