@@ -1,7 +1,7 @@
 // Live Preview extras: setext headings, callout folding, inline footnotes.
 import { describe, it, expect } from "vitest";
 import { EditorState, EditorSelection } from "@codemirror/state";
-import { ensureSyntaxTree } from "@codemirror/language";
+import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
 import { createEditor, obsidianMarkdown, buildInline, buildSetext, envFacet, type EditorHost } from "../src/editor";
 
 const host: EditorHost = {
@@ -11,8 +11,11 @@ const host: EditorHost = {
 const env = { host, getSourcePath: () => "N.md" };
 
 function mkstate(doc: string, cursor: number) {
-  const s = EditorState.create({ doc, selection: EditorSelection.single(cursor), extensions: [obsidianMarkdown(), envFacet.of(env)] });
-  ensureSyntaxTree(s, doc.length, 5000);
+  const make = () => EditorState.create({ doc, selection: EditorSelection.single(cursor), extensions: [obsidianMarkdown(), envFacet.of(env)] });
+  // CodeMirror's initial parse has a 20ms budget; on a busy machine it yields a partial tree that a state without a
+  // view never finishes. Build the state again until the whole document is parsed.
+  let s = make();
+  for (let i = 0; i < 200 && (ensureSyntaxTree(s, doc.length, 5000), syntaxTree(s).length < doc.length); i++) s = make();
   return s;
 }
 function hiddenBy(set: ReturnType<typeof buildSetext>, doc: string): string[] {

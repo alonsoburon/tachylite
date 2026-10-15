@@ -62,8 +62,9 @@ describe("editor highlighting", () => {
     const parent = document.body.appendChild(document.createElement("div"));
     const ed = createEditor(parent, { doc: "```ts\nconst a: number = 1\n```\n\n```python\nimport os\n```\n", host, mode: "source" });
     const cls = (sel: string) => [...ed.view.contentDOM.querySelectorAll(sel)].map((e) => e.textContent);
-    expect(cls(".cm-keyword")).toContain("const");
-    await vi.waitFor(() => expect(cls(".cm-keyword")).toContain("import"), { timeout: 3000 });
+    // The initial parse is time-boxed, so on a busy machine even the bundled language can need a moment.
+    await vi.waitFor(() => expect(cls(".cm-keyword")).toContain("const"), { timeout: 5000 });
+    await vi.waitFor(() => expect(cls(".cm-keyword")).toContain("import"), { timeout: 5000 });
     ed.destroy();
     parent.remove();
   });
