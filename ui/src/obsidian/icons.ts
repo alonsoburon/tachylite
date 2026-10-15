@@ -19,10 +19,15 @@ const ALIASES: Record<string, string> = {
   "wand-2": "wand-sparkles", sidebar: "panel-left", "sidebar-open": "panel-left-open", "sidebar-close": "panel-left-close", "file-spreadsheet": "file-spreadsheet",
   spreadsheet: "sheet", "layout-grid": "layout-grid", "calendar-day": "calendar", "arrow-enter": "corner-down-left", document: "file", "calendar-with-checkmark": "calendar-check", "image-file": "file-image", "audio-file": "file-audio", "video-file": "file-video", "pdf-file": "file-text", "create-new": "square-pen", "go-to-file": "file-search", "paper-plane": "send", "vertical-three-dots": "ellipsis-vertical", "horizontal-split": "separator-horizontal", "vertical-split": "separator-vertical", "star-list": "list-todo", "bullet-list": "list", "number-list": "list-ordered", "code-2": "code-xml", "double-up-arrow-glyph": "chevrons-up", "double-down-arrow-glyph": "chevrons-down", "up-chevron-glyph": "chevron-up", "down-chevron-glyph": "chevron-down", "right-triangle": "chevron-right", "left-arrow": "arrow-left", "right-arrow": "arrow-right", "link-glyph": "link", "search-glyph": "search", "cross": "x", "checkmark": "check", "plus-with-circle": "circle-plus", "minus-with-circle": "circle-minus", "cross-in-box": "square-x", "lock-glyph": "lock", "help": "circle-help", "reset": "rotate-ccw", "restore-file-glyph": "history", "crossed-star": "star-off", "any-key": "keyboard", "stacked-levels": "layers", "audio-file-glyph": "file-audio", "workspace-glyph": "layout-dashboard", "gear": "settings", "trash": "trash-2", "pin": "pin", "open-vault": "vault", "folder": "folder", "star": "star", "enter": "corner-down-left",
 };
+/** Icons Obsidian ships under lucide-style ids that the lucide package does not have; drawn here from scratch. */
+const BUILTIN: Record<string, IconNode> = {
+  "links-coming-in": [["path", { d: "M3 4v16" }], ["path", { d: "M21 12H8" }], ["path", { d: "m12 8-4 4 4 4" }]],
+  "links-going-out": [["path", { d: "M21 4v16" }], ["path", { d: "M3 12h13" }], ["path", { d: "m12 8 4 4-4 4" }]],
+};
 function lucideNode(id: string): { name: string; node: IconNode } | null {
   const name = id.replace(/^lucide-/, "");
   const table = lucideIcons as Record<string, IconNode>;
-  const node = table[pascal(name)] ?? (ALIASES[name] ? table[pascal(ALIASES[name])] : undefined);
+  const node = table[pascal(name)] ?? (ALIASES[name] ? table[pascal(ALIASES[name])] : undefined) ?? BUILTIN[name];
   return node ? { name, node } : null;
 }
 

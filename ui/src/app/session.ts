@@ -3,7 +3,7 @@ import { ipc, type VaultInfo } from "../ipc";
 import { App, Notice, MarkdownView, type WorkspaceLeaf } from "../obsidian";
 import { refreshBlocks } from "../editor";
 import { editorHandles, installBridge } from "./bridge";
-import { installCommands } from "./commands";
+import { installCommands, restoreZoom } from "./commands";
 import { coreModules } from "./core";
 import { History } from "./history";
 import { installMarkdownView } from "./markdownView";
@@ -79,6 +79,7 @@ export async function startSession(info: VaultInfo, host: HTMLElement, opts: { s
         catch (e) { console.error(`core module ${m.id} failed`, e); }
       }
       disposers.push(installCommands(app, history));
+      restoreZoom(app);
       disposers.push(installSettings(app));
       disposers.push(installStatusBar(app));
       disposers.push(installMenuCommands(app));

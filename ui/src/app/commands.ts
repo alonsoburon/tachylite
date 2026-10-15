@@ -26,6 +26,19 @@ export function openVaultSwitcher(): void {
   location.reload();
 }
 
+const ZOOM_KEY = "zoom";
+const ZOOM_STEP = 0.1;
+/** Page zoom: persisted per vault, applied by the shell (the webview's own zoom, so layout and popovers stay correct). */
+export function applyZoom(app: App, factor: number): void {
+  const f = Math.min(3, Math.max(0.5, Math.round(factor * 100) / 100));
+  app.saveLocalStorage(ZOOM_KEY, f === 1 ? null : f);
+  void ipc.setZoom(f).catch(() => {});
+}
+export function restoreZoom(app: App): void {
+  const f = app.loadLocalStorage(ZOOM_KEY);
+  if (typeof f === "number" && f !== 1) void ipc.setZoom(f).catch(() => {});
+}
+
 export function installCommands(app: App, history: History): () => void {
   const ws = app.workspace;
   const active = (): TachyMarkdownView | null => ws.getActiveViewOfType(MarkdownView) as TachyMarkdownView | null;
@@ -41,6 +54,11 @@ export function installCommands(app: App, history: History): () => void {
   const cm = (e: { cm?: EditorView }) => e.cm as EditorView;
 
   // ---- app
+  const zoom = (delta: number | null) => () => { applyZoom(app, delta === null ? 1 : (app.loadLocalStorage(ZOOM_KEY) ?? 1) + delta); };
+  // Both "=" and "+" zoom in (Ctrl+= and Ctrl+Shift+=), as do the numpad keys.
+  add({ id: "app:zoom-in", name: "Zoom in", hotkeys: [{ modifiers: ["Mod"], key: "=" }, { modifiers: ["Mod", "Shift"], key: "+" }, { modifiers: ["Mod"], key: "+" }], callback: zoom(ZOOM_STEP) });
+  add({ id: "app:zoom-out", name: "Zoom out", hotkeys: mod("-"), callback: zoom(-ZOOM_STEP) });
+  add({ id: "app:zoom-reset", name: "Reset zoom", hotkeys: mod("0"), callback: zoom(null) });
   add({ id: "app:open-settings", name: "Open settings", hotkeys: mod(","), callback: () => app.setting.open() });
   add({ id: "app:go-back", name: "Navigate back", hotkeys: [{ modifiers: ["Alt"], key: "ArrowLeft" }], checkCallback: (c) => { if (!history.canGo(-1)) return false; if (!c) void history.go(-1); return true; } });
   add({ id: "app:go-forward", name: "Navigate forward", hotkeys: [{ modifiers: ["Alt"], key: "ArrowRight" }], checkCallback: (c) => { if (!history.canGo(1)) return false; if (!c) void history.go(1); return true; } });

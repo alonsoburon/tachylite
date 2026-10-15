@@ -130,6 +130,7 @@ export const ipc = {
   // launch / diagnostics
   launchArgs: () => call<{ vault: string | null; script: string | null }>("launch_args"),
   quitApp: () => call<void>("quit_app"),
+  setZoom: (factor: number) => call<void>("set_zoom", { factor }),
   openUrl: (url: string) => call<void>("open_url", { url }),
   /** `tachylite://` URLs received so far (launch argument, second launches, macOS open events); empties the queue. */
   deepLinkTake: () => call<string[]>("deep_link_take"),

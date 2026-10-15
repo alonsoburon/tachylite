@@ -515,6 +515,12 @@ fn log_frontend(level: String, message: String) {
     }
 }
 
+/// Page zoom for the calling window (Ctrl/Cmd + and -). 1.0 is 100%.
+#[tauri::command]
+fn set_zoom(window: tauri::WebviewWindow, factor: f64) -> Result<(), String> {
+    window.set_zoom(factor.clamp(0.3, 4.0)).map_err(|e| e.to_string())
+}
+
 /// Exit the application (called by the frontend once it has flushed pending saves).
 #[tauri::command]
 fn quit_app(app: AppHandle) {
@@ -670,6 +676,7 @@ fn main() {
             platform::open_url,
             platform::deep_link_take,
             quit_app,
+            set_zoom,
             dev_screenshot,
             dev_request_close,
             adapter_exists,
