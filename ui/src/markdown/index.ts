@@ -7,3 +7,4 @@ export {
 export { processCallouts } from "./callouts";
 export { canonicalCallout, calloutIcon } from "./icons";
 export { renderFrontmatter } from "./frontmatter";
+export { paneFor } from "./pane";

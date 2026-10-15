@@ -83,7 +83,7 @@ function linkOpen(app: App | null, a: HTMLElement, linktext: string, sourcePath:
   a.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    void app?.workspace.openLinkText(linktext, sourcePath, e.ctrlKey || e.metaKey ? "tab" : false);
+    void app?.workspace.openLinkText(linktext, sourcePath, Keymap.isModEvent(e));
   });
 }
 
@@ -300,7 +300,7 @@ export class Tasks {
   promise(): Promise<any> { return Promise.all(this.pending); }
 }
 
-import { Events } from "./events";
+import { Events, Keymap } from "./events";
 export class SecretStorage extends Events {
   constructor(private prefix: string) { super(); }
   private k(id: string): string { return `${this.prefix}-secret-${id}`; }

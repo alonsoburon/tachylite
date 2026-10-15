@@ -1,6 +1,6 @@
 // Property (frontmatter) types: the widgets that edit each type and app.metadataTypeManager (.obsidian/types.json).
 import { ipc } from "../ipc";
-import { Component, Events } from "./events";
+import { Component, Events, Keymap } from "./events";
 import { setIcon } from "./icons";
 import { AbstractInputSuggest } from "./ui";
 import type { App } from "./app";
@@ -108,7 +108,7 @@ export function renderPropertyText(app: App, el: HTMLElement, text: string, sour
       const dest = app.metadataCache.getFirstLinkpathDest(target.split("#")[0], sourcePath);
       const a = el.createEl("a", { cls: "internal-link" + (dest ? "" : " is-unresolved"), text: m[2] ?? target, attr: { href: target, "data-href": target } });
       a.addEventListener("mousedown", (e) => e.stopPropagation());
-      a.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); void app.workspace.openLinkText(target, sourcePath, e.ctrlKey || e.metaKey ? "tab" : false); });
+      a.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); void app.workspace.openLinkText(target, sourcePath, Keymap.isModEvent(e)); });
     }
     i = m.index! + m[0].length;
   }

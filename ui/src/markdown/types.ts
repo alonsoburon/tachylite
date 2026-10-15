@@ -34,7 +34,8 @@ export interface RenderContext {
   readFile(path: string): Promise<string>;
   getResourceUrl(path: string): string;
   getFrontmatter?(path: string): Record<string, unknown> | null;
-  openLink(linktext: string, sourcePath: string, newLeaf: boolean): void;
+  /** `newLeaf`: false = same tab, true or "tab" = new tab, "split" = split to the side, "window" = new window. */
+  openLink(linktext: string, sourcePath: string, newLeaf: boolean | "tab" | "split" | "window"): void;
   postProcessors?: PostProcessor[];
   codeBlockProcessors?: Map<string, CodeBlockProcessor>;
   maxEmbedDepth?: number;

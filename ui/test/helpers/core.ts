@@ -15,7 +15,12 @@ export async function bootCore(files: Record<string, string>, stubs: Record<stri
   document.body.appendChild(app.dom.appContainerEl);
   return {
     v, app,
-    async dispose() { offs.forEach((o) => typeof o === "function" && o()); await app.stop(); v.cleanup(); document.body.innerHTML = ""; },
+    async dispose() {
+      offs.forEach((o) => typeof o === "function" && o());
+      // Detach the leaves so their CodeMirror views are destroyed; a live view keeps timers that fire after the window is gone.
+      app.workspace.iterateAllLeaves((l) => { try { l.detach(); } catch { /* already gone */ } });
+      await app.stop(); v.cleanup(); document.body.innerHTML = "";
+    },
   };
 }
 

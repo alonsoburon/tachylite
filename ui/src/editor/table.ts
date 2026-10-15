@@ -9,7 +9,7 @@
 import { WidgetType, type EditorView } from "@codemirror/view";
 import type { WidgetEnv } from "./widgets";
 import { makeRenderContext } from "./widgets";
-import { renderInline } from "../markdown";
+import { renderInline, paneFor } from "../markdown";
 
 export type Align = "left" | "center" | "right" | null;
 
@@ -316,7 +316,7 @@ export class TableWidget extends WidgetType {
       const link = t.closest("a.internal-link, a.external-link");
       if (link) {
         e.preventDefault();
-        if (link.classList.contains("internal-link")) this.env.host.openLink(link.getAttribute("data-href") ?? "", this.env.getSourcePath(), e.ctrlKey || e.metaKey);
+        if (link.classList.contains("internal-link")) this.env.host.openLink(link.getAttribute("data-href") ?? "", this.env.getSourcePath(), paneFor(e));
         else this.env.host.openExternal?.(link.getAttribute("href") ?? "");
         return;
       }

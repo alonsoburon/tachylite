@@ -1,5 +1,5 @@
 // Backlinks and outgoing-links core views, built on metadataCache + vault.
-import { TFile, getFrontMatterInfo, type App, type WorkspaceLeaf } from "../../obsidian";
+import { Keymap, TFile, getFrontMatterInfo, type App, type WorkspaceLeaf } from "../../obsidian";
 import { buildFileMenu } from "../files";
 import { activateView, addCommand, openFile, whileCoreEnabled, type CoreModule } from "./util";
 import { collapseIcon, fileLabel, FollowView, highlightText, naturalCompare, navButton, navHeader } from "./panel";
@@ -349,7 +349,7 @@ export class OutgoingLinksView extends FollowView {
       if (it.count > 1) flair.createSpan({ cls: "tree-item-flair", text: String(it.count) });
       self.addEventListener("click", (e) => {
         if (target) void openFile(this.app, target, e);
-        else void this.app.workspace.openLinkText(it.label, source.path, e.ctrlKey || e.metaKey ? "tab" : false);
+        else void this.app.workspace.openLinkText(it.label, source.path, Keymap.isModEvent(e));
       });
       if (target) self.addEventListener("contextmenu", (e) => { e.preventDefault(); buildFileMenu(this.app, target, "outgoing-link").showAtMouseEvent(e); });
     }

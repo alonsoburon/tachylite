@@ -24,7 +24,8 @@ export interface EditorHost {
   /** All tags known in the vault (with or without leading `#`). */
   listTags(): string[] | Promise<string[]>;
   getResourceUrl(path: string): string;
-  openLink(linktext: string, sourcePath: string, newLeaf: boolean): void;
+  /** `newLeaf`: false = same tab, true or "tab" = new tab, "split" = split to the side, "window" = new window. */
+  openLink(linktext: string, sourcePath: string, newLeaf: boolean | "tab" | "split" | "window"): void;
   readFile(path: string): Promise<string>;
   /** Render a note/media embed into `el`. If omitted, the built-in markdown renderer is used. */
   renderEmbed?(el: HTMLElement, linktext: string, sourcePath: string): void | Promise<void>;

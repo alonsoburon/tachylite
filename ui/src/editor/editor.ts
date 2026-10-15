@@ -17,6 +17,7 @@ import { tags as t } from "@lezer/highlight";
 
 import type { EditorHandle, EditorMode, EditorOptions } from "./types";
 import { obsidianMarkdown } from "./parser";
+import { paneFor } from "../markdown";
 const markdownLang = obsidianMarkdown();
 import { blockField, envFacet, inlinePlugin } from "./decorations";
 import { setextField } from "./setext";
@@ -153,16 +154,36 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
   };
 
   const linkClicks = EditorView.domEventHandlers({
+    // On X11 the middle button pastes the primary selection on mouseup; a link click must not.
+    mouseup(e) {
+      if (e.button !== 1 || !(e.target as HTMLElement | null)?.closest?.(".cm-hmd-internal-link[data-href]")) return false;
+      e.preventDefault();
+      return true;
+    },
+    auxclick(e) {
+      if (e.button !== 1) return false;
+      const wiki = (e.target as HTMLElement | null)?.closest?.<HTMLElement>(".cm-hmd-internal-link[data-href]");
+      if (!wiki) return false;
+      e.preventDefault();
+      opts.host.openLink(wiki.getAttribute("data-href") ?? "", cur.sourcePath, paneFor(e));
+      return true;
+    },
     mousedown(e, view) {
+      if (e.button === 1) {
+        // The middle button opens links on auxclick (below); here it only must not move the caret or start autoscroll.
+        if ((e.target as HTMLElement | null)?.closest?.(".cm-hmd-internal-link[data-href]")) { e.preventDefault(); return true; }
+        return false;
+      }
       if (e.button !== 0) return false;
       const target = e.target as HTMLElement | null;
       if (!target?.closest) return false;
       const mod = e.ctrlKey || e.metaKey;
+      const pane = paneFor(e);
       const live = mode === "live-preview";
       const wiki = target.closest<HTMLElement>(".cm-hmd-internal-link[data-href]");
       if (wiki && (mod || (live && wiki.getAttribute("data-lp") === "1"))) {
         e.preventDefault();
-        opts.host.openLink(wiki.getAttribute("data-href") ?? "", cur.sourcePath, mod);
+        opts.host.openLink(wiki.getAttribute("data-href") ?? "", cur.sourcePath, pane);
         return true;
       }
       const tag = target.closest<HTMLElement>(".cm-hashtag[data-tag]");
@@ -177,7 +198,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
         const url = ext.getAttribute("data-url") ?? "";
         if (opts.host.openExternal) opts.host.openExternal(url);
         else if (/^[a-z][a-z0-9+.-]*:/i.test(url)) window.open(url, "_blank", "noopener");
-        else opts.host.openLink(decodeURI(url), cur.sourcePath, true);
+        else opts.host.openLink(decodeURI(url), cur.sourcePath, pane || "tab");
         return true;
       }
       void view;

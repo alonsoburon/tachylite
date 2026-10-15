@@ -453,7 +453,25 @@ describe("createEditor (DOM)", () => {
     l2.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 }));
     expect(host.opened.length).toBe(1);
     l2.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0, ctrlKey: true }));
-    expect(host.opened[1]).toEqual(["Alpha", "Alpha.md", true]);
+    expect(host.opened[1]).toEqual(["Alpha", "Alpha.md", "tab"]);
+    h.destroy();
+  });
+
+  it("middle-click on a wikilink opens it in a new tab on auxclick, ctrl+alt-click in a split, without paste or caret moves", () => {
+    const { parent, h, host } = mount("see [[Alpha|A]] now");
+    h.view.dispatch({ selection: { anchor: h.view.state.doc.length } });
+    const link = parent.querySelector<HTMLElement>(".cm-hmd-internal-link")!;
+    const down = new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 1 });
+    link.dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+    const up = new MouseEvent("mouseup", { bubbles: true, cancelable: true, button: 1 });
+    link.dispatchEvent(up);
+    expect(up.defaultPrevented).toBe(true); // X11 would otherwise paste the primary selection here
+    expect(host.opened).toEqual([]);
+    link.dispatchEvent(new MouseEvent("auxclick", { bubbles: true, cancelable: true, button: 1 }));
+    expect(host.opened).toEqual([["Alpha", "Alpha.md", "tab"]]);
+    link.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0, ctrlKey: true, altKey: true }));
+    expect(host.opened[1]).toEqual(["Alpha", "Alpha.md", "split"]);
     h.destroy();
   });
 

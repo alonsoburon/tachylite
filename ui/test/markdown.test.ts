@@ -105,7 +105,10 @@ describe("markdown renderer", () => {
     const a = el.querySelector("a")!;
     a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, ctrlKey: true }));
-    expect(ctx.opened).toEqual([["Note A", "Current.md", false], ["Note A", "Current.md", true]]);
+    expect(ctx.opened).toEqual([["Note A", "Current.md", false], ["Note A", "Current.md", "tab"]]);
+    a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, ctrlKey: true, altKey: true }));
+    a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, ctrlKey: true, altKey: true, shiftKey: true }));
+    expect(ctx.opened.slice(2)).toEqual([["Note A", "Current.md", "split"], ["Note A", "Current.md", "window"]]);
   });
 
   it("markdown links to notes become internal links; external stay external", async () => {

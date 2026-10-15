@@ -23,7 +23,7 @@ export function makeEditorHost(app: App): EditorHost {
   return {
     resolveLink: (lp, src) => app.metadataCache.getFirstLinkpathDest(lp, src)?.path ?? null,
     getResourceUrl: (p) => app.vault.adapter.getResourcePath(p),
-    openLink: (lt, src, newLeaf) => { void app.workspace.openLinkText(lt, src, newLeaf ? "tab" : false); },
+    openLink: (lt, src, newLeaf) => { void app.workspace.openLinkText(lt, src, newLeaf === true ? "tab" : newLeaf); },
     readFile: async (p) => { const f = md(p); return f ? app.vault.cachedRead(f) : app.vault.adapter.read(p); },
     openTag: (tag) => { void openTagSearch(app, tag); },
     openExternal,
@@ -126,7 +126,7 @@ export function makeRenderContext(app: App, sourcePath: string, component?: { ad
     getFrontmatter: (p) => app.metadataCache.getCache(p)?.frontmatter ?? null,
     openLink: (lt, src, newLeaf) => {
       if (/^[a-z][a-z0-9+.-]*:/i.test(lt) && !/^[a-z]:[\\/]/i.test(lt)) { openExternal(lt); return; }
-      void app.workspace.openLinkText(lt, src, newLeaf ? "tab" : false);
+      void app.workspace.openLinkText(lt, src, newLeaf === true ? "tab" : newLeaf);
     },
     openTag: (tag) => { void openTagSearch(app, tag); },
     addChild: component ? (c) => component.addChild(c) : undefined,

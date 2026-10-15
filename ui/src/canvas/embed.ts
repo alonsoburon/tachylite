@@ -1,5 +1,5 @@
 // `![[board.canvas]]`: a read-only, pannable preview of a canvas inside a note (app.embedRegistry creator for "canvas").
-import { setIcon, type TFile } from "../obsidian";
+import { Keymap, setIcon, type TFile } from "../obsidian";
 import { EmbedBase, type EmbedContext } from "../obsidian/embeds";
 import { Canvas } from "./canvas";
 import { parseCanvas } from "./model";
@@ -34,7 +34,7 @@ export class CanvasEmbed extends EmbedBase {
     c.setData(data);
     const open = box.createDiv({ cls: "markdown-embed-link", attr: { "aria-label": "Open canvas" } });
     setIcon(open, "lucide-arrow-up-right");
-    open.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); void this.app.workspace.openLinkText(file.path, this.ctx.sourcePath ?? "", e.ctrlKey || e.metaKey); });
+    open.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); void this.app.workspace.openLinkText(file.path, this.ctx.sourcePath ?? "", Keymap.isModEvent(e)); });
     const fit = () => { if (this.canvas === c) c.zoomToFit(); };
     fit();
     // The embed is often laid out after rendering; fit again once it has a size.

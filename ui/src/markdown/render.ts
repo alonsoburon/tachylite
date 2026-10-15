@@ -8,6 +8,7 @@ import {
   extractSubpath, scrollToSubpath, splitFences, splitFrontmatter, splitLinktext, stripComments,
 } from "./util";
 import { processCallouts } from "./callouts";
+import { paneFor } from "./pane";
 import { highlightCodeBlocks } from "./highlight";
 import { renderFrontmatter } from "./frontmatter";
 import { linkIcon } from "./icons";
@@ -533,7 +534,7 @@ function attachHandlers(el: HTMLElement, ctx: RenderContext): void {
     const target = e.target as HTMLElement | null;
     if (!target?.closest) return;
     const c = holder.ctx;
-    const newLeaf = e.ctrlKey || e.metaKey || e.button === 1;
+    const newLeaf = paneFor(e);
     if (e.type === "auxclick" && e.button !== 1) return;
 
     const internal = target.closest<HTMLElement>("a.internal-link");
