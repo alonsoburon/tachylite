@@ -33,6 +33,7 @@ export class EditorSettingTab extends SettingTab {
 
     heading(el, "Display");
     this.toggle("Show line numbers", "Show line numbers in the gutter of the editor.", "showLineNumber");
+    this.toggle("Right-to-left (RTL) direction", "Display text right to left, for languages such as Arabic and Hebrew.", "rightToLeft");
     this.toggle("Fold heading", "Allow folding sections below headings.", "foldHeading");
     this.toggle("Fold indent", "Allow folding nested lists and indented blocks.", "foldIndent");
 
@@ -45,5 +46,7 @@ export class EditorSettingTab extends SettingTab {
     this.toggle("Auto pair Markdown syntax", "Type the closing mark for emphasis, code and similar syntax automatically.", "autoPairMarkdown");
     this.toggle("Smart indent lists", "Keep the indentation of list items when pressing Enter.", "smartIndentList");
     this.toggle("Vim key bindings", "Use Vim key bindings when editing.", "vimMode");
+    new Setting(el).setName("Always focus new tabs").setDesc("When opening a link in a new tab, switch to it right away.").addToggle((t) =>
+      t.setValue(app.vault.getConfig("focusNewTab") !== false).onChange((v) => commitConfig(app, "focusNewTab", v)));
   }
 }

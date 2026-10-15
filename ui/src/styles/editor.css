@@ -341,3 +341,8 @@
 .markdown-source-view .cm-editor:not(.cm-focused) .cm-fat-cursor { background: none; outline: 1px solid var(--interactive-accent); color: transparent !important; }
 .markdown-source-view .cm-vim-panel { font-family: var(--font-monospace); font-size: var(--font-ui-small); color: var(--text-normal); background: var(--background-secondary); padding: var(--size-2-1) var(--size-4-2); }
 .markdown-source-view .cm-vim-panel input { color: var(--text-normal); font-family: inherit; }
+
+/* Right-to-left direction (Settings > Editor > Right-to-left). */
+body.is-rtl .markdown-source-view .cm-content,
+body.is-rtl .markdown-preview-view,
+body.is-rtl .inline-title { direction: rtl; text-align: right; }

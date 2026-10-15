@@ -793,7 +793,9 @@ export class Workspace extends Events {
     if (!newLeaf) leaf = this.rootLeaves().find((l) => l.view instanceof FileView && l.view.file === file) ?? null;
     leaf ??= this.getLeaf(newLeaf as any);
     const eState = { ...(openViewState?.eState ?? {}), ...(subpath ? { subpath } : {}) };
-    await leaf.openFile(file, { ...openViewState, eState, active: openViewState?.active ?? true });
+    // "Always focus new tabs" (app.json focusNewTab) decides whether a link opened in a new tab takes the focus.
+    const focus = newLeaf === "tab" || newLeaf === true ? this.app.vault.getConfig("focusNewTab") !== false : true;
+    await leaf.openFile(file, { ...openViewState, eState, active: openViewState?.active ?? focus });
   }
 
   updateOptions(): void {

@@ -28,6 +28,7 @@ export function applyConfigToBody(app: App): void {
   b.classList.toggle("show-view-header", app.vault.getConfig("showViewHeader") !== false);
   b.classList.toggle("is-readable-line-width", app.vault.getConfig("readableLineLength") !== false);
   b.classList.toggle("show-line-numbers", !!app.vault.getConfig("showLineNumber"));
+  b.classList.toggle("is-rtl", !!app.vault.getConfig("rightToLeft"));
   for (const leaf of app.workspace.getLeavesOfType("markdown")) {
     const v = leaf.view as MarkdownView;
     editorHandles.get(v.cm)?.reconfigure({

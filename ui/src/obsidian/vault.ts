@@ -35,7 +35,7 @@ function parentOf(path: string): string {
 
 export const DEFAULT_CONFIG: Record<string, any> = {
   showLineNumber: false, foldHeading: true, foldIndent: true, defaultViewMode: "source", livePreview: true,
-  readableLineLength: true, strictLineBreaks: false, propertiesInDocument: "visible", showInlineTitle: true,
+  readableLineLength: true, rightToLeft: false, focusNewTab: true, strictLineBreaks: false, propertiesInDocument: "visible", showInlineTitle: true,
   tabSize: 4, useTab: true, spellcheck: true, vimMode: false, autoPairBrackets: true, autoPairMarkdown: true,
   smartIndentList: true, promptDelete: true, trashOption: "system", alwaysUpdateLinks: false,
   newFileLocation: "root", newFileFolderPath: "", attachmentFolderPath: "/", useMarkdownLinks: false,
