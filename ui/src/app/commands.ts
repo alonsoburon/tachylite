@@ -3,6 +3,8 @@ import { FileView, MarkdownView, Notice, WorkspaceTabs, WorkspaceWindow, type Ap
 import {
   indentListLess, indentListMore, insertLink, toggleBold, toggleChecklist, toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough,
 } from "../editor";
+import { linkAt } from "../editor";
+import { openExternal } from "./bridge";
 import {
   deleteParagraph, insertCallout, insertCodeBlock, insertEmbed, insertHorizontalRule, insertMathBlock, insertTable, insertTag, insertWikilink,
   setHeading, toggleBlockquote, toggleBulletList, toggleNumberedList,
@@ -26,6 +28,7 @@ export function openVaultSwitcher(): void {
   location.reload();
 }
 
+const safeDecode = (s: string) => { try { return decodeURIComponent(s); } catch { return s; } };
 const ZOOM_KEY = "zoom";
 const ZOOM_STEP = 0.1;
 /** Page zoom: persisted per vault, applied by the shell (the webview's own zoom, so layout and popovers stay correct). */
@@ -128,6 +131,19 @@ export function installCommands(app: App, history: History): () => void {
   ed("editor:delete-paragraph", "Delete paragraph", deleteParagraph);
   ed("editor:swap-line-up", "Move line up", moveLineUp);
   ed("editor:swap-line-down", "Move line down", moveLineDown);
+  add({
+    id: "editor:follow-link", name: "Follow link under cursor", hotkeys: [{ modifiers: ["Alt"], key: "Enter" }],
+    editorCheckCallback: (checking, editor, ctx) => {
+      const cur = editor.getCursor();
+      const link = linkAt(editor.getLine(cur.line), cur.ch);
+      if (!link) return false;
+      if (!checking) {
+        if (link.external) openExternal(link.target);
+        else void app.workspace.openLinkText(link.kind === "markdown" ? safeDecode(link.target) : link.target, ctx?.file?.path ?? "", false);
+      }
+      return true;
+    },
+  });
   ed("editor:open-search", "Search current file", openSearchPanel, mod("f"));
   ed("editor:open-search-replace", "Search and replace in current file", openSearchPanel, mod("h"));
 
