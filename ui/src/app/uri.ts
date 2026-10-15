@@ -151,7 +151,7 @@ const BUILT_IN: Record<string, (app: App, p: UriParams) => unknown> = {
 export async function dispatchUri(app: App, params: UriParams): Promise<boolean> {
   const { action } = params;
   if (!action || (action === "open" && Object.keys(params).length === 1)) return true;
-  const run = BUILT_IN[action] ? (p: UriParams) => BUILT_IN[action](app, p) : app.protocolHandlers[action];
+  const run = BUILT_IN[action] ? (p: UriParams) => BUILT_IN[action](app, p) : app.protocolHandlers.get(action);
   if (!run) { new Notice(`Unknown Tachylite URI action "${action}".`); return false; }
   try { await run(params); return true; }
   catch (e) { console.error(`URI action ${action} failed`, e); new Notice(String((e as Error).message ?? e)); return false; }

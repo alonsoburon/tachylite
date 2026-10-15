@@ -35,8 +35,9 @@ export function addIcon(iconId: string, svgContent: string): void { custom.set(i
 export function removeIcon(iconId: string): void { custom.delete(iconId); }
 
 export function getIconIds(): string[] {
-  const ids = Object.keys(lucideIcons).map((n) => "lucide-" + n.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/([a-zA-Z])(\d)/g, "$1-$2").toLowerCase());
-  return [...custom.keys(), ...ids];
+  // PascalCase -> kebab: split at lower/digit->upper and inside runs of capitals ("AArrowDown" -> "a-arrow-down", "XCircle" -> "x-circle").
+  const ids = Object.keys(lucideIcons).map((n) => "lucide-" + n.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/([A-Z])([A-Z][a-z])/g, "$1-$2").replace(/([a-zA-Z])(\d)/g, "$1-$2").toLowerCase());
+  return [...custom.keys(), ...ids, ...Object.keys(BUILTIN).map((n) => "lucide-" + n)];
 }
 
 export function getIcon(iconId: string): SVGSVGElement | null {

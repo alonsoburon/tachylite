@@ -64,6 +64,8 @@ export class InternalPluginWrapper extends Events {
     super();
     this.instance = { id, name: CORE_NAMES[id] ?? id, options: {} };
     if (id === "switcher") (this.instance as any).QuickSwitcherModal = QuickSwitcherModal;
+    // Obsidian Sync is out of scope, but plugins (Smart Connections) read its status before they run: report "not syncing".
+    if (id === "sync") Object.assign(this.instance, { syncStatus: "Fully synced", syncing: false });
     if (id === "graph") {
       // The graph engine is not implemented; plugins that patch its prototype (hover-editor) only need the shape.
       class GraphEngine { onNodeHover(): void {} onNodeUnhover(): void {} onNodeClick(): void {} }

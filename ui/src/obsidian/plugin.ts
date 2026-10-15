@@ -232,8 +232,8 @@ export abstract class Plugin extends Component {
     });
   }
   registerObsidianProtocolHandler(action: string, handler: (params: any) => any): void {
-    this.app.protocolHandlers[action] = handler;
-    this.register(() => delete this.app.protocolHandlers[action]);
+    this.app.protocolHandlers.set(action, handler);
+    this.register(() => this.app.protocolHandlers.delete(action));
   }
   registerEditorSuggest(editorSuggest: EditorSuggest<any>): void {
     const m = this.app.workspace.editorSuggestManager!;

@@ -50,8 +50,8 @@ const PLUGINS: Spec[] = [
 ];
 
 // More plugins: only "loads, renders its settings, unloads, no console errors" is asserted.
-for (const id of ["nldates-obsidian", "obsidian-outliner", "obsidian-linter", "obsidian-latex-suite", "tag-wrangler", "obsidian-emoji-toolbar", "recent-files-obsidian", "cmdr", "obsidian-day-planner", "better-word-count", "obsidian-folder-note-plugin", "obsidian-minimal-settings", "mysnippets-plugin", "obsidian42-brat", "obsidian-hover-editor", "text-extractor", "obsidian-codemirror-options"]) {
-  PLUGINS.push({ id, dir: dirOf(id), ...(id === "obsidian-latex-suite" ? { allowErrors: /dynamic import callback/ /* node vm limitation; fine in a webview */ } : {}), ...(id === "obsidian-outliner" ? {} : {}) });
+for (const id of ["nldates-obsidian", "obsidian-outliner", "obsidian-linter", "obsidian-latex-suite", "tag-wrangler", "obsidian-emoji-toolbar", "recent-files-obsidian", "cmdr", "obsidian-day-planner", "better-word-count", "obsidian-folder-note-plugin", "obsidian-minimal-settings", "mysnippets-plugin", "obsidian42-brat", "obsidian-hover-editor", "text-extractor", "obsidian-codemirror-options", "obsidian-full-calendar", "obsidian-spaced-repetition", "obsidian-icon-folder", "obsidian-charts", "number-headings-obsidian", "obsidian-map-view", "smart-connections", "auto-note-mover", "obsidian-tracker", "heatmap-calendar", "todoist-sync-plugin", "obsidian-checklist-plugin", "customjs", "obsidian-pandoc", "obsidian-advanced-uri", "obsidian-zotero-desktop-connector"]) {
+  PLUGINS.push({ id, dir: dirOf(id), ...(id === "obsidian-latex-suite" ? { allowErrors: /dynamic import callback/ /* node vm limitation; fine in a webview */ } : id === "obsidian-map-view" ? { allowErrors: /reading .scale./ /* happy-dom has no canvas 2D context (Leaflet error tiles); a webview does */ } : {}), ...(id === "obsidian-outliner" ? {} : {}) });
 }
 
 let v: FakeVault | undefined, app: App | undefined, offCanvas: (() => void) | undefined;
@@ -94,7 +94,8 @@ for (const spec of PLUGINS) {
       if (spec.settingsTab) expect(tabs).toBeGreaterThanOrEqual(1);
       if (spec.views) expect(viewTypes.length).toBeGreaterThanOrEqual(spec.views);
       // the settings tab must render without throwing
-      for (const t of app.setting.pluginTabs) { t.display(); expect(t.containerEl.childElementCount).toBeGreaterThan(0); t.hide(); }
+      // (some tabs render through React/Svelte roots, which mount on the next tick)
+      for (const t of app.setting.pluginTabs) { t.display(); await vi.waitFor(() => expect(t.containerEl.childElementCount).toBeGreaterThan(0), { timeout: 1500 }); t.hide(); }
       // give async onload work (layout-ready callbacks, timers) a moment
       await new Promise((r) => setTimeout(r, 300));
       // open a note so editor extensions / views get instantiated

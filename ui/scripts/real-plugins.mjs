@@ -40,6 +40,22 @@ export const PINNED = [
   ["obsidian-hover-editor", "nothingislost/obsidian-hover-editor", "0.11.31"],
   ["text-extractor", "scambier/obsidian-text-extractor", "0.7.0"],
   ["obsidian-codemirror-options", "nothingislost/obsidian-codemirror-options", "0.9.5"],
+  ["obsidian-full-calendar", "obsidian-community/obsidian-full-calendar", "0.10.7"],
+  ["obsidian-spaced-repetition", "st3v3nmw/obsidian-spaced-repetition", "1.15.4"],
+  ["obsidian-icon-folder", "FlorianWoelki/obsidian-iconize", "2.14.7"],
+  ["obsidian-charts", "phibr0/obsidian-charts", "3.9.0"],
+  ["number-headings-obsidian", "onlyafly/number-headings-obsidian", "1.16.0"],
+  ["obsidian-map-view", "esm7/obsidian-map-view", "6.1.4"],
+  ["smart-connections", "brianpetro/obsidian-smart-connections", "4.7.2"],
+  ["auto-note-mover", "farux/obsidian-auto-note-mover", "1.2.0"],
+  ["obsidian-tracker", "pyrochlore/obsidian-tracker", "1.19.0"],
+  ["heatmap-calendar", "Richardsl/heatmap-calendar-obsidian", "0.7.1"],
+  ["todoist-sync-plugin", "jamiebrynes7/obsidian-todoist-plugin", "2.6.0"],
+  ["obsidian-checklist-plugin", "delashum/obsidian-checklist-plugin", "3.1.0"],
+  ["customjs", "saml-dev/obsidian-custom-js", "1.0.21"],
+  ["obsidian-pandoc", "OliverBalfour/obsidian-pandoc", "0.4.1"],
+  ["obsidian-advanced-uri", "Vinzent03/obsidian-advanced-uri", "2.2.0"],
+  ["obsidian-zotero-desktop-connector", "mgmeyers/obsidian-zotero-integration", "3.2.1"],
 ];
 
 export const CACHE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".cache", "real-plugins");

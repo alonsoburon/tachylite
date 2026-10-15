@@ -798,6 +798,8 @@ export class Workspace extends Events {
     await leaf.openFile(file, { ...openViewState, eState, active: openViewState?.active ?? focus });
   }
 
+  /** Some plugins look for the handlers on the workspace; they live on the app (see App.protocolHandlers). */
+  get protocolHandlers() { return this.app.protocolHandlers; }
   updateOptions(): void {
     for (const l of this.getLeavesOfType("markdown")) if (l.view instanceof MarkdownView) l.view.reconfigure();
     this.trigger("css-change");

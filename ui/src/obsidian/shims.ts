@@ -9,6 +9,16 @@ import type { App } from "./app";
 import { nodeBridge, openPath } from "./nodeBridge";
 import { detectOS } from "./events";
 
+/** Node's `os.constants` (the Linux values): packages like cross-spawn, execa and signal-exit read these when they load. */
+const OS_CONSTANTS = Object.freeze({
+  UV_UDP_REUSEADDR: 4,
+  dlopen: Object.freeze({ RTLD_LAZY: 1, RTLD_NOW: 2, RTLD_GLOBAL: 256, RTLD_LOCAL: 0, RTLD_DEEPBIND: 8 }),
+  errno: Object.freeze({ E2BIG: 7, EACCES: 13, EADDRINUSE: 98, EADDRNOTAVAIL: 99, EAGAIN: 11, EBADF: 9, EBUSY: 16, ECONNABORTED: 103, ECONNREFUSED: 111, ECONNRESET: 104, EEXIST: 17, EINTR: 4, EINVAL: 22, EIO: 5, EISDIR: 21, EMFILE: 24, ENOENT: 2, ENOMEM: 12, ENOSPC: 28, ENOTDIR: 20, ENOTEMPTY: 39, EPERM: 1, EPIPE: 32, ETIMEDOUT: 110, EXDEV: 18 }),
+  signals: Object.freeze({ SIGHUP: 1, SIGINT: 2, SIGQUIT: 3, SIGILL: 4, SIGTRAP: 5, SIGABRT: 6, SIGIOT: 6, SIGBUS: 7, SIGFPE: 8, SIGKILL: 9, SIGUSR1: 10, SIGSEGV: 11, SIGUSR2: 12, SIGPIPE: 13, SIGALRM: 14, SIGTERM: 15, SIGCHLD: 17, SIGSTKFLT: 16, SIGCONT: 18, SIGSTOP: 19, SIGTSTP: 20, SIGTTIN: 21, SIGTTOU: 22, SIGURG: 23, SIGXCPU: 24, SIGXFSZ: 25, SIGVTALRM: 26, SIGPROF: 27, SIGWINCH: 28, SIGIO: 29, SIGPOLL: 29, SIGPWR: 30, SIGSYS: 31 }),
+  priority: Object.freeze({ PRIORITY_LOW: 19, PRIORITY_BELOW_NORMAL: 10, PRIORITY_NORMAL: 0, PRIORITY_ABOVE_NORMAL: -7, PRIORITY_HIGH: -14, PRIORITY_HIGHEST: -20 }),
+});
+
+
 export { Buffer, EventEmitter };
 export const path = pathBrowserify;
 
@@ -101,7 +111,7 @@ export function createOs(): any {
     release: () => "0.0.0", hostname: () => b()?.hostname ?? "tachylite", homedir: () => b()?.homedir ?? "/", tmpdir: () => b()?.tmpdir ?? "/tmp",
     endianness: () => "LE", cpus: () => [], totalmem: () => 0, freemem: () => 0,
     uptime: () => 0, loadavg: () => [0, 0, 0], networkInterfaces: () => ({}),
-    userInfo: () => ({ username: b()?.username ?? "user", uid: -1, gid: -1, shell: null, homedir: b()?.homedir ?? "/" }), constants: {},
+    userInfo: () => ({ username: b()?.username ?? "user", uid: -1, gid: -1, shell: null, homedir: b()?.homedir ?? "/" }), constants: OS_CONSTANTS,
   };
   Object.defineProperty(os, "EOL", { get: () => (proc.platform === "win32" ? "\r\n" : "\n"), enumerable: true });
   Object.defineProperty(os, "devNull", { get: () => (proc.platform === "win32" ? "\\\\.\\nul" : "/dev/null"), enumerable: true });
@@ -168,6 +178,14 @@ export function createUtil(): any {
     deprecate: <T>(fn: T) => fn, isDeepStrictEqual, TextEncoder, TextDecoder,
     types: { isPromise: (x: any) => !!x && typeof x.then === "function", isDate: (x: any) => x instanceof Date, isRegExp: (x: any) => x instanceof RegExp, isUint8Array: (x: any) => x instanceof Uint8Array, isArrayBuffer: (x: any) => x instanceof ArrayBuffer, isMap: (x: any) => x instanceof Map, isSet: (x: any) => x instanceof Set, isAsyncFunction: (x: any) => x?.constructor?.name === "AsyncFunction" },
     isArray: Array.isArray, isString: (x: any) => typeof x === "string", isFunction: (x: any) => typeof x === "function",
+    isBoolean: (x: any) => typeof x === "boolean", isNumber: (x: any) => typeof x === "number", isObject: (x: any) => x !== null && typeof x === "object",
+    isUndefined: (x: any) => x === undefined, isNull: (x: any) => x === null, isNullOrUndefined: (x: any) => x == null, isRegExp: (x: any) => x instanceof RegExp,
+    isDate: (x: any) => x instanceof Date, isError: (x: any) => x instanceof Error, isPrimitive: (x: any) => x === null || (typeof x !== "object" && typeof x !== "function"),
+    // NODE_DEBUG output is not wired up: loggers are always disabled no-ops, which is what an unset NODE_DEBUG gives.
+    debuglog: () => Object.assign(() => {}, { enabled: false }), debug: () => Object.assign(() => {}, { enabled: false }),
+    stripVTControlCharacters: (s: string) => String(s).replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, ""),
+    styleText: (_f: unknown, text: string) => text,
+    toUSVString: (s: unknown) => { const t: any = String(s); return typeof t.toWellFormed === "function" ? t.toWellFormed() : t; },
   };
 }
 export function createAssert(): any {

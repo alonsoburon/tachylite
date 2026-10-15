@@ -187,6 +187,7 @@ describe("fs, os, process, electron", () => {
     expect(fs.readFileSync(path.join(v!.root, "rel.txt"), "utf8")).toBe("x");
     const o = req("os");
     expect([o.homedir(), o.tmpdir(), o.hostname(), o.EOL]).toEqual([os.homedir(), os.tmpdir(), os.hostname(), os.EOL]);
+    expect([o.constants.signals.SIGINT, o.constants.signals.SIGTERM, o.constants.errno.ENOENT, o.constants.priority.PRIORITY_NORMAL]).toEqual([2, 15, 2, 0]);
     expect(app!.vault.adapter.getBasePath()).toBe(v!.root);
     expect(app!.vault.adapter.getFullPath("Note.md")).toBe(path.join(v!.root, "Note.md"));
   });
@@ -256,5 +257,16 @@ module.exports = class P extends Plugin {
     expect(modal()).toBeNull(); // turning it off needs no confirmation
     expect(v.bridge).toMatchObject({ consent: false, active: false });
     expect(nodeBridge.active).toBe(false);
+  });
+});
+
+describe("util helpers plugins call while loading", () => {
+  it("debuglog returns a disabled logger, and the legacy type checks and stripVTControlCharacters exist", async () => {
+    const { createUtil } = await import("../src/obsidian/shims");
+    const util: any = (createUtil as any)();
+    const log = util.debuglog("x");
+    expect(typeof log).toBe("function"); expect(log.enabled).toBe(false); expect(() => log("ignored")).not.toThrow();
+    expect([util.isNull(null), util.isObject({}), util.isUndefined(1), util.isPrimitive("a"), util.isError(new Error("e"))]).toEqual([true, true, false, true, true]);
+    expect(util.stripVTControlCharacters("\u001b[31mred\u001b[0m")).toBe("red");
   });
 });
