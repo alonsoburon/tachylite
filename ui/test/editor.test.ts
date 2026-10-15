@@ -475,6 +475,23 @@ describe("createEditor (DOM)", () => {
     h.destroy();
   });
 
+  it("middle-click pastes the host's primary selection itself, and leaves the event alone when there is none", async () => {
+    const { parent, h, host } = mount("abc");
+    h.view.dispatch({ selection: { anchor: 1 } });
+    const content = parent.querySelector<HTMLElement>(".cm-content")!;
+    const plain = new MouseEvent("mouseup", { bubbles: true, cancelable: true, button: 1 });
+    content.dispatchEvent(plain);
+    expect(plain.defaultPrevented).toBe(false); // no readPrimarySelection: the webview keeps its own behavior
+    (host as any).readPrimarySelection = async () => "PRIMARY";
+    h.view.posAtCoords = () => 1; // happy-dom has no layout to map the click to a position
+    const up = new MouseEvent("mouseup", { bubbles: true, cancelable: true, button: 1 });
+    content.dispatchEvent(up);
+    expect(up.defaultPrevented).toBe(true); // the native paste is what can hang the page
+    await vi.waitFor(() => expect(h.getValue()).toBe("aPRIMARYbc"));
+    expect(h.view.state.selection.main.head).toBe(1 + "PRIMARY".length);
+    h.destroy();
+  });
+
   it("bracket auto-closing: [[ -> [[]], backtick, **, wrap selection", () => {
     const { h } = mount("");
     type(h.view, "[");

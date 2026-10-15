@@ -38,3 +38,5 @@ tempfile.workspace = true
 # Developer-only window snapshots (the `dev_screenshot` command) work without a visible display.
 webkit2gtk = "2.0.2"
 cairo-rs = { version = "0.18", features = ["png"] }
+# The primary selection (middle-click paste) is read through GTK; same version the shell already links.
+gtk = "0.18"

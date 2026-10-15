@@ -35,6 +35,11 @@ export interface EditorHost {
   /** See RenderContext.renderFileEmbed (embeds of non-markdown file types registered in app.embedRegistry: `.canvas`, `.base`, plugin types). */
   renderFileEmbed?(el: HTMLElement, path: string, subpath: string, linktext: string, sourcePath: string): boolean | Promise<boolean>;
   openExternal?(url: string): void;
+  /**
+   * Linux: the primary selection (the text last selected anywhere). When provided, a middle-click in the editor
+   * pastes it at the click position through this instead of the webview's own paste, which can hang the page.
+   */
+  readPrimarySelection?(): Promise<string | null>;
   /** Languages of fenced blocks that plugins render themselves (code-block processors). */
   codeBlockLanguages?(): string[];
   /** Render a whole fenced block (```lang ... ```) through the plugins' processors; the handle is unloaded with the widget. */

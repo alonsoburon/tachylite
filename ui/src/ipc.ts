@@ -131,6 +131,8 @@ export const ipc = {
   launchArgs: () => call<{ vault: string | null; script: string | null }>("launch_args"),
   quitApp: () => call<void>("quit_app"),
   setZoom: (factor: number) => call<void>("set_zoom", { factor }),
+  /** Linux primary selection (the text last selected anywhere); null when empty or not Linux. */
+  readPrimarySelection: () => call<string | null>("read_primary_selection"),
   openUrl: (url: string) => call<void>("open_url", { url }),
   /** `tachylite://` URLs received so far (launch argument, second launches, macOS open events); empties the queue. */
   deepLinkTake: () => call<string[]>("deep_link_take"),

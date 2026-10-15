@@ -515,6 +515,28 @@ fn log_frontend(level: String, message: String) {
     }
 }
 
+/// The X11/Wayland primary selection: the text last selected anywhere, which a middle-click pastes. The page can't
+/// read it without a blocking round trip that deadlocks the web process when this app itself owns the selection
+/// (the shell then asks the page for its selection while the page waits on the shell), so the editor fetches it here,
+/// where the web process stays free to answer.
+#[cfg(target_os = "linux")]
+#[tauri::command]
+async fn read_primary_selection(window: tauri::WebviewWindow) -> Res<Option<String>> {
+    let (tx, rx) = std::sync::mpsc::channel::<Option<String>>();
+    window
+        .run_on_main_thread(move || {
+            let clipboard = gtk::Clipboard::get(&gtk::gdk::SELECTION_PRIMARY);
+            let _ = tx.send(clipboard.wait_for_text().map(|t| t.to_string()));
+        })
+        .map_err(e)?;
+    tauri::async_runtime::spawn_blocking(move || rx.recv_timeout(Duration::from_secs(3)).map_err(|e| e.to_string())).await.map_err(e)?
+}
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+async fn read_primary_selection() -> Res<Option<String>> {
+    Ok(None)
+}
+
 /// Page zoom for the calling window (Ctrl/Cmd + and -). 1.0 is 100%.
 #[tauri::command]
 fn set_zoom(window: tauri::WebviewWindow, factor: f64) -> Result<(), String> {
@@ -677,6 +699,7 @@ fn main() {
             platform::deep_link_take,
             quit_app,
             set_zoom,
+            read_primary_selection,
             dev_screenshot,
             dev_request_close,
             adapter_exists,

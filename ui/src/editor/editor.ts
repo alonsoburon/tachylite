@@ -154,10 +154,30 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
   };
 
   const linkClicks = EditorView.domEventHandlers({
-    // On X11 the middle button pastes the primary selection on mouseup; a link click must not.
-    mouseup(e) {
-      if (e.button !== 1 || !(e.target as HTMLElement | null)?.closest?.(".cm-hmd-internal-link[data-href]")) return false;
+    // On Linux the middle button pastes the primary selection on mouseup. A link click must not paste, and a paste
+    // must not go through the webview's own handler (it deadlocks when this app owns the selection), so the host
+    // reads the selection and it is inserted at the click position here.
+    mouseup(e, view) {
+      if (e.button !== 1) return false;
+      if ((e.target as HTMLElement | null)?.closest?.(".cm-hmd-internal-link[data-href]")) { e.preventDefault(); return true; }
+      const read = opts.host.readPrimarySelection;
+      if (!read || view.state.readOnly) return false;
       e.preventDefault();
+      // The browser's own hit test is what a left click uses and is exact; CodeMirror's coordinate mapping can be a line off here.
+      const hit = view.contentDOM.ownerDocument.caretRangeFromPoint?.(e.clientX, e.clientY);
+      const at = hit && view.contentDOM.contains(hit.startContainer)
+        ? view.posAtDOM(hit.startContainer, hit.startOffset)
+        : view.posAtCoords({ x: e.clientX, y: e.clientY }) ?? view.state.selection.main.head;
+      void read().then((text) => {
+        if (!text) return;
+        view.dispatch({
+          changes: { from: at, insert: text },
+          selection: { anchor: at + text.length },
+          userEvent: "input.paste",
+          scrollIntoView: true,
+        });
+        view.focus();
+      });
       return true;
     },
     auxclick(e) {

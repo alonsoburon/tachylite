@@ -4,7 +4,7 @@ import type { EditorView } from "@codemirror/view";
 import { createEditor, splitFence, type EditorHandle, type EditorHost, type EditorMode, type LinkTarget } from "../editor";
 import { renderMarkdown, type RenderContext } from "../markdown";
 import { ipc } from "../ipc";
-import { Component, MarkdownPreviewRenderer, MarkdownPreviewView, MarkdownRenderer, Menu, prepareFuzzySearch, type App } from "../obsidian";
+import { Component, MarkdownPreviewRenderer, MarkdownPreviewView, MarkdownRenderer, Menu, Platform, prepareFuzzySearch, type App } from "../obsidian";
 import { propertiesMode, renderPropertiesTable } from "./properties/embed";
 import { setEditorFactory } from "../obsidian/editor";
 import { createPostProcessorContext, runCodeBlockProcessor, setMarkdownRenderer } from "../obsidian/markdown";
@@ -27,6 +27,8 @@ export function makeEditorHost(app: App): EditorHost {
     readFile: async (p) => { const f = md(p); return f ? app.vault.cachedRead(f) : app.vault.adapter.read(p); },
     openTag: (tag) => { void openTagSearch(app, tag); },
     openExternal,
+    // Only Linux has a primary selection; elsewhere the middle button does nothing special in the editor.
+    readPrimarySelection: Platform.isLinux ? () => ipc.readPrimarySelection().catch(() => null) : undefined,
     save: (path) => {
       for (const leaf of app.workspace.getLeavesOfType("markdown")) {
         const v = leaf.view as unknown as { file?: { path: string }; save?(): Promise<void> };
