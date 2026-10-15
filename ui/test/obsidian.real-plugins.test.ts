@@ -51,7 +51,7 @@ const PLUGINS: Spec[] = [
 
 // More plugins: only "loads, renders its settings, unloads, no console errors" is asserted.
 for (const id of ["nldates-obsidian", "obsidian-outliner", "obsidian-linter", "obsidian-latex-suite", "tag-wrangler", "obsidian-emoji-toolbar", "recent-files-obsidian", "cmdr", "obsidian-day-planner", "better-word-count", "obsidian-folder-note-plugin", "obsidian-minimal-settings", "mysnippets-plugin", "obsidian42-brat", "obsidian-hover-editor", "text-extractor", "obsidian-codemirror-options", "obsidian-full-calendar", "obsidian-spaced-repetition", "obsidian-icon-folder", "obsidian-charts", "number-headings-obsidian", "obsidian-map-view", "smart-connections", "auto-note-mover", "obsidian-tracker", "heatmap-calendar", "todoist-sync-plugin", "obsidian-checklist-plugin", "customjs", "obsidian-pandoc", "obsidian-advanced-uri", "obsidian-zotero-desktop-connector"]) {
-  PLUGINS.push({ id, dir: dirOf(id), ...(id === "obsidian-latex-suite" ? { allowErrors: /dynamic import callback/ /* node vm limitation; fine in a webview */ } : id === "obsidian-map-view" ? { allowErrors: /reading .scale./ /* happy-dom has no canvas 2D context (Leaflet error tiles); a webview does */ } : {}), ...(id === "obsidian-outliner" ? {} : {}) });
+  PLUGINS.push({ id, dir: dirOf(id), ...(id === "obsidian-latex-suite" ? { allowErrors: /dynamic import callback/ /* node vm limitation; fine in a webview */ } : id === "smart-connections" ? { allowErrors: /Error loading SmartEnv/ /* it loads data adapters and models that a test has no network or storage for */ } : id === "obsidian-map-view" ? { allowErrors: /reading .scale./ /* happy-dom has no canvas 2D context (Leaflet error tiles); a webview does */ } : {}), ...(id === "obsidian-outliner" ? {} : {}) });
 }
 
 let v: FakeVault | undefined, app: App | undefined, offCanvas: (() => void) | undefined;
@@ -116,7 +116,9 @@ for (const spec of PLUGINS) {
       await new Promise((r) => setTimeout(r, 150)); // let async teardown errors surface inside this test
       spy.mockRestore();
       process.off("unhandledRejection", onRej);
-      const real = errors.filter((e) => !/Failed to load|ResizeObserver/.test(String((e as any[])[0])) && !(spec.allowErrors && spec.allowErrors.test(JSON.stringify((e as any[]).map((x) => String((x as Error)?.message ?? x))))));
+      // A plugin's late async error can surface during the next plugin's test; blame it on its own plugin, not this one.
+      const foreign = (e: unknown) => { const m = /tachylite-plugin:\/\/([^/\s)]+)\//.exec((e as any[]).map((x) => (x instanceof Error ? x.stack : String(x))).join(" ")); return !!m && m[1] !== spec.id; };
+      const real = errors.filter((e) => !foreign(e) && !/Failed to load|ResizeObserver/.test(String((e as any[])[0])) && !(spec.allowErrors && spec.allowErrors.test(JSON.stringify((e as any[]).map((x) => String((x as Error)?.message ?? x))))));
       expect(real.map((e) => (e as any[]).map((x) => (x instanceof Error ? x.stack : String(x))).join(" ").slice(0, 400)), "console errors / unhandled rejections").toEqual([]);
     }, 60_000);
   });

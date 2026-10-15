@@ -407,6 +407,7 @@ export class WorkspaceLeaf extends WorkspaceItem {
   onResize(): void { this.view.onResize(); }
   detach(): void {
     const ws = this.app.workspace;
+    ws.rememberClosed(this);
     void this.closeView();
     const parent = this.parent;
     if (parent) parent.removeChild(this);
@@ -494,6 +495,29 @@ export class Workspace extends Events {
       this.activeEditor = leaf.view instanceof MarkdownView ? leaf.view : null;
       this.checkFileOpen();
     }
+  }
+  /** View states of recently closed tabs in the main area and popouts, newest last (for "Undo close tab"). */
+  closedLeaves: ViewState[] = [];
+  rememberClosed(leaf: WorkspaceLeaf): void {
+    const root = leaf.getRoot();
+    if (!(root === this.rootSplit || root instanceof WorkspaceWindow)) return;
+    const vs = leaf.getViewState();
+    if (vs.type === "empty") return;
+    this.closedLeaves.push({ type: vs.type, state: vs.state, pinned: vs.pinned });
+    if (this.closedLeaves.length > 20) this.closedLeaves.shift();
+  }
+  /** Reopen the most recently closed tab whose file still exists; false when there is nothing to reopen. */
+  async undoCloseLeaf(): Promise<boolean> {
+    while (this.closedLeaves.length) {
+      const vs = this.closedLeaves.pop()!;
+      const file = typeof vs.state?.file === "string" ? vs.state.file : null;
+      if (file && !this.app.vault.getAbstractFileByPath(file)) continue;
+      const leaf = this.getLeaf("tab");
+      await leaf.setViewState({ ...vs, active: true });
+      this.setActiveLeaf(leaf, { focus: true });
+      return true;
+    }
+    return false;
   }
   onLeafDetached(leaf: WorkspaceLeaf): void {
     this.recent = this.recent.filter((l) => l !== leaf);

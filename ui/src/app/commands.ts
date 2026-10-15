@@ -94,6 +94,18 @@ export function installCommands(app: App, history: History): () => void {
   add({ id: "workspace:move-to-new-window", name: "Move current tab to new window", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) { try { ws.moveLeafToPopout(l); } catch (e) { console.error(e); new Notice("Unable to open a new window."); } } return true; } });
   add({ id: "workspace:close-window", name: "Close window", checkCallback: (c) => { const w = ws.activeLeaf?.getContainer(); if (!(w instanceof WorkspaceWindow)) return false; if (!c) w.close(); return true; } });
   add({ id: "workspace:toggle-pin", name: "Pin/unpin tab", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) l.togglePinned(); return true; } });
+  add({ id: "workspace:undo-close-pane", name: "Undo close tab", hotkeys: [{ modifiers: ["Mod", "Shift"], key: "t" }], checkCallback: (c) => {
+    if (!ws.closedLeaves.length) return false;
+    if (!c) void ws.undoCloseLeaf();
+    return true;
+  } });
+  add({ id: "workspace:close-tab-group", name: "Close tab group", checkCallback: (c) => {
+    const t = mainTabs();
+    if (!t) return false;
+    if (!c) for (const l of [...t.tabs.children] as WorkspaceLeaf[]) if (!l.pinned) l.detach();
+    return true;
+  } });
+  add({ id: "app:show-release-notes", name: "Show release notes", callback: () => openExternal("https://github.com/alonsoburon/tachylite/releases", app) });
   add({ id: "workspace:close-others", name: "Close other tabs", checkCallback: (c) => { const t = mainTabs(); if (!t) return false; if (!c) for (const l of [...t.tabs.children] as WorkspaceLeaf[]) if (l !== t.leaf && !l.pinned) l.detach(); return true; } });
 
   // ---- markdown view modes
