@@ -3527,7 +3527,7 @@ dependencies = [
 
 [[package]]
 name = "tachylite-app"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base64 0.22.1",
  "cairo-rs",
@@ -3550,7 +3550,7 @@ dependencies = [
 
 [[package]]
 name = "tachylite-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde_json",
  "tachylite-core",
@@ -3559,7 +3559,7 @@ dependencies = [
 
 [[package]]
 name = "tachylite-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "notify",
  "regex",
@@ -3574,7 +3574,7 @@ dependencies = [
 
 [[package]]
 name = "tachylite-plugins"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
  "serde_json",
