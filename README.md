@@ -1,66 +1,72 @@
 # Tachylite
 
-**A free and open-source desktop app, written in Rust, that aims to be a 1:1 compatible
-alternative to [Obsidian](https://obsidian.md).** Open the same vault folder, get the same notes,
-links and settings, and run the same community plugins and themes.
+An open-source, Rust-based desktop app that tries to be a drop-in replacement for
+[Obsidian](https://obsidian.md). Point it at the same vault folder and you get the same notes,
+links and settings, and the same community plugins and themes should just work.
 
-> **Status: early, pre-1.0.** It runs and is usable on Linux, but it is *not yet* a drop-in
-> replacement. "1:1 compatible" is the goal, not a claim. See [Known gaps](#known-gaps).
+> **Heads up: this is early.** It runs and is usable on Linux, but it is not a drop-in
+> replacement yet. "1:1 compatible" is the goal, not something I'm claiming. The
+> [known gaps](#known-gaps) section is long and I tried to be honest about it.
 
-## Goals
+## Why
 
-- **Same vault, no lock-in.** A vault is a plain folder of Markdown files plus a `.obsidian/`
-  config directory. Tachylite reads and writes that format, so you can switch back and forth.
-- **Same link behavior.** `[[wikilinks]]`, embeds, aliases, heading/block subpaths, tags,
-  frontmatter, backlinks and automatic link updating on rename, resolved with the same rules.
-- **Community plugins and themes.** Installs from the public community catalog and runs
-  plugins written for the Obsidian plugin API (a compatible implementation of the API lives in
-  `ui/src/obsidian`).
-- **Free software, Rust core.** MIT licensed. The vault engine, plugin distribution and
-  desktop shell are Rust ([Tauri 2](https://tauri.app)); the editor and plugin runtime run in a
-  webview because community plugins are DOM/JavaScript code.
+I wanted an Obsidian-compatible app I could read, hack on and ship myself, without giving up the
+vault format or the plugin ecosystem. So:
 
-## Legal and provenance — please read
+- **Your vault is just a folder.** Markdown files plus a `.obsidian/` config dir. Tachylite reads
+  and writes the same format, so you can open a vault in either app and switch back and forth.
+- **Links resolve the same way.** Wikilinks, embeds, aliases, heading and block subpaths, tags,
+  frontmatter, backlinks, and rewriting links when you rename a file, all following the same rules.
+- **Community plugins and themes.** It installs from the public catalog and runs plugins written
+  against the Obsidian plugin API. The API shim lives in `ui/src/obsidian`.
+- **MIT, Rust core.** The vault engine, plugin installer and desktop shell are Rust
+  ([Tauri 2](https://tauri.app)). The editor and plugin runtime live in a webview, because
+  community plugins are DOM and JavaScript and there's no way around that.
 
-Tachylite is an **independent project. It is not affiliated with, endorsed by, or sponsored by
-Obsidian / Dynalist Inc.** "Obsidian" is a trademark of its owner and is used here only to
-describe compatibility.
+## Legal stuff, read this part
 
-- **No Obsidian code, CSS, icons, fonts, translations or other assets are included.** Everything
-  in this repository is original work, except third-party open-source dependencies under their
-  own licenses.
-- **What it is built from:** the open, documented file formats (Markdown, YAML frontmatter,
-  JSON config), the public plugin API type definitions (`obsidian` on npm, MIT), the public
-  community catalog and release layout on GitHub, and observed application behavior.
-- **Transparency about method:** to match behavior (link resolution rules, config file names
-  and defaults, the plugin install protocol, DOM class names and CSS variable names that themes
-  rely on), the maintainer studied the distributed desktop app, including static analysis of
-  its JavaScript with [REA](https://github.com/morluto/rea), strictly for interoperability.
-  This is **not** a certified clean-room implementation, and we don't claim it is. Behavioral
-  facts and names were taken; code, styling and assets were not. Implementations are written
-  from scratch.
-- **Interoperability only.** There is no DRM or licensing circumvention, and nothing here
-  touches Obsidian's paid services (Sync, Publish). Those are out of scope.
-- Obsidian's own terms may restrict how you use or analyze its software. This is not legal
-  advice; if you contribute, you are responsible for complying with the terms that apply to you.
+Tachylite is an independent project. It is **not affiliated with, endorsed by, or sponsored by
+Obsidian / Dynalist Inc.** "Obsidian" is their trademark and I only use it to say what this is
+compatible with.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the rules contributors must follow.
+- **There is no Obsidian code, CSS, icons, fonts, translations or other assets in this repo.**
+  Everything here is original, apart from third-party open-source dependencies under their own
+  licenses.
+- **What it's built from:** open file formats (Markdown, YAML frontmatter, JSON config), the public
+  plugin API typings (the `obsidian` package on npm, MIT), the public community catalog and
+  release layout on GitHub, and watching how the app behaves.
+- **How I matched behavior, plainly:** to get link resolution, config file names and defaults,
+  the plugin install flow, and the DOM class names and CSS variables that themes depend on, I
+  read through the shipped desktop app, including static analysis of its JavaScript with
+  [REA](https://github.com/morluto/rea). That was strictly for interoperability. This is **not** a
+  certified clean-room implementation and I'm not going to pretend it is. Facts and names were
+  taken; code, styling and assets were not, and everything is written from scratch.
+- **Interop only.** No DRM or licensing circumvention, and nothing touches Obsidian's paid
+  services (Sync, Publish). Those are out of scope.
+- Obsidian's terms may restrict how you use or analyze their software. This isn't legal advice,
+  and if you contribute, complying with the terms that apply to you is on you.
 
-## Layout
+Contributor rules are in [CONTRIBUTING.md](CONTRIBUTING.md). The short version: don't copy their
+code or assets, ever.
+
+## What's where
 
 | Path | What |
 |---|---|
-| `crates/tachylite-core` | Vault index, markdown metadata (links, tags, headings, blocks, frontmatter), link resolution, backlinks, search, `.obsidian` config |
-| `crates/tachylite-plugins` | Community plugin/theme catalog, install, enable, version fallback |
-| `crates/tachylite-cli` | `tachy`: headless inspection and plugin management |
-| `crates/tachylite-app` | Tauri shell: the commands between the core and the webview |
-| `ui/src/obsidian` | Implementation of the `obsidian` module for plugins, plus the plugin loader |
-| `ui/src/markdown`, `ui/src/editor` | Reading-view renderer and CodeMirror 6 Live Preview |
+| `crates/tachylite-core` | Vault index, metadata parsing (links, tags, headings, blocks, frontmatter), link resolution, backlinks, search, `.obsidian` config |
+| `crates/tachylite-plugins` | Community plugin and theme catalog, install, enable, version fallback |
+| `crates/tachylite-cli` | `tachy`, a headless CLI for poking at vaults and managing plugins |
+| `crates/tachylite-app` | The Tauri shell: glue between the core and the webview |
+| `ui/src/obsidian` | The `obsidian` module for plugins, plus the plugin loader |
+| `ui/src/markdown`, `ui/src/editor` | Reading view renderer and the CodeMirror 6 Live Preview |
 | `ui/src/app` | Layout, core views, settings, community plugin browser |
+| `compat/` | Black-box fixtures checked by Rust tests |
 
 ## Build and run
 
-Needs Rust, Node 20+, and on Linux WebKitGTK 4.1 (`webkit2gtk-4.1`). Only Linux has been run so far.
+You need Rust, Node 20+, and on Linux the WebKitGTK 4.1 and GTK 3 dev packages
+(`webkit2gtk-4.1` and friends; on Fedora that's `webkit2gtk4.1-devel gtk3-devel libsoup3-devel`).
+Only Linux has actually been run so far.
 
 ```
 cd ui && npm install --legacy-peer-deps && npm run build
@@ -69,42 +75,45 @@ cargo run -p tachylite-app -- --vault /path/to/vault # open a vault directly
 cargo test --workspace && (cd ui && npx vitest run)
 ```
 
-Community plugins start in restricted mode, as in Obsidian, until enabled in Settings.
-`tachy <vault> plugin-search <query>` and `plugin-install <id>` work headlessly.
+(`--legacy-peer-deps` is needed, yes, it's annoying.)
+
+Community plugins start in restricted mode like in Obsidian, until you enable them in Settings.
+`tachy <vault> plugin-search <query>` and `tachy <vault> plugin-install <id>` work headlessly.
+
+Prebuilt Linux AppImage and `.deb` builds are on the
+[releases page](https://github.com/alonsoburon/tachylite/releases).
 
 ## Known gaps
 
-Implemented but young (covered by tests and exercised in the real Linux window, so expect
-rough edges): Canvas (`.canvas`), Bases (`.base`: table, cards and list views, partial formula
-language), editable tables, Dataview-style inline and block widgets in Live Preview, code
-syntax highlighting, Vim mode, popout windows, OS trash, Templates, Daily notes, Properties,
-Note composer, File recovery, Workspaces, Page preview (hover popovers, nested, per-source
-Ctrl/Cmd setting, the `hover-link` API that Hover Editor builds on), the graph view (global and
-local graph, filters, colour groups, display and force settings in `graph.json`; stays
+**What exists, but is young.** It has tests and I've clicked around in the real Linux window, but
+expect rough edges: Canvas (`.canvas`), Bases (`.base` with table, cards and list views, and only
+part of the formula language), editable tables, Dataview-style inline and block widgets in Live
+Preview, syntax highlighting, Vim mode, popout windows, OS trash, Templates, Daily notes,
+Properties, Note composer, File recovery, Workspaces, Page preview (hover popovers, nested,
+per-source Ctrl/Cmd setting, plus the `hover-link` API that Hover Editor builds on), the graph view
+(global and local, filters, color groups, display and force settings in `graph.json`, still
 interactive at 5k notes), `tachylite://` links, and an opt-in Node bridge (`child_process`, real
-`fs`) so desktop-only plugins can run. The Node bridge gives plugins full user permissions, as
-Obsidian does, and sits behind a confirmation.
+`fs`) so desktop-only plugins can run. The bridge gives plugins your full user permissions, same as
+Obsidian, and sits behind a confirmation.
 
-Community plugins run end to end in the real window (current releases): obsidian-git (status
-view, stage, commit, history, through the Node bridge), Excalidraw (create, edit through its
-API, reopen, embed), Omnisearch (index, search modal, in-file search), Calendar, Templater
-(templates with user scripts), Dataview (queries and inline queries in Live Preview and reading
-view), Tasks (queries, completing tasks), Kanban (boards, adding cards) and QuickAdd (capture
-choices), plus Hover Editor.
+**Community plugins I've run end to end in the real window** (current releases): obsidian-git
+(status, stage, commit, history, via the Node bridge), Excalidraw (create, edit, reopen, embed),
+Omnisearch (index, search modal, in-file search), Calendar, Templater (templates with user
+scripts), Dataview (queries and inline queries, in Live Preview and reading view), Tasks (queries,
+completing tasks), Kanban (boards, adding cards), QuickAdd (capture choices) and Hover Editor.
 
-Still missing or unverified:
+**Still missing or unverified:**
 
-- Omnisearch's local HTTP server cannot listen (there are no sockets in the webview); the rest
+- Omnisearch's local HTTP server can't listen, since there are no sockets in a webview. The rest
   of the plugin works.
-- Templater's `<% %>` syntax highlighting is off: Obsidian's editor is a CM5-mode parser that
-  Templater overlays, ours is a Lezer parser, so its highlighter is ignored.
-- The graph is drawn on a 2D canvas (Obsidian uses WebGL); it was measured with 5k notes, larger
-  vaults lay out more slowly.
-- Plugin compatibility beyond the plugins above is checked by loading real bundles in tests;
-  that shows they load, not that every feature works. Report breakage as issues with the plugin
-  id and version.
+- Templater's `<% %>` syntax highlighting is off. Obsidian's editor uses a CM5-mode parser that
+  Templater overlays; ours is a Lezer parser, so its highlighter gets ignored.
+- The graph is drawn on a 2D canvas (Obsidian uses WebGL). I measured it at 5k notes; bigger
+  vaults lay out slower.
+- Any plugin not listed above is only known to *load* (tests load real bundles), not to work in
+  every corner. If one breaks, file an issue with the plugin id and version.
 - Bases formulas and some Canvas details are incomplete.
-- Packaging and CI are configured for Linux, macOS and Windows, but only Linux has been run.
+- CI builds for Linux, macOS and Windows, but only Linux has been run by a human.
 - Sync and Publish are out of scope.
 
 ## License
