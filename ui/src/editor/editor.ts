@@ -153,7 +153,32 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
     ];
   };
 
+  /** Paste and drop: let the app (and plugins) look first, then turn files into attachments; text is left to CodeMirror. */
+  const intake = (e: ClipboardEvent | DragEvent, view: EditorView, data: DataTransfer | null, pasted: boolean): boolean => {
+    opts.host.editorEvent?.(pasted ? "editor-paste" : "editor-drop", e, view);
+    if (e.defaultPrevented) return true;
+    const vaultPath = !pasted ? data?.getData("application/x-tachylite-vault-path") : "";
+    const files = data?.files ? [...data.files] : [];
+    const link = vaultPath ? opts.host.linkForFile?.(vaultPath, cur.sourcePath) ?? null : null;
+    if (!link && (!files.length || !opts.host.saveAttachments)) return false;
+    e.preventDefault();
+    let at = view.state.selection.main.head;
+    if (!pasted) {
+      const d = e as DragEvent;
+      const hit = view.contentDOM.ownerDocument.caretRangeFromPoint?.(d.clientX, d.clientY);
+      at = hit && view.contentDOM.contains(hit.startContainer) ? view.posAtDOM(hit.startContainer, hit.startOffset) : view.posAtCoords({ x: d.clientX, y: d.clientY }) ?? at;
+    }
+    const range = pasted ? view.state.selection.main : { from: at, to: at };
+    void (link !== null ? Promise.resolve(link) : opts.host.saveAttachments!(files, cur.sourcePath, pasted)).then((text) => {
+      if (!text) return;
+      view.dispatch({ changes: { from: range.from, to: range.to, insert: text }, selection: { anchor: range.from + text.length }, userEvent: pasted ? "input.paste" : "input.drop", scrollIntoView: true });
+    });
+    return true;
+  };
+
   const linkClicks = EditorView.domEventHandlers({
+    paste(e, view) { return intake(e, view, e.clipboardData, true); },
+    drop(e, view) { return intake(e, view, e.dataTransfer, false); },
     // On Linux the middle button pastes the primary selection on mouseup. A link click must not paste, and a paste
     // must not go through the webview's own handler (it deadlocks when this app owns the selection), so the host
     // reads the selection and it is inserted at the click position here.

@@ -40,6 +40,15 @@ export interface EditorHost {
    * pastes it at the click position through this instead of the webview's own paste, which can hang the page.
    */
   readPrimarySelection?(): Promise<string | null>;
+  /** Fired for paste and drop before the editor handles them, so the app can emit `editor-paste` / `editor-drop`; `preventDefault()` on the event cancels the default handling. */
+  editorEvent?(name: "editor-paste" | "editor-drop", e: ClipboardEvent | DragEvent, view: EditorView): void;
+  /**
+   * Store pasted or dropped files as attachments and return the links to insert (one per line). `pasted` is true for
+   * the clipboard, where an image has no real file name and gets a timestamped one.
+   */
+  /** The link to insert when a vault file (dragged from the file explorer) is dropped into the editor; null when `path` is not a file. */
+  linkForFile?(path: string, sourcePath: string): string | null;
+  saveAttachments?(files: File[], sourcePath: string, pasted: boolean): Promise<string>;
   /** Languages of fenced blocks that plugins render themselves (code-block processors). */
   codeBlockLanguages?(): string[];
   /** Render a whole fenced block (```lang ... ```) through the plugins' processors; the handle is unloaded with the widget. */

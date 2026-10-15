@@ -2,7 +2,7 @@
 // tab chrome (close, pin, drag-reorder, drop-to-split), resize handles, sidebar toggles, layout persistence.
 import { ipc } from "../ipc";
 import {
-  FileView, Menu, Notice, TextFileView, WorkspaceParent, WorkspaceSidedock, WorkspaceSplit, WorkspaceTabs, WorkspaceWindow,
+  FileView, Menu, Notice, Tasks, TextFileView, WorkspaceParent, WorkspaceSidedock, WorkspaceSplit, WorkspaceTabs, WorkspaceWindow,
   type App, type LayoutHost, type View, type WorkspaceItem, type WorkspaceLeaf, type WorkspaceWindowInitData,
 } from "../obsidian";
 import { setIcon } from "../obsidian/icons";
@@ -466,6 +466,10 @@ export class Shell implements LayoutHost {
   }
   /** Await every pending note save and write the layout (used before the window closes). */
   async flushAsync(): Promise<void> {
+    // `quit`: plugins add work (flush their data) through the Tasks object, and it is awaited before the window closes.
+    const tasks = new Tasks();
+    try { this.app.workspace.trigger("quit", tasks); } catch (e) { console.error(e); }
+    await Promise.race([tasks.promise().catch((e) => console.error(e)), new Promise((r) => setTimeout(r, 5000))]);
     const saves = this.app.workspace.allLeaves().map((l) => (l.view instanceof TextFileView ? l.view.save() : Promise.resolve()));
     await Promise.allSettled(saves);
     this.app.workspace.requestSaveLayout.cancel();

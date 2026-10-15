@@ -1,12 +1,13 @@
 // Glue between the Obsidian-API model (ui/src/obsidian) and the real renderers:
 // editor factory (CM6 Live Preview), reading-view markdown renderer, external links.
+import moment from "moment";
 import type { EditorView } from "@codemirror/view";
 import { createEditor, splitFence, type EditorHandle, type EditorHost, type EditorMode, type LinkTarget } from "../editor";
 import { renderMarkdown, type RenderContext } from "../markdown";
 import { ipc } from "../ipc";
 import { Component, MarkdownPreviewRenderer, MarkdownPreviewView, MarkdownRenderer, Menu, Platform, prepareFuzzySearch, type App } from "../obsidian";
 import { propertiesMode, renderPropertiesTable } from "./properties/embed";
-import { setEditorFactory } from "../obsidian/editor";
+import { editorInfoField, setEditorFactory } from "../obsidian/editor";
 import { createPostProcessorContext, runCodeBlockProcessor, setMarkdownRenderer } from "../obsidian/markdown";
 
 /** CM6 view -> handle of the real editor (mode switching, source path). */
@@ -18,6 +19,27 @@ export function openExternal(url: string): void {
 }
 
 /** Embeds of extensions with a creator in app.embedRegistry that the markdown renderer does not draw itself (canvas, plugin types). */
+/** Extensions the editor embeds (`![[…]]`) rather than links. */
+const EMBEDDABLE = /\.(png|jpe?g|gif|svg|webp|bmp|avif|mp3|wav|m4a|ogg|3gp|flac|opus|mp4|webm|ogv|mov|mkv|pdf)$/i;
+const MIME_EXT: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp", "image/svg+xml": "svg", "image/bmp": "bmp", "image/avif": "avif" };
+
+/** Store one pasted/dropped file in the vault's attachment folder and return the link to insert for it. */
+export async function saveAttachment(app: App, file: File, sourcePath: string, pasted: boolean): Promise<string> {
+  let name = file.name;
+  if (pasted && (!name || /^image\.[a-z0-9]+$/i.test(name))) {
+    const ext = MIME_EXT[file.type] ?? (name.split(".").pop() || "png");
+    name = `Pasted image ${moment().format("YYYYMMDDHHmmss")}.${ext}`;
+  }
+  const path = await app.fileManager.getAvailablePathForAttachment(name || "file", sourcePath);
+  const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+  if (dir && !app.vault.getFolderByPath(dir)) await app.vault.createFolder(dir).catch(() => {});
+  const saved = await app.vault.createBinary(path, await file.arrayBuffer());
+  const link = app.fileManager.generateMarkdownLink(saved, sourcePath);
+  // Markdown-style links: a pasted image has no alt text (it has no real name), a dropped file keeps its name.
+  const styled = pasted ? link.replace(/^(!?)\[[^\]]*\]\(/, "$1[](") : link;
+  return EMBEDDABLE.test(saved.path) && !styled.startsWith("!") ? "!" + styled : styled;
+}
+
 export function makeEditorHost(app: App): EditorHost {
   const md = (p: string) => app.vault.getFileByPath(p);
   return {
@@ -27,6 +49,21 @@ export function makeEditorHost(app: App): EditorHost {
     readFile: async (p) => { const f = md(p); return f ? app.vault.cachedRead(f) : app.vault.adapter.read(p); },
     openTag: (tag) => { void openTagSearch(app, tag); },
     openExternal,
+    editorEvent: (name, e, view) => {
+      const info = view.state.field(editorInfoField, false);
+      if (info) app.workspace.trigger(name, e, info.editor, info);
+    },
+    linkForFile: (path, sourcePath) => {
+      const f = app.vault.getFileByPath(path);
+      if (!f) return null;
+      const link = app.fileManager.generateMarkdownLink(f, sourcePath);
+      return EMBEDDABLE.test(f.path) && !link.startsWith("!") ? "!" + link : link;
+    },
+    saveAttachments: async (files, sourcePath, pasted) => {
+      const links: string[] = [];
+      for (const f of files) links.push(await saveAttachment(app, f, sourcePath, pasted));
+      return links.join("\n");
+    },
     // Only Linux has a primary selection; elsewhere the middle button does nothing special in the editor.
     readPrimarySelection: Platform.isLinux ? () => ipc.readPrimarySelection().catch(() => null) : undefined,
     save: (path) => {

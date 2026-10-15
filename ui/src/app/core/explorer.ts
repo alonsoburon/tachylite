@@ -291,6 +291,7 @@ export class FileExplorerView extends PanelView {
     if (!f) return;
     this.dragged = f;
     e.dataTransfer?.setData("text/plain", f.path);
+    e.dataTransfer?.setData("application/x-tachylite-vault-path", f.path); // lets an editor turn the drop into a link
     if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
     (e.target as HTMLElement).closest(".tree-item-self")?.addClass("is-being-dragged");
   }
