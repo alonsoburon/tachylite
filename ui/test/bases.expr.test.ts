@@ -37,6 +37,14 @@ function js(x: Value): unknown {
 }
 const run = (src: string, e?: EvalEnv) => js(ev(src, e));
 
+describe("string case", () => {
+  it("lower, upper and title change the case", () => {
+    expect(run('"Abc dEf".lower()')).toBe("abc def");
+    expect(run('"Abc dEf".upper()')).toBe("ABC DEF");
+    expect(run('"abc def".title()')).toBe("Abc Def");
+  });
+});
+
 describe("parser", () => {
   it("tokenizes numbers followed by method calls and regex literals", () => {
     expect(tokenize("1.isTruthy()").map((t) => t.k)).toEqual(["num", "op", "ident", "op", "op", "eof"]);

@@ -524,6 +524,7 @@ function stringMethod(s: string, name: string, args: Value[]): Value {
     case "endsWith": return new BooleanValue(s.endsWith(a[0] ?? ""));
     case "isEmpty": return new BooleanValue(s.length === 0);
     case "lower": return new StringValue(s.toLowerCase());
+    case "upper": return new StringValue(s.toUpperCase());
     case "title": return new StringValue(titleCase(s));
     case "trim": return new StringValue(s.trim());
     case "reverse": return new StringValue([...s].reverse().join(""));

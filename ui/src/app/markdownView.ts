@@ -65,6 +65,7 @@ export class TachyMarkdownView extends MarkdownView {
     this.editMode.sourceMode = this.app.vault.getConfig("livePreview") === false;
     this.sourceEl.toggleClass("is-live-preview", !this.editMode.sourceMode);
     this.cm.dispatch({ effects: setLivePreview.of(!this.editMode.sourceMode) });
+    this.registerDomEvent(this.sourceEl, "contextmenu", (e: MouseEvent) => this.showEditorMenu(e));
     const left = this.headerEl.querySelector<HTMLElement>(".view-header-left")!;
     const nav = left.createDiv({ cls: "view-header-nav-buttons" });
     this.backEl = nav.createDiv({ cls: "clickable-icon", attr: { "aria-label": "Navigate back" } });
@@ -102,6 +103,42 @@ export class TachyMarkdownView extends MarkdownView {
     this.app.workspace.trigger("layout-change");
     if (mode === "source" && this.leaf === this.app.workspace.activeLeaf) setTimeout(() => this.editor.focus(), 0);
   }
+  /** The editor's right-click menu: clipboard, formatting, paragraph and insert actions, then whatever plugins add on `editor-menu`. */
+  private showEditorMenu(e: MouseEvent): void {
+    const target = e.target as HTMLElement | null;
+    // The properties table, inline title, embedded widgets and tables keep their own handling.
+    if (!target?.closest(".cm-content") || target.closest(".metadata-container, .inline-title, .cm-embed-block, .cm-table-widget, input, textarea")) return;
+    e.preventDefault();
+    const app = this.app, ed = this.editor, menu = new Menu();
+    const run = (id: string) => () => { ed.focus(); app.commands.executeCommandById(id); };
+    const link = target.closest<HTMLElement>(".cm-hmd-internal-link[data-href]");
+    if (link && this.file) {
+      app.workspace.handleLinkContextMenu(menu, link.getAttribute("data-href") ?? "", this.file.path, this.leaf);
+      menu.addSeparator();
+    }
+    const hasSel = ed.somethingSelected();
+    menu.addItem((i) => i.setSection("link").setTitle("Add link").setIcon("lucide-link").onClick(run("editor:insert-wikilink")));
+    menu.addItem((i) => i.setSection("clipboard").setTitle("Cut").setIcon("lucide-scissors").setDisabled(!hasSel).onClick(() => { ed.focus(); document.execCommand("cut"); }));
+    menu.addItem((i) => i.setSection("clipboard").setTitle("Copy").setIcon("lucide-copy").setDisabled(!hasSel).onClick(() => { ed.focus(); document.execCommand("copy"); }));
+    menu.addItem((i) => i.setSection("clipboard").setTitle("Paste").setIcon("lucide-clipboard-paste").onClick(() => {
+      navigator.clipboard?.readText().then((t) => { if (t) { ed.focus(); ed.replaceSelection(t); } }).catch(() => new Notice("Paste is not available here; use the keyboard shortcut."));
+    }));
+    menu.addItem((i) => i.setSection("clipboard").setTitle("Select all").setIcon("lucide-text-select").onClick(() => { ed.focus(); ed.setSelection({ line: 0, ch: 0 }, { line: ed.lastLine(), ch: ed.getLine(ed.lastLine()).length }); }));
+    const sub = (title: string, icon: string, items: [string, string][]) => menu.addItem((i) => {
+      i.setSection("format").setTitle(title).setIcon(icon);
+      const m = i.setSubmenu();
+      for (const [name, id] of items) m.addItem((j) => j.setTitle(name).onClick(run(id)));
+    });
+    sub("Format", "lucide-bold", [["Bold", "editor:toggle-bold"], ["Italic", "editor:toggle-italics"], ["Strikethrough", "editor:toggle-strikethrough"], ["Highlight", "editor:toggle-highlight"], ["Code", "editor:toggle-code"]]);
+    sub("Paragraph", "lucide-pilcrow", [
+      ["Bullet list", "editor:toggle-bullet-list"], ["Numbered list", "editor:toggle-numbered-list"], ["Task list", "editor:toggle-checklist-status"], ["Quote", "editor:toggle-blockquote"],
+      ...[1, 2, 3, 4, 5, 6].map((n): [string, string] => [`Heading ${n}`, `editor:set-heading-${n}`]), ["Remove heading", "editor:set-heading-0"],
+    ]);
+    sub("Insert", "lucide-plus", [["Callout", "editor:insert-callout"], ["Code block", "editor:insert-codeblock"], ["Horizontal rule", "editor:insert-horizontal-rule"], ["Table", "editor:insert-table"], ["Math block", "editor:insert-mathblock"], ["Embed", "editor:insert-embed"], ["Tag", "editor:insert-tag"]]);
+    app.workspace.trigger("editor-menu", menu, ed, this);
+    menu.showAtMouseEvent(e);
+  }
+
   private updateModeAction(): void {
     const reading = this.getMode() === "preview";
     if (!this.modeActionEl) return;

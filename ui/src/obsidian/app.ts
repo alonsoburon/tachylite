@@ -151,7 +151,10 @@ export class App {
       this.hotkeyManager.handleKeydown(e);
     };
     doc.addEventListener("keydown", key);
+    const resize = () => this.workspace.trigger("resize");
+    doc.defaultView?.addEventListener("resize", resize);
     return () => {
+      doc.defaultView?.removeEventListener("resize", resize);
       for (const t of ["click", "mousedown", "keydown", "contextmenu", "pointerdown"]) doc.removeEventListener(t, track, true);
       doc.removeEventListener("keydown", key);
     };
