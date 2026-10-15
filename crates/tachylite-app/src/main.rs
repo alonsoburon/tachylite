@@ -515,6 +515,22 @@ fn log_frontend(level: String, message: String) {
     }
 }
 
+/// Open a vault file with the system's default app, or show it in the system file manager (`reveal`). The path is
+/// vault-relative and may not leave the vault.
+#[tauri::command]
+fn open_in_system(state: State<App>, path: String, reveal: bool) -> Res<()> {
+    let root = root_of(&state)?;
+    let rel = std::path::Path::new(&path);
+    if rel.is_absolute() || rel.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+        return Err("path is outside the vault".into());
+    }
+    let full = root.join(rel);
+    if !full.exists() {
+        return Err(format!("{path} does not exist"));
+    }
+    bridge::system_open(&full, reveal)
+}
+
 /// The X11/Wayland primary selection: the text last selected anywhere, which a middle-click pastes. The page can't
 /// read it without a blocking round trip that deadlocks the web process when this app itself owns the selection
 /// (the shell then asks the page for its selection while the page waits on the shell), so the editor fetches it here,
@@ -692,6 +708,7 @@ fn main() {
             platform::deep_link_take,
             quit_app,
             set_zoom,
+            open_in_system,
             read_primary_selection,
             dev_screenshot,
             dev_request_close,

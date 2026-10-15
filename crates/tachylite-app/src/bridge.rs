@@ -1115,13 +1115,17 @@ pub fn bridge_open_path(bridge: State<Bridge>, path: String, reveal: Option<bool
     if !p.exists() {
         return Err(NodeErr::new("ENOENT", "open", Some(&p)).to_json());
     }
-    let reveal = reveal.unwrap_or(false);
+    system_open(&p, reveal.unwrap_or(false))
+}
+
+/// Open `p` with the system's default app, or (`reveal`) show it in the system file manager.
+pub fn system_open(p: &Path, reveal: bool) -> Res<()> {
     let mut cmd = if cfg!(target_os = "macos") {
         let mut c = Command::new("open");
         if reveal {
             c.arg("-R");
         }
-        c.arg(&p);
+        c.arg(p);
         c
     } else if cfg!(windows) {
         let mut c = Command::new("explorer");
@@ -1132,12 +1136,12 @@ pub fn bridge_open_path(bridge: State<Bridge>, path: String, reveal: Option<bool
             #[cfg(not(windows))]
             c.arg(format!("/select,{}", p.display()));
         } else {
-            c.arg(&p);
+            c.arg(p);
         }
         c
     } else {
         let mut c = Command::new("xdg-open");
-        c.arg(if reveal { p.parent().unwrap_or(&p) } else { &p });
+        c.arg(if reveal { p.parent().unwrap_or(p) } else { p });
         c
     };
     cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().map(|_| ()).map_err(|e| e.to_string())

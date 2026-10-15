@@ -130,6 +130,8 @@ export const ipc = {
   // launch / diagnostics
   launchArgs: () => call<{ vault: string | null; script: string | null }>("launch_args"),
   quitApp: () => call<void>("quit_app"),
+  /** Open a vault file with the default app, or reveal it in the system file manager. */
+  openInSystem: (path: string, reveal: boolean) => call<void>("open_in_system", { path, reveal }),
   setZoom: (factor: number) => call<void>("set_zoom", { factor }),
   /** Linux primary selection (the text last selected anywhere); null when empty or not Linux. */
   readPrimarySelection: () => call<string | null>("read_primary_selection"),

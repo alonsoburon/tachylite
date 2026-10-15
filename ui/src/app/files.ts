@@ -1,5 +1,6 @@
 // File-level operations shared by the explorer, commands and views (create / rename / delete / move / menus).
-import { Menu, Notice, TFile, TFolder, type App, type TAbstractFile } from "../obsidian";
+import { ipc } from "../ipc";
+import { Menu, Notice, Platform, TFile, TFolder, type App, type TAbstractFile } from "../obsidian";
 import { confirmDialog, promptText } from "./dialogs";
 
 const ILLEGAL = /[\\/:*?"<>|]/;
@@ -117,6 +118,9 @@ export function buildFileMenu(app: App, file: TAbstractFile, source: string, men
     menu.addItem((i) => i.setSection("action").setTitle("New folder").setIcon("lucide-folder-plus").onClick(() => { void newFolder(app, file as TFolder); }));
   }
   if (isFile) menu.addItem((i) => i.setSection("action").setTitle("Make a copy").setIcon("lucide-copy").onClick(() => { void duplicateFile(app, file).catch((e) => new Notice(String(e.message ?? e))); }));
+  const sys = (reveal: boolean) => () => { void ipc.openInSystem(file.path, reveal).catch((e) => new Notice(String(e?.message ?? e))); };
+  if (isFile) menu.addItem((i) => i.setSection("system").setTitle("Open in default app").setIcon("lucide-external-link").onClick(sys(false)));
+  menu.addItem((i) => i.setSection("system").setTitle(Platform.isMacOS ? "Reveal in Finder" : Platform.isWin ? "Show in system explorer" : "Show in system file manager").setIcon("lucide-folder-open").onClick(sys(true)));
   menu.addItem((i) => i.setSection("system").setTitle("Copy path from vault folder").setIcon("lucide-clipboard").onClick(() => copyText(file.path)));
   if (source !== "file-explorer") menu.addItem((i) => i.setSection("system").setTitle("Reveal file in navigation").setIcon("lucide-folder-search").onClick(() => revealInExplorer(app, file)));
   menu.addItem((i) => i.setSection("danger").setTitle("Rename...").setIcon("lucide-pencil").onClick(() => { void promptRename(app, file); }));

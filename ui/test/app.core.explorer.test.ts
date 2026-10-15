@@ -172,3 +172,64 @@ describe("file explorer", () => {
     expect(c.app.viewRegistry.getViewCreatorByType("file-explorer")).toBeTruthy();
   });
 });
+
+describe("file explorer multi-selection", () => {
+  const click = (v: FileExplorerView, p: string, init: MouseEventInit = {}) => title(v, p).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, ...init }));
+  const selected = (v: FileExplorerView) => Array.from(v.filesEl.querySelectorAll<HTMLElement>(".is-selected")).map((t) => t.dataset.path);
+
+  it("shift-click selects the visible range, ctrl-click then toggles, and a plain click clears it", async () => {
+    const v = await open();
+    click(v, "Alpha.md");
+    click(v, "img.png", { shiftKey: true });
+    expect(selected(v)).toEqual(["Alpha.md", "Beta.md", "img.png"]);
+    click(v, "Beta.md", { ctrlKey: true }); // toggles off while a selection exists (instead of opening a tab)
+    expect(selected(v)).toEqual(["Alpha.md", "img.png"]);
+    click(v, "z.canvas", { ctrlKey: true });
+    expect(selected(v)).toEqual(["Alpha.md", "img.png", "z.canvas"]);
+    click(v, "Beta.md");
+    expect(selected(v)).toEqual([]);
+  });
+
+  it("the context menu on a selection is the bulk menu, and plugins extend it through files-menu", async () => {
+    const v = await open();
+    const seen: unknown[] = [];
+    c.app.workspace.on("files-menu", (menu: any, files: any[], source: string) => { seen.push([files.map((f) => f.path), source]); menu.addItem((i: any) => i.setTitle("Plugin bulk item")); });
+    click(v, "Alpha.md"); click(v, "Beta.md", { shiftKey: true });
+    title(v, "Beta.md").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    const items = () => Array.from(document.querySelectorAll(".menu .menu-item-title")).map((e) => e.textContent);
+    await vi.waitFor(() => expect(items()).toContain("Plugin bulk item"));
+    expect(items()).toContain("Delete 2 items");
+    expect(items()).not.toContain("Rename...");
+    expect(seen).toEqual([[["Alpha.md", "Beta.md"], "file-explorer"]]);
+  });
+
+  it("deletes the whole selection after one confirmation", async () => {
+    const v = await open();
+    c.app.vault.setConfig("promptDelete", false);
+    click(v, "Alpha.md"); click(v, "Beta.md", { shiftKey: true });
+    v.filesEl.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(c.app.vault.getAbstractFileByPath("Alpha.md")).toBeNull());
+    expect(c.app.vault.getAbstractFileByPath("Beta.md")).toBeNull();
+    expect(c.app.vault.getAbstractFileByPath("img.png")).not.toBeNull();
+  });
+});
+
+describe("file menu system actions", () => {
+  it("offers Open in default app for files and Show in system file manager for everything, through the vault-scoped command", async () => {
+    const calls: unknown[] = [];
+    const { setBackend } = await import("../src/ipc");
+    setBackend(async (cmd: string, a: any) => { if (cmd === "open_in_system") { calls.push([a.path, a.reveal]); return null; } return null; });
+    const { buildFileMenu } = await import("../src/app/files");
+    const file = c.app.vault.getFileByPath("Alpha.md")!;
+    const menu = buildFileMenu(c.app, file, "file-explorer");
+    const item = (t: string) => menu.items.find((i: any) => i.titleEl?.textContent === t || i.title === t) as any;
+    const titlesOf = menu.items.map((i: any) => i.titleEl?.textContent ?? i.title);
+    expect(titlesOf).toEqual(expect.arrayContaining(["Open in default app", expect.stringMatching(/Show in system|Reveal in Finder/)]));
+    item("Open in default app").dom.click();
+    item(titlesOf.find((t: string) => /Show in system|Reveal/.test(t))!).dom.click();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(calls).toEqual([["Alpha.md", false], ["Alpha.md", true]]);
+    const folder = buildFileMenu(c.app, c.app.vault.getFolderByPath("docs")!, "file-explorer");
+    expect(folder.items.map((i: any) => i.titleEl?.textContent ?? i.title)).not.toContain("Open in default app");
+  });
+});

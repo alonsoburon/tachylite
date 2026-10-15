@@ -1,5 +1,6 @@
 // File explorer core view ("file-explorer"): the vault tree, built on the public API only.
 import { Keymap, Menu, Notice, TFile, TFolder, setIcon, type App, type TAbstractFile, type WorkspaceLeaf } from "../../obsidian";
+import { confirmDialog } from "../dialogs";
 import { buildFileMenu, deleteWithPrompt, moveInto, newFolder, newNote, promptRename, renameTo } from "../files";
 import { addCommand, openFile, PanelView, whileCoreEnabled, type CoreModule } from "./util";
 import { collapseIcon, fileLabel, naturalCompare, navButton, navHeader } from "./panel";
@@ -37,6 +38,9 @@ export class FileExplorerView extends PanelView {
   focusPath: string | null = null;
   activePath: string | null = null;
   private dragged: TAbstractFile | null = null;
+  /** Multi-selection (Shift+click for a range, Ctrl/Cmd+click to toggle once one exists), by path, and the range anchor. */
+  private selection = new Set<string>();
+  private anchor: string | null = null;
   private renaming = false;
 
   constructor(leaf: WorkspaceLeaf) {
@@ -100,7 +104,10 @@ export class FileExplorerView extends PanelView {
   private onClick(e: MouseEvent): void {
     if (this.renaming && (e.target as HTMLElement).closest(".is-being-renamed")) return;
     const f = this.entry(this.pathOf(e.target));
-    if (!f) { this.filesEl.focus(); return; }
+    if (!f) { this.clearSelection(); this.filesEl.focus(); return; }
+    if (e.button === 0 && (e.shiftKey || (this.selection.size > 0 && Keymap.isModifier(e, "Mod")))) { this.extendSelection(f, e); return; }
+    this.clearSelection();
+    this.anchor = f.path;
     this.setFocus(f.path);
     if (f instanceof TFolder) this.toggleFolder(f);
     else if (f instanceof TFile) void openFile(this.app, f, e);
@@ -109,7 +116,8 @@ export class FileExplorerView extends PanelView {
   private onContext(e: MouseEvent): void {
     e.preventDefault();
     const f = this.entry(this.pathOf(e.target));
-    if (f) { this.setFocus(f.path); buildFileMenu(this.app, f, "file-explorer").showAtMouseEvent(e); return; }
+    if (f && this.selection.size > 1 && this.selection.has(f.path)) { this.selectionMenu().showAtMouseEvent(e); return; }
+    if (f) { this.clearSelection(); this.setFocus(f.path); buildFileMenu(this.app, f, "file-explorer").showAtMouseEvent(e); return; }
     const root = this.app.vault.getRoot();
     const menu = new Menu()
       .addItem((i) => i.setSection("action").setTitle("New note").setIcon("lucide-edit").onClick(() => { void newNote(this.app, { folder: root }); }))
@@ -117,6 +125,56 @@ export class FileExplorerView extends PanelView {
     // Core and community plugins add their entries for the vault root too ("New canvas", ...).
     this.app.workspace.trigger("file-menu", menu, root, "file-explorer", this.leaf);
     menu.showAtMouseEvent(e);
+  }
+
+  // ------------------------------------------------------------------ multi-selection
+  private selected(): TAbstractFile[] {
+    return [...this.selection].map((p) => this.entry(p)).filter((x): x is TAbstractFile => !!x);
+  }
+  private applySelection(): void {
+    for (const t of this.titles()) t.toggleClass("is-selected", this.selection.has(t.dataset.path ?? ""));
+  }
+  private clearSelection(): void {
+    if (!this.selection.size) return;
+    this.selection.clear();
+    this.applySelection();
+  }
+  /** Shift+click selects the visible range from the anchor; Ctrl/Cmd+click toggles one entry. */
+  private extendSelection(f: TAbstractFile, e: MouseEvent): void {
+    const paths = this.titles().map((t) => t.dataset.path ?? "");
+    if (e.shiftKey) {
+      const a = paths.indexOf(this.anchor ?? this.focusPath ?? f.path), b = paths.indexOf(f.path);
+      const [from, to] = a < 0 || b < 0 ? [Math.max(b, 0), Math.max(b, 0)] : [Math.min(a, b), Math.max(a, b)];
+      this.selection = new Set(paths.slice(from, to + 1));
+    } else {
+      if (this.selection.has(f.path)) this.selection.delete(f.path); else this.selection.add(f.path);
+      this.anchor = f.path;
+    }
+    this.setFocus(f.path);
+    this.applySelection();
+  }
+  /** The menu for several selected entries: bulk actions, then whatever plugins add on `files-menu`. */
+  private selectionMenu(): Menu {
+    const files = this.selected();
+    const menu = new Menu();
+    const n = files.length;
+    menu.addItem((i) => i.setSection("danger").setTitle(`Delete ${n} items`).setIcon("lucide-trash-2").setWarning(true).onClick(() => { void this.deleteSelected(); }));
+    this.app.workspace.trigger("files-menu", menu, files, "file-explorer", this.leaf);
+    return menu;
+  }
+  private async deleteSelected(): Promise<void> {
+    // Entries inside a selected folder go with it, so only the top-most ones are deleted.
+    const files = this.selected().filter((f) => !this.selected().some((o) => o !== f && o instanceof TFolder && f.path.startsWith(o.path + "/")));
+    if (!files.length) return;
+    if (this.app.vault.getConfig("promptDelete") !== false) {
+      const ok = await confirmDialog(this.app, { title: "Delete items", message: `Are you sure you want to delete these ${files.length} items?`, cta: "Delete", warning: true });
+      if (!ok) return;
+    }
+    for (const f of files) {
+      try { await this.app.fileManager.trashFile(f); }
+      catch (err) { new Notice(`Couldn't delete "${f.name}": ${(err as Error)?.message ?? err}`); }
+    }
+    this.clearSelection();
   }
 
   private onKey(e: KeyboardEvent): void {
@@ -134,7 +192,9 @@ export class FileExplorerView extends PanelView {
         break;
       case "Enter": if (cur instanceof TFile) { e.preventDefault(); void openFile(this.app, cur, e); } else if (cur instanceof TFolder) { e.preventDefault(); this.toggleFolder(cur); } break;
       case "F2": if (cur) { e.preventDefault(); this.startRename(cur); } break;
+      case "Escape": if (this.selection.size) { e.preventDefault(); this.clearSelection(); } break;
       case "Delete": case "Backspace":
+        if (this.selection.size > 1 && (e.key === "Delete" || Keymap.isModifier(e, "Mod"))) { e.preventDefault(); void this.deleteSelected(); break; }
         if (cur && (e.key === "Delete" || Keymap.isModifier(e, "Mod"))) { e.preventDefault(); void deleteWithPrompt(this.app, cur).catch((err) => new Notice(String(err.message ?? err))); }
         break;
     }
@@ -159,6 +219,8 @@ export class FileExplorerView extends PanelView {
     this.renderChildren(this.app.vault.getRoot(), this.filesEl);
     this.filesEl.scrollTop = top;
     this.syncState();
+    for (const p of [...this.selection]) if (!this.entry(p)) this.selection.delete(p);
+    this.applySelection();
   }
 
   private visible(f: TAbstractFile): boolean {
