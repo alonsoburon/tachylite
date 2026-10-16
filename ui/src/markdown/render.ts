@@ -156,6 +156,14 @@ function sectionClass(first: Token): string {
   }
 }
 
+const CONTAINER = "details|div|section|aside|figure|center|blockquote|fieldset";
+/** How many HTML container elements an html_block opens without closing (negative if it only closes). */
+function unclosedContainers(html: string): number {
+  const open = (html.match(new RegExp(`<(?:${CONTAINER})(?=[\\s>])[^>]*(?<!/)>`, "gi")) ?? []).length;
+  const close = (html.match(new RegExp(`</(?:${CONTAINER})\\s*>`, "gi")) ?? []).length;
+  return open - close;
+}
+
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
 function sanitize(root: HTMLElement): void {
@@ -206,9 +214,23 @@ async function renderInternal(md: string, el: HTMLElement, ctx: RenderContext, s
       j = i + 1;
       while (j < tokens.length && !(tokens[j].nesting === -1 && tokens[j].level === t.level)) j++;
     }
-    const slice = tokens.slice(i, j + 1);
-    const html = mdIt.renderer.render(slice, mdIt.options, env);
+    let html = mdIt.renderer.render(tokens.slice(i, j + 1), mdIt.options, env);
     i = j + 1;
+    // An HTML container left open (e.g. <details>) swallows the blocks after it up to its closing tag, so Markdown inside renders.
+    if (t.type === "html_block") {
+      let open = unclosedContainers(t.content);
+      let last = t;
+      while (open > 0 && i < tokens.length) {
+        const n = tokens[i];
+        let k = i;
+        if (n.nesting === 1) { k = i + 1; while (k < tokens.length && !(tokens[k].nesting === -1 && tokens[k].level === n.level)) k++; }
+        html += mdIt.renderer.render(tokens.slice(i, k + 1), mdIt.options, env);
+        if (n.type === "html_block") open += unclosedContainers(n.content);
+        last = n;
+        i = k + 1;
+      }
+      if (last !== t && t.map && last.map) t.map = [t.map[0], last.map[1]];
+    }
     if (!html.trim()) continue;
     const sec = document.createElement("div");
     sec.className = "markdown-preview-section " + sectionClass(t);

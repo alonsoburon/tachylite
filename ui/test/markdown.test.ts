@@ -321,3 +321,20 @@ describe("image embed sizes", () => {
     ]);
   });
 });
+
+describe("html containers spanning blank lines", () => {
+  it("renders Markdown inside <details> that is split by blank lines", async () => {
+    const { el } = await render("<details><summary>S</summary>\n\ninner **b**\n\n- item\n\n</details>\n\nafter");
+    const d = el.querySelector("details")!;
+    expect(d.querySelector("summary")!.textContent).toBe("S");
+    expect(d.querySelector("strong")!.textContent).toBe("b");
+    expect(d.querySelector("li")!.textContent).toBe("item");
+    expect(el.querySelectorAll("details").length).toBe(1);
+    expect(el.textContent).toContain("after");
+    expect(d.textContent).not.toContain("after");
+  });
+  it("leaves balanced html blocks alone", async () => {
+    const { el } = await render("<div>a</div>\n\nplain");
+    expect(el.querySelectorAll(".markdown-preview-section").length).toBe(2);
+  });
+});
