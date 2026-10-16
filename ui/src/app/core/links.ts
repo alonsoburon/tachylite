@@ -421,24 +421,46 @@ export class OutgoingLinksView extends FollowView {
   }
 }
 
-function paneModule(id: string, type: string, make: (leaf: WorkspaceLeaf) => any, commands: [string, string, string][]): CoreModule {
+function paneModule(id: string, type: string, make: (leaf: WorkspaceLeaf) => any, commands: [string, string, string][], extra?: (app: App) => () => void): CoreModule {
   return {
     id,
     install(app: App) {
       app.viewRegistry.registerView(type, make);
       const stop = whileCoreEnabled(app, id, () => {
         const offs = commands.map(([cid, name, icon]) => addCommand(app, { id: cid, name, icon, callback: () => { void activateView(app, type, "right"); } }));
-        return () => { offs.forEach((o) => o()); app.workspace.detachLeavesOfType(type); };
+        const offExtra = extra?.(app);
+        return () => { offs.forEach((o) => o()); offExtra?.(); app.workspace.detachLeavesOfType(type); };
       });
       return () => { stop(); app.viewRegistry.unregisterView(type); };
     },
   };
 }
 
+/** Status bar entry "N backlinks" for the active note; clicking it opens the Backlinks view. */
+function backlinkStatus(app: App): () => void {
+  const item = app.statusBarEl.createDiv({ cls: "status-bar-item plugin-backlink mod-clickable" });
+  item.hide();
+  const render = () => {
+    const file = app.workspace.getActiveFile();
+    item.toggle(!!file && file.extension === "md");
+    if (!file) return;
+    let n = 0;
+    for (const refs of app.metadataCache.getBacklinksForFile(file).data.values()) n += refs.length;
+    item.setText(`${n.toLocaleString()} backlink${n === 1 ? "" : "s"}`);
+  };
+  item.addEventListener("click", () => { void activateView(app, BACKLINK_VIEW, "right"); });
+  const ws = app.workspace;
+  const refs = [ws.on("file-open", render), ws.on("active-leaf-change", render), ws.on("layout-change", render)];
+  const mc = app.metadataCache.on("resolved", render);
+  const changed = app.metadataCache.on("changed", render);
+  render();
+  return () => { refs.forEach((r) => ws.offref(r)); app.metadataCache.offref(mc); app.metadataCache.offref(changed); item.detach(); };
+}
+
 export const backlinks: CoreModule = paneModule("backlink", BACKLINK_VIEW, (l) => new BacklinksView(l), [
   ["backlink:open", "Backlinks: Show backlinks", "lucide-links-coming-in"],
   ["backlink:open-backlinks", "Backlinks: Open backlinks for the current note", "lucide-links-coming-in"],
-]);
+], backlinkStatus);
 export const outgoingLinks: CoreModule = paneModule("outgoing-link", OUTGOING_VIEW, (l) => new OutgoingLinksView(l), [
   ["outgoing-link:open", "Outgoing links: Show outgoing links", "lucide-links-going-out"],
   ["outgoing-link:open-for-current", "Outgoing links: Open outgoing links for the current note", "lucide-links-going-out"],
