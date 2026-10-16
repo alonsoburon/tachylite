@@ -82,3 +82,34 @@ describe("other workspace commands", () => {
     await vi.waitFor(() => expect(opened).toEqual(["https://github.com/alonsoburon/tachylite/releases"]));
   });
 });
+
+describe("focus on a neighbouring tab group", () => {
+  const rect = (x: number, y: number, w: number, h: number) => ({ left: x, top: y, width: w, height: h, right: x + w, bottom: y + h, x, y, toJSON() {} }) as DOMRect;
+
+  it("moves between side-by-side and stacked groups by their position, and is unavailable at the edge", async () => {
+    const app = await boot();
+    await app.workspace.openLinkText("A", "", false);
+    app.commands.executeCommandById("workspace:split-vertical");           // a group to the right
+    await vi.waitFor(() => expect(new Set(app.workspace.getLeavesOfType("markdown").map((l: any) => l.parent)).size).toBe(2));
+    const groups = [...new Set(app.workspace.getLeavesOfType("markdown").map((l: any) => l.parent))] as any[];
+    const [left, right] = groups.sort((a, b) => a.parent.children.indexOf(a) - b.parent.children.indexOf(b));
+    left.containerEl.getBoundingClientRect = () => rect(0, 0, 400, 600);
+    right.containerEl.getBoundingClientRect = () => rect(400, 0, 400, 600);
+    app.workspace.setActiveLeaf(left.children[0], { focus: true });
+    expect(app.commands.executeCommandById("workspace:focus-left")).toBe(false);   // nothing further left in the main area
+    expect(app.commands.executeCommandById("workspace:focus-top")).toBe(false);
+    expect(app.commands.executeCommandById("workspace:focus-right")).toBe(true);
+    expect(app.workspace.activeLeaf!.parent).toBe(right);
+    expect(app.commands.executeCommandById("workspace:focus-left")).toBe(true);
+    expect(app.workspace.activeLeaf!.parent).toBe(left);
+    expect(app.commands.findCommand("workspace:focus-top")?.name).toBe("Focus on tab group above");
+    expect(app.commands.findCommand("workspace:focus-bottom")?.name).toBe("Focus on tab group below");
+    // Stack them instead: the same groups, now one above the other.
+    left.containerEl.getBoundingClientRect = () => rect(0, 0, 800, 300);
+    right.containerEl.getBoundingClientRect = () => rect(0, 300, 800, 300);
+    expect(app.commands.executeCommandById("workspace:focus-bottom")).toBe(true);
+    expect(app.workspace.activeLeaf!.parent).toBe(right);
+    expect(app.commands.executeCommandById("workspace:focus-top")).toBe(true);
+    expect(app.workspace.activeLeaf!.parent).toBe(left);
+  });
+});

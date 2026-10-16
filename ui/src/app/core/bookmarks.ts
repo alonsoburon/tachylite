@@ -1,10 +1,12 @@
 // Bookmarks core view ("bookmarks"): items persisted to .obsidian/bookmarks.json in Obsidian's format.
-import { Events, Menu, Notice, TFile, TFolder, type App, type TAbstractFile, type WorkspaceLeaf } from "../../obsidian";
+import moment from "moment";
+import { Events, FileView, Menu, Notice, TFile, TFolder, WorkspaceWindow, type App, type TAbstractFile, type WorkspaceLeaf } from "../../obsidian";
 import { ipc } from "../../ipc";
 import { promptText } from "../dialogs";
 import { revealInExplorer } from "../files";
 import { activateView, addCommand, openFile, PanelView, whileCoreEnabled, type CoreModule } from "./util";
 import { collapseIcon, navButton, navHeader } from "./panel";
+import { SearchView } from "./search";
 import { setIcon } from "../../obsidian";
 
 export const BOOKMARKS_VIEW = "bookmarks";
@@ -295,6 +297,34 @@ export const bookmarks: CoreModule = {
             const f = app.workspace.getActiveFile();
             if (!f) return false;
             if (!checking) store.toggleFile(f);
+            return true;
+          },
+        }),
+        addCommand(app, {
+          id: "bookmarks:bookmark-all-tabs", name: "Bookmarks: Bookmark all tabs", icon: "lucide-bookmarks",
+          checkCallback: (checking) => {
+            // The files open in the main area (and popouts), once each, in tab order.
+            const files: TFile[] = [];
+            app.workspace.iterateAllLeaves((l) => {
+              const r = l.getRoot();
+              const f = l.view instanceof FileView ? l.view.file : null;
+              if (f && (r === app.workspace.rootSplit || r instanceof WorkspaceWindow) && !files.includes(f)) files.push(f);
+            });
+            if (!files.length) return false;
+            if (!checking) {
+              const group = store.newGroup(moment().format("YYYY-MM-DD HH:mm"));
+              for (const f of files) store.addItem({ type: "file", title: "", path: f.path }, group);
+            }
+            return true;
+          },
+        }),
+        addCommand(app, {
+          id: "bookmarks:bookmark-current-search", name: "Bookmarks: Bookmark current search", icon: "lucide-bookmark-plus",
+          checkCallback: (checking) => {
+            const v = app.workspace.getActiveViewOfType(SearchView);
+            const query = v?.query.trim();
+            if (!query) return false;
+            if (!checking && !store.findItem((i) => i.type === "search" && i.query === query)) store.addItem({ type: "search", title: "", query });
             return true;
           },
         }),

@@ -121,6 +121,37 @@ export function installCommands(app: App, history: History): () => void {
     if (!c) new FolderPicker(app, f).open();
     return true;
   } });
+  // Focus the nearest tab group (main area or sidebars) in a direction, judged by where the groups are on screen.
+  type Dir = "left" | "right" | "top" | "bottom";
+  const focusGroup = (dir: Dir) => (checking: boolean) => {
+    const from = mainTabs()?.tabs ?? (ws.activeLeaf?.parent instanceof WorkspaceTabs ? ws.activeLeaf.parent : null);
+    if (!from) return false;
+    const a = from.containerEl.getBoundingClientRect();
+    const horizontal = dir === "left" || dir === "right";
+    let best: WorkspaceTabs | null = null, bestScore = Infinity;
+    const seen = new Set<WorkspaceTabs>();
+    ws.iterateAllLeaves((l) => {
+      const t = l.parent;
+      if (!(t instanceof WorkspaceTabs) || t === from || seen.has(t)) return;
+      seen.add(t);
+      const r = t.containerEl.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return;
+      // The candidate must lie on that side and share some of the other axis with the current group.
+      const gap = dir === "left" ? a.left - r.right : dir === "right" ? r.left - a.right : dir === "top" ? a.top - r.bottom : r.top - a.bottom;
+      const overlap = horizontal ? Math.min(a.bottom, r.bottom) - Math.max(a.top, r.top) : Math.min(a.right, r.right) - Math.max(a.left, r.left);
+      if (gap < -1 || overlap <= 0) return;
+      const score = Math.max(gap, 0) * 10000 - overlap; // nearest first, the better-aligned one on a tie
+      if (score < bestScore) { best = t; bestScore = score; }
+    });
+    const target = best as WorkspaceTabs | null;
+    if (!target) return false;
+    if (!checking) { const l = (target.children[target.currentTab] ?? target.children[0]) as WorkspaceLeaf; ws.setActiveLeaf(l, { focus: true }); }
+    return true;
+  };
+  const FOCUS_NAMES: Record<Dir, string> = { left: "to the left", right: "to the right", top: "above", bottom: "below" };
+  for (const dir of ["left", "right", "top", "bottom"] as Dir[]) {
+    add({ id: `workspace:focus-${dir}`, name: `Focus on tab group ${FOCUS_NAMES[dir]}`, checkCallback: focusGroup(dir) });
+  }
   add({ id: "workspace:close-others", name: "Close other tabs", checkCallback: (c) => { const t = mainTabs(); if (!t) return false; if (!c) for (const l of [...t.tabs.children] as WorkspaceLeaf[]) if (l !== t.leaf && !l.pinned) l.detach(); return true; } });
 
   // ---- markdown view modes
