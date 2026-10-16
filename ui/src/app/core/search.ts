@@ -15,19 +15,24 @@ interface Hit { path: string; lines: [number, string][] }
 const MAX_FILES = 200;
 const SNIPPET = 220;
 
-/** Words/phrases of a query that should be highlighted in match lines (operators, negations and OR are dropped). */
+/** Operators whose argument is text to highlight; the others (file, path, tag, property) match metadata, not lines. */
+const TEXT_OPS = new Set(["content", "line", "block", "section", "task", "task-todo", "task-done", "match-case", "ignore-case"]);
+
+/** Words/phrases of a query that should be highlighted in match lines (metadata operators, negations, regexes and OR are dropped). */
 export function highlightTerms(query: string): string[] {
   const out: string[] = [];
-  const re = /(-?)(?:(\w+):)?(?:"([^"]*)"|(\S+))/g;
+  // Negated groups and [property:value] filters never produce match lines; /regex/ terms are left unhighlighted.
+  const q = query.replace(/-\([^()]*\)/g, " ").replace(/(?:property:)?\[[^\]]*\]/g, " ").replace(/(?:^|\s|\()(?:\w[\w-]*:)?\/(?:\\.|[^/\\])+\//g, " ");
+  const re = /(-?)(?:(\w[\w-]*):)?(?:"([^"]*)"|(\S+))/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(query))) {
+  while ((m = re.exec(q))) {
     const [, neg, op, quoted, bare] = m;
     if (neg) continue;
-    const v = (quoted ?? bare ?? "").replace(/^\(|\)$/g, "");
+    const v = (quoted ?? bare ?? "").replace(/^\(+|\)+$/g, "");
     if (!v || (!op && v === "OR")) continue;
-    if (op && !["content", "line", "block", "section"].includes(op.toLowerCase())) {
-      // Unknown "word:" prefixes are ordinary text ("note: hello"); known file/path/tag operators are not.
-      if (["file", "path", "tag", "task", "task-todo", "task-done", "match-case", "ignore-case"].includes(op.toLowerCase())) continue;
+    if (op && !TEXT_OPS.has(op.toLowerCase())) {
+      // Unknown "word:" prefixes are ordinary text ("note: hello"); known metadata operators are not.
+      if (["file", "path", "tag", "property"].includes(op.toLowerCase())) continue;
       out.push(`${op}:${v}`);
       continue;
     }

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { EditorState, EditorSelection } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { syntaxTree, indentUnit } from "@codemirror/language";
+import { ensureSyntaxTree, syntaxTree, indentUnit } from "@codemirror/language";
 import { CompletionContext } from "@codemirror/autocomplete";
 import {
   createEditor, continueMarkup, obsidianMarkdown, buildInline, buildBlocks, envFacet, toggleBold, toggleItalic, toggleHighlight,
@@ -36,11 +36,16 @@ function env(host = mkhost(), source = "Alpha.md") {
 }
 
 function mkstate(doc: string, cursor = 0, anchor?: number) {
-  return EditorState.create({
+  const make = () => EditorState.create({
     doc,
     selection: EditorSelection.single(anchor ?? cursor, cursor),
     extensions: [obsidianMarkdown(), indentUnit.of("\t"), envFacet.of(env())],
   });
+  // CodeMirror's initial parse has a 20ms budget; on a busy machine it leaves a partial tree that a state without a
+  // view never finishes. Build the state again until the whole document is parsed.
+  let s = make();
+  for (let i = 0; i < 200 && (ensureSyntaxTree(s, doc.length, 5000), syntaxTree(s).length < doc.length); i++) s = make();
+  return s;
 }
 
 function decos(doc: string, cursor: number, live = true) {

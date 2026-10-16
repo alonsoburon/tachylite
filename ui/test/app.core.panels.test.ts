@@ -30,6 +30,9 @@ const openMd = async (path: string) => { const l = c.app.workspace.getLeaf("tab"
 describe("search", () => {
   it("parses highlight terms", () => {
     expect(highlightTerms('foo "bar baz" -skip file:x.md tag:#t OR qux')).toEqual(["foo", "bar baz", "qux"]);
+    // Groups, scoped and case operators keep their text; properties, regexes and negated groups are dropped.
+    expect(highlightTerms("line:(green sour) [status:done] -(apples OR pears) task-todo:wash /ap+les/ match-case:Word property:[a:b]")).toEqual(["green", "sour", "wash", "Word"]);
+    expect(highlightTerms("(storage OR plan) pears")).toEqual(["storage", "plan", "pears"]);
   });
 
   it("debounces, groups results per file, highlights matches and opens at a line", async () => {
