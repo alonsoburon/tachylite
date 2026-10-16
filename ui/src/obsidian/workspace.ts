@@ -262,15 +262,45 @@ export class WorkspaceRibbon {
   containerEl: HTMLElement;
   ribbonEl: HTMLElement;
   items: { id: string; icon: string; title: string; callback: (evt: MouseEvent) => any; buttonEl: HTMLElement }[] = [];
+  /** Items the user hid from the ribbon, keyed the item id, `<plugin id>:<title>` (workspace.json's `left-ribbon.hiddenItems`). `false` or absent means shown. */
+  hiddenItems: Record<string, boolean> = {};
+  /** Called when the user shows or hides an item, so the layout can be saved. */
+  onHiddenChange: (() => void) | null = null;
   constructor(public app: App, public side: "left" | "right") {
     this.containerEl = createDiv({ cls: `workspace-ribbon side-dock-ribbon mod-${side}` });
     this.ribbonEl = this.containerEl.createDiv({ cls: "side-dock-actions" });
+    this.containerEl.addEventListener("contextmenu", (e) => {
+      // Right-clicking an item is that item's own business; the bare ribbon offers the show/hide list.
+      if (this.items.some((i) => i.buttonEl.contains(e.target as Node)) || !this.items.length) return;
+      e.preventDefault();
+      this.showMenu(e);
+    });
+  }
+  // Items are registered under Obsidian's `<plugin id>:<title>` ids already, which is also the key workspace.json uses.
+  private keyOf(i: { id: string }): string { return i.id; }
+  isHidden(i: { id: string; title: string }): boolean { return !!this.hiddenItems[this.keyOf(i)]; }
+  private applyHidden(i: { id: string; title: string; buttonEl: HTMLElement }): void { i.buttonEl.toggleClass("is-hidden", this.isHidden(i)); i.buttonEl.style.display = this.isHidden(i) ? "none" : ""; }
+  setHiddenItems(hidden: Record<string, boolean> | undefined): void {
+    this.hiddenItems = { ...(hidden ?? {}) };
+    for (const i of this.items) this.applyHidden(i);
+  }
+  setItemVisible(i: { id: string; title: string; buttonEl: HTMLElement }, visible: boolean): void {
+    if (visible) delete this.hiddenItems[this.keyOf(i)]; else this.hiddenItems[this.keyOf(i)] = true;
+    this.applyHidden(i);
+    this.onHiddenChange?.();
+  }
+  showMenu(e: MouseEvent): void {
+    const menu = new Menu();
+    for (const item of this.items) menu.addItem((m) => m.setTitle(item.title).setIcon(item.icon).setChecked(!this.isHidden(item)).onClick(() => this.setItemVisible(item, this.isHidden(item))));
+    menu.showAtMouseEvent(e);
   }
   addRibbonItemButton(id: string, icon: string, title: string, callback: (evt: MouseEvent) => any): HTMLElement {
     const el = this.ribbonEl.createDiv({ cls: "clickable-icon side-dock-ribbon-action", attr: { "aria-label": title, "data-tooltip-position": this.side === "left" ? "right" : "left" } });
     setIcon(el, icon);
     el.addEventListener("click", callback);
-    this.items.push({ id, icon, title, callback, buttonEl: el });
+    const item = { id, icon, title, callback, buttonEl: el };
+    this.items.push(item);
+    this.applyHidden(item);
     return el;
   }
   removeRibbonItemButton(el: HTMLElement): void {
@@ -449,6 +479,7 @@ export class Workspace extends Events {
     this.rootSplit = new WorkspaceRoot(app);
     this.floatingSplit = new WorkspaceFloating(app);
     this.leftRibbon = new WorkspaceRibbon(app, "left");
+    this.leftRibbon.onHiddenChange = () => this.requestSaveLayout();
     this.rightRibbon = new WorkspaceRibbon(app, "right");
     this.containerEl.append(this.leftRibbon.containerEl, this.leftSplit.containerEl, this.rootSplit.containerEl, this.rightSplit.containerEl, this.rightRibbon.containerEl);
     this.requestSaveLayout = debounce(async () => { await this.host?.saveLayout?.(this.getLayout()); }, 2000, true) as Debouncer<[], Promise<void>>;
@@ -855,6 +886,7 @@ export class Workspace extends Events {
       left: { ...ser(this.leftSplit), width: this.leftSplit.width, collapsed: this.leftSplit.collapsed },
       right: { ...ser(this.rightSplit), width: this.rightSplit.width, collapsed: this.rightSplit.collapsed },
       ...(wins.length ? { floating: { id: rid(), type: "floating", children: wins.map(ser) } } : {}),
+      "left-ribbon": { hiddenItems: this.leftRibbon.hiddenItems },
       active: this.activeLeaf?.id,
       lastOpenFiles: this.lastOpenFiles,
     };
@@ -908,6 +940,8 @@ export class Workspace extends Events {
     this.activeLeaf = null;
     if (act) this.setActiveLeaf(act);
     if (Array.isArray(layout.lastOpenFiles)) this.lastOpenFiles = layout.lastOpenFiles;
+    const hidden = layout["left-ribbon"]?.hiddenItems;
+    this.leftRibbon.setHiddenItems(hidden && typeof hidden === "object" && !Array.isArray(hidden) ? hidden : undefined);
     this.trigger("layout-change");
   }
   /** Re-instantiate leaves whose placeholder view type was just registered by a plugin. */
