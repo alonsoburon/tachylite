@@ -81,8 +81,15 @@ export function buildInline(
   const mark = (from: number, to: number, cls: string, attrs?: Record<string, string>) => {
     if (to > from) out.push(Decoration.mark({ class: cls, attributes: attrs }).range(from, to));
   };
+  // A plugin's replace decoration may not cover a line break, so a hidden range that spans lines is hidden line by line.
   const hide = (from: number, to: number) => {
-    if (to > from) out.push(Decoration.replace({}).range(from, to));
+    if (to <= from) return;
+    for (let pos = from; pos < to;) {
+      const line = doc.lineAt(pos);
+      const end = Math.min(to, line.to);
+      if (end > pos) out.push(Decoration.replace({}).range(pos, end));
+      pos = line.to + 1;
+    }
   };
   const touches = (f: number, t: number) => selectionTouches(state, f, t);
   const lineActive = (f: number, t: number) => selectionTouchesLines(state, f, t);
@@ -338,7 +345,7 @@ export function buildInline(
             const marks = node.getChildren("LinkMark");
             const url = node.getChild("URL");
             if (marks.length >= 4 && url) {
-              if (live && !touches(from, to)) {
+              if (live && !touches(from, to) && doc.lineAt(from).to >= to) {
                 const alt0 = doc.sliceString(marks[0].to, marks[1].from);
                 const m = /\|(\d+)(?:x(\d+))?\s*$/.exec(alt0);
                 const alt = m ? alt0.slice(0, m.index) : alt0;
@@ -415,7 +422,8 @@ export function buildInline(
             const marks = node.getChildren("MathMark");
             if (marks.length < 2) return false;
             const tex = doc.sliceString(marks[0].to, marks[1].from);
-            if (live && !touches(from, to)) {
+            // A plugin decoration can't replace a line break, so `$$` math that spans lines inside a paragraph stays source.
+            if (live && !touches(from, to) && !tex.includes("\n")) {
               out.push(Decoration.replace({ widget: new MathWidget(tex, marks[0].to - marks[0].from === 2) }).range(from, to));
             } else {
               mark(marks[0].to, marks[1].from, "cm-math");
@@ -429,7 +437,7 @@ export function buildInline(
           case "InlineFootnote": {
             const fm = node.getChildren("InlineFootnoteMark");
             if (fm.length < 2) return false;
-            if (live && !touches(from, to)) {
+            if (live && !touches(from, to) && doc.lineAt(from).to >= to) {
               out.push(Decoration.replace({ widget: new InlineFootnoteWidget(footnoteNumber(state, from), doc.sliceString(fm[0].to, fm[1].from)) }).range(from, to));
               return false;
             }
