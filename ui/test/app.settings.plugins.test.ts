@@ -160,12 +160,17 @@ describe("Community plugins tab", () => {
     expect(r.querySelector(".extra-setting-button[aria-label='Options']")).toBeNull();
     clickToggle(r);
     await vi.waitFor(() => expect(app.plugins.isEnabled("hello")).toBe(true));
-    await vi.waitFor(() => expect(t.containerEl.querySelectorAll(".extra-setting-button").length).toBe(2));
+    await vi.waitFor(() => expect(t.containerEl.querySelectorAll(".extra-setting-button").length).toBe(3));
     r = t.containerEl.querySelector<HTMLElement>(".community-plugin-item")!;
     r.querySelectorAll<HTMLElement>(".extra-setting-button")[0].click(); // gear
     expect(app.setting.activeTab?.id).toBe("hello");
     app.setting.close();
-    r.querySelectorAll<HTMLElement>(".extra-setting-button")[1].click(); // trash
+    r.querySelectorAll<HTMLElement>(".extra-setting-button")[1].click(); // hotkeys: opens the Hotkeys tab filtered to this plugin
+    expect(app.setting.activeTab?.id).toBe("hotkeys");
+    await vi.waitFor(() => expect(document.querySelector<HTMLInputElement>(".hotkey-search-container input")?.value).toBe("hello plugin"));
+    expect([...document.querySelectorAll(".hotkey-list-item")].every((e) => e.textContent!.toLowerCase().includes("hello plugin"))).toBe(true);
+    app.setting.close();
+    r.querySelectorAll<HTMLElement>(".extra-setting-button")[2].click(); // trash
     await vi.waitFor(() => expect(document.querySelector(".modal.mod-confirmation")).not.toBeNull());
     await confirmTop("Uninstall");
     await vi.waitFor(() => expect(app.plugins.manifests["hello"]).toBeUndefined());

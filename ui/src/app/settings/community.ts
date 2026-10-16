@@ -2,6 +2,7 @@
 import { Modal, Setting, SettingTab, type App } from "../../obsidian";
 import { nodeBridge } from "../../obsidian/nodeBridge";
 import { confirmDialog } from "../dialogs";
+import type { HotkeysSettingTab } from "./hotkeys";
 import { PluginBrowserModal } from "./pluginBrowser";
 import { checkForUpdates, updatePlugin, type UpdateInfo } from "./updates";
 import { errMsg, heading, notify } from "./util";
@@ -107,6 +108,10 @@ export class CommunityPluginsSettingTab extends SettingTab {
       }
       const tab = pl.isEnabled(m.id) && app.setting.pluginTabs.find((t) => t.id === m.id);
       if (tab) s.addExtraButton((b) => b.setIcon("lucide-settings").setTooltip("Options").onClick(() => app.setting.openTabById(m.id)));
+      if (pl.isEnabled(m.id)) s.addExtraButton((b) => b.setIcon("lucide-plus-circle").setTooltip("Hotkeys").onClick(() => {
+        (app.setting.settingTabs.find((t) => t.id === "hotkeys") as HotkeysSettingTab | undefined)?.setQuery(m.name || m.id);
+        app.setting.openTabById("hotkeys");
+      }));
       s.addExtraButton((b) => b.setIcon("lucide-trash").setTooltip("Uninstall").onClick(async () => {
         const ok = await confirmDialog(app, { title: "Uninstall plugin", message: `Uninstall "${m.name || m.id}"? Its files and settings will be deleted.`, cta: "Uninstall", warning: true });
         if (!ok) return;

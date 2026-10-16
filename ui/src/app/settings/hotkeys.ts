@@ -53,6 +53,9 @@ export class HotkeysSettingTab extends SettingTab {
     this.renderList();
   }
 
+  /** Pre-fill the command filter (the plugin list's hotkeys button opens this tab filtered to one plugin). */
+  setQuery(q: string): void { this.query = q.trim().toLowerCase(); this.hotkeyFilter = null; }
+
   hide(): void { this.stopCapture?.(); this.stopCapture = null; }
 
   private conflicts(): Map<string, string[]> {
