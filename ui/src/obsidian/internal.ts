@@ -1,50 +1,110 @@
 // app.internalPlugins (core plugin registry) and app.customCss (themes / snippets).
 import { ipc } from "../ipc";
-import { Events } from "./events";
-import { Keymap } from "./events";
+import { Events, Keymap, Platform, prettyHotkey } from "./events";
+import { setIcon } from "./icons";
 import type { TFile } from "./files";
-import { FuzzySuggestModal, SuggestModal } from "./ui";
-import { prepareFuzzySearch, renderResults, sortSearchResults, type SearchResult } from "./util";
+import { FuzzySuggestModal, SuggestModal, type FuzzyMatch } from "./ui";
+import { parseFrontMatterAliases, prepareFuzzySearch, renderResults, sortSearchResults, type SearchResult } from "./util";
 import type { Command } from "./plugin";
 import type { App } from "./app";
 
-interface SwitcherItem { file: TFile; match: SearchResult }
+interface SwitcherItem { file: TFile; match: SearchResult; /** Set when the match is on one of the note's aliases. */ alias?: string }
 /** Core "Quick switcher" modal (exposed as internalPlugins.getPluginById("switcher").instance.QuickSwitcherModal). */
 export class QuickSwitcherModal extends SuggestModal<SwitcherItem> {
   constructor(app: App) {
     super(app);
     this.setPlaceholder("Find or create a note...");
-    this.setInstructions([{ command: "↑↓", purpose: "to navigate" }, { command: "↵", purpose: "to open" }, { command: "esc", purpose: "to dismiss" }]);
+    const mod = Platform.isMacOS ? "cmd" : "ctrl";
+    this.setInstructions([
+      { command: "↑↓", purpose: "to navigate" }, { command: "↵", purpose: "to open" }, { command: `${mod} ↵`, purpose: "to open in new tab" },
+      { command: `${mod} alt ↵`, purpose: "to open to the right" }, { command: "shift ↵", purpose: "to create" }, { command: "esc", purpose: "to dismiss" },
+    ]);
   }
   get chooser() { return this.suggestions; }
+  private supported(file: TFile): boolean {
+    return file.extension === "md" || file.extension === "canvas" || !!this.app.vault.getConfig("showUnsupportedFiles");
+  }
   getSuggestions(query: string): SwitcherItem[] {
     const search = prepareFuzzySearch(query);
+    const files = this.app.vault.getFiles().filter((f) => this.supported(f));
+    if (!query.trim()) {
+      // Nothing typed: the notes you opened most recently first (not the one you are in), then the newest edits.
+      const recent = new Map(this.app.workspace.getLastOpenFiles().map((p, i) => [p, i] as const));
+      const active = this.app.workspace.getActiveFile()?.path;
+      return files.filter((f) => f.path !== active)
+        .sort((a, b) => (recent.get(a.path) ?? Infinity) - (recent.get(b.path) ?? Infinity) || b.stat.mtime - a.stat.mtime)
+        .map((file) => ({ file, match: search(file.basename) ?? { score: 0, matches: [] } }));
+    }
     const out: SwitcherItem[] = [];
-    for (const file of this.app.vault.getFiles()) {
-      if (file.extension !== "md" && file.extension !== "canvas" && !this.app.vault.getConfig("showUnsupportedFiles")) continue;
+    for (const file of files) {
       const m = search(file.extension === "md" ? file.path.replace(/\.md$/, "") : file.path);
       if (m) out.push({ file, match: m });
+      if (file.extension === "md") {
+        for (const alias of parseFrontMatterAliases(this.app.metadataCache.getFileCache(file)?.frontmatter) ?? []) {
+          const am = search(alias);
+          if (am) out.push({ file, match: am, alias });
+        }
+      }
     }
-    if (query.trim()) sortSearchResults(out);
+    sortSearchResults(out);
     return out;
   }
   renderSuggestion(item: SwitcherItem, el: HTMLElement): void {
     el.addClass("mod-complex");
     const content = el.createDiv({ cls: "suggestion-content" });
     const title = content.createDiv({ cls: "suggestion-title" });
+    if (item.alias) {
+      renderResults(title, item.alias, item.match);
+      const note = content.createDiv({ cls: "suggestion-note" });
+      setIcon(note.createSpan({ cls: "suggestion-flair" }), "lucide-forward");
+      note.createSpan({ text: ` ${item.file.path.replace(/\.md$/, "")}` });
+      return;
+    }
     const text = item.file.extension === "md" ? item.file.basename : item.file.name;
     renderResults(title, text, item.match, item.file.path.length - text.length - (item.file.extension === "md" ? 3 : 0));
     if (item.file.parent && !item.file.parent.isRoot()) content.createDiv({ cls: "suggestion-note", text: item.file.parent.path });
+  }
+  /** Shift+Enter creates (or opens) the note named by what was typed, whatever is highlighted. */
+  selectActiveSuggestion(evt: MouseEvent | KeyboardEvent): void {
+    const name = this.inputEl.value.trim();
+    if (evt instanceof KeyboardEvent && evt.shiftKey && name) {
+      this.close();
+      void this.app.workspace.openLinkText(name, "", evt.ctrlKey || evt.metaKey ? (evt.altKey ? "split" : "tab") : false);
+      return;
+    }
+    super.selectActiveSuggestion(evt);
   }
   onChooseSuggestion(item: SwitcherItem, evt: MouseEvent | KeyboardEvent): void {
     void this.app.workspace.openLinkText(item.file.path, "", Keymap.isModEvent(evt));
   }
 }
+
+const RECENT_COMMANDS = "recent-commands";
 class CommandPaletteModal extends FuzzySuggestModal<Command> {
   constructor(app: App) { super(app); this.setPlaceholder("Select a command..."); }
   getItems(): Command[] { return this.app.commands.listCommands().filter((c) => this.app.commands.canExecute(c)); }
   getItemText(c: Command): string { return c.name; }
-  onChooseItem(c: Command): void { this.app.commands.executeCommand(c); }
+  getSuggestions(query: string): FuzzyMatch<Command>[] {
+    const res = super.getSuggestions(query);
+    if (query.trim()) return res;
+    // Nothing typed: pinned commands (command-palette.json "pinned"), then the ones you ran lately, then the rest.
+    const pinned: string[] = this.app.internalPlugins.getPluginById("command-palette")?.instance.options?.pinned ?? [];
+    const recent: string[] = this.app.loadLocalStorage(RECENT_COMMANDS) ?? [];
+    const rank = (c: Command) => { const p = pinned.indexOf(c.id); if (p >= 0) return p; const r = recent.indexOf(c.id); return r >= 0 ? pinned.length + r : Infinity; };
+    return res.map((m, i) => ({ m, i })).sort((a, b) => rank(a.m.item) - rank(b.m.item) || a.i - b.i).map((x) => x.m);
+  }
+  renderSuggestion(v: FuzzyMatch<Command>, el: HTMLElement): void {
+    el.addClass("mod-complex");
+    const content = el.createDiv({ cls: "suggestion-content" });
+    const aux = el.createDiv({ cls: "suggestion-aux" });
+    renderResults(content.createDiv({ cls: "suggestion-title" }), v.item.name, v.match);
+    for (const h of this.app.hotkeyManager.getHotkeys(v.item.id)) aux.createEl("kbd", { cls: "suggestion-hotkey", text: prettyHotkey(h) });
+  }
+  onChooseItem(c: Command): void {
+    const recent: string[] = (this.app.loadLocalStorage(RECENT_COMMANDS) ?? []).filter((id: string) => id !== c.id);
+    this.app.saveLocalStorage(RECENT_COMMANDS, [c.id, ...recent].slice(0, 10));
+    this.app.commands.executeCommand(c);
+  }
 }
 
 const CORE_NAMES: Record<string, string> = {

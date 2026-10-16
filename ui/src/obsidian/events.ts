@@ -242,3 +242,22 @@ export function hotkeyMatches(h: Hotkey, evt: KeyboardEvent): boolean {
 export function hotkeyToString(h: Hotkey): string {
   return [...h.modifiers, h.key].join("+");
 }
+
+/** "Mod+Shift+K" as shown in the UI: Ctrl/Cmd, Alt/Opt and readable key names. */
+const KEY_NAMES: Record<string, string> = {
+  " ": "Space", ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right", Escape: "Esc", Enter: "Enter", Backspace: "Backspace", Delete: "Delete", Tab: "Tab",
+};
+
+export function prettyHotkey(h: Hotkey): string {
+  const mods = h.modifiers.map((m) => {
+    switch (m) {
+      case "Mod": return Platform.isMacOS ? "Cmd" : "Ctrl";
+      case "Meta": return Platform.isMacOS ? "Cmd" : Platform.isWin ? "Win" : "Super";
+      case "Alt": return Platform.isMacOS ? "Opt" : "Alt";
+      default: return m;
+    }
+  });
+  const k = KEY_NAMES[h.key] ?? (h.key.length === 1 ? h.key.toUpperCase() : h.key);
+  return [...mods, k].join("+");
+}
+

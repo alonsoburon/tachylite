@@ -330,6 +330,10 @@ kbd, .setting-hotkey { padding: 1px 6px; border-radius: var(--hotkey-radius, var
 .suggestion-note { color: var(--text-faint); font-size: var(--font-ui-smaller); }
 .suggestion-highlight { color: var(--text-accent); font-weight: var(--font-semibold); }
 .suggestion-hotkey { color: var(--text-faint); font-size: var(--font-ui-smaller); }
+.suggestion-aux { flex: none; display: flex; align-items: center; gap: var(--size-2-3); }
+.suggestion-hotkey { font-family: inherit; background: none; border: 0; box-shadow: none; padding: 0; }
+.suggestion-flair { display: inline-flex; vertical-align: middle; margin-right: 2px; }
+.suggestion-flair svg { width: 12px; height: 12px; }
 .suggestion-container { position: absolute; z-index: var(--layer-popover); min-width: 220px; max-width: 420px; max-height: 280px; overflow: auto; background: var(--background-secondary-alt); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); box-shadow: var(--shadow-l); padding: var(--size-2-3); }
 
 /* ---------------------------------------------------------------- menus, notices, tooltips, popovers */

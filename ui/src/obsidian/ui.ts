@@ -455,7 +455,10 @@ export abstract class SuggestModal<T> extends Modal implements ISuggestOwner<T> 
     this.inputEl.addEventListener("input", () => void this.updateSuggestions());
     this.scope.register([], "ArrowDown", () => { this.suggestions.moveSelection(1); return false; });
     this.scope.register([], "ArrowUp", () => { this.suggestions.moveSelection(-1); return false; });
-    this.scope.register([], "Enter", (evt) => { this.selectActiveSuggestion(evt); return false; });
+    // Enter, and Enter with the modifiers pickers use to open elsewhere (Ctrl/Cmd: tab, + Alt: split, Shift: create).
+    for (const mods of [[], ["Mod"], ["Mod", "Alt"], ["Shift"], ["Mod", "Shift"], ["Alt"]] as Modifier[][]) {
+      this.scope.register(mods, "Enter", (evt) => { this.selectActiveSuggestion(evt); return false; });
+    }
   }
   setPlaceholder(p: string): void { this.inputEl.placeholder = p; }
   setInstructions(list: Instruction[]): void { renderInstructions(this.instructionsEl, list); }

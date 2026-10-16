@@ -2,22 +2,8 @@
 import { Platform, SettingTab, Setting, type App, type Command, type Hotkey, type Modifier } from "../../obsidian";
 import { normalizeKey } from "../../obsidian/events";
 
-const KEY_NAMES: Record<string, string> = {
-  " ": "Space", ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right", Escape: "Esc", Enter: "Enter", Backspace: "Backspace", Delete: "Delete", Tab: "Tab",
-};
-
-export function prettyHotkey(h: Hotkey): string {
-  const mods = h.modifiers.map((m) => {
-    switch (m) {
-      case "Mod": return Platform.isMacOS ? "Cmd" : "Ctrl";
-      case "Meta": return Platform.isMacOS ? "Cmd" : Platform.isWin ? "Win" : "Super";
-      case "Alt": return Platform.isMacOS ? "Opt" : "Alt";
-      default: return m;
-    }
-  });
-  const k = KEY_NAMES[h.key] ?? (h.key.length === 1 ? h.key.toUpperCase() : h.key);
-  return [...mods, k].join("+");
-}
+import { prettyHotkey } from "../../obsidian/events";
+export { prettyHotkey };
 
 /** Platform-independent identity of a hotkey, used to detect duplicates. */
 export function hotkeyId(h: Hotkey): string {
