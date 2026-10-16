@@ -85,7 +85,11 @@ export class HotkeyManager {
   async load(): Promise<void> {
     try {
       const v = await ipc.configRead("hotkeys.json");
-      if (v && typeof v === "object") this.customKeys = v;
+      // hotkeys.json is user-editable: keep only well-formed `command id -> [{ modifiers, key }]` entries.
+      if (v && typeof v === "object" && !Array.isArray(v)) {
+        const ok = (h: any) => h && typeof h.key === "string" && Array.isArray(h.modifiers) && h.modifiers.every((m: unknown) => typeof m === "string");
+        this.customKeys = Object.fromEntries(Object.entries(v).filter(([, keys]) => Array.isArray(keys) && keys.every(ok))) as Record<string, Hotkey[]>;
+      }
     } catch (e) { console.warn("hotkeys.json unreadable", e); }
   }
   setDefaultHotkeys(id: string, keys: Hotkey[]): void { this.defaultKeys[id] = keys; }

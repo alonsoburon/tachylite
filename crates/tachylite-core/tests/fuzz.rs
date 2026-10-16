@@ -78,3 +78,120 @@ fn escapes_and_code_before_multibyte_characters() {
     }
     assert_eq!(parse("\\é [[a]]").links[0].link, "a");
 }
+
+#[test]
+fn search_never_panics_on_random_queries() {
+    use tachylite_core::{search::search, Workspace};
+    let d = tempfile::tempdir().unwrap();
+    for (p, c) in [
+        ("A.md", "---\nstatus: draft\ntags: [x]\n---\n# Apples é\nRed apples 😀 are sweet. #tag\n- [ ] task\n"),
+        ("B/é.md", "日本語 text\n\n```\ncode block\n```\n"),
+        ("C.md", ""),
+    ] {
+        let abs = d.path().join(p);
+        std::fs::create_dir_all(abs.parent().unwrap()).unwrap();
+        std::fs::write(abs, c).unwrap();
+    }
+    let ws = Workspace::open(d.path()).unwrap();
+    const Q: &[&str] = &[
+        "file:",
+        "path:",
+        "content:",
+        "tag:",
+        "tag:#x",
+        "line:(",
+        "block:(",
+        "section:(",
+        "task:",
+        "task-todo:",
+        "task-done:",
+        "match-case:",
+        "ignore-case:",
+        "[status:draft]",
+        "[status]",
+        "[",
+        "]",
+        "[x:",
+        "/re/",
+        "/[/",
+        "/(a|b)+/",
+        "/",
+        "\"",
+        "\"phrase",
+        "(",
+        ")",
+        "-",
+        "OR",
+        "AND",
+        " ",
+        "apples",
+        "é",
+        "日本",
+        "😀",
+        "\\",
+        "*",
+        "?",
+        "^",
+        "$",
+        ":",
+        "#",
+        "-tag:",
+        "(a OR (b",
+        "\u{301}",
+    ];
+    let mut seed: u64 = 0xdeadbeefcafef00d;
+    let mut next = || {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (seed >> 33) as usize
+    };
+    for _ in 0..3000 {
+        let n = 1 + next() % 8;
+        let q: String = (0..n).map(|_| Q[next() % Q.len()]).collect::<Vec<_>>().join(if next() % 2 == 0 { " " } else { "" });
+        let _ = search(&ws.vault, &ws.meta, &q);
+    }
+}
+
+#[test]
+fn garbage_config_files_never_panic() {
+    use tachylite_core::Workspace;
+    let junk: &[&str] = &[
+        "",
+        "null",
+        "[]",
+        "[1,2]",
+        "\"str\"",
+        "42",
+        "{",
+        "{\"a\":",
+        "\u{feff}{\"newLinkFormat\":5}",
+        "{\"userIgnoreFilters\":\"x\"}",
+        "{\"userIgnoreFilters\":[1,null,\"/[/\"]}",
+        "{\"trashOption\":[]}",
+        "\u{0}\u{1}",
+        "{\"attachmentFolderPath\":{}}",
+    ];
+    for (i, j) in junk.iter().enumerate() {
+        let d = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(d.path().join(".obsidian")).unwrap();
+        for f in ["app.json", "core-plugins.json", "community-plugins.json", "hotkeys.json", "appearance.json", "workspace.json", "graph.json"] {
+            std::fs::write(d.path().join(".obsidian").join(f), j).unwrap();
+        }
+        std::fs::write(d.path().join("Note.md"), "[[Other]] #t").unwrap();
+        std::fs::write(d.path().join("Other.md"), "x").unwrap();
+        let ws = Workspace::open(d.path()).unwrap_or_else(|e| panic!("case {i} {j:?}: {e}"));
+        let c = &ws.vault.config;
+        let _ = (
+            c.new_link_format(),
+            c.use_markdown_links(),
+            c.always_update_links(),
+            c.new_file_folder_path(),
+            c.new_file_location(),
+            c.attachment_folder_path(),
+            c.trash_option(),
+            c.user_ignore_filters(),
+        );
+        let _ = tachylite_core::config::core_plugin_state(d.path());
+        let _ = tachylite_core::config::enabled_community_plugins(d.path());
+        assert!(ws.meta.first_linkpath_dest("Other", "Note.md").is_some(), "case {i} {j:?}");
+    }
+}

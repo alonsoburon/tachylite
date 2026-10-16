@@ -1,4 +1,6 @@
 // Settings > Hotkeys: capture, delete, restore, conflicts, filters.
+import fs from "node:fs";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setBackend } from "../src/ipc";
 import { makeVault, type FakeVault } from "./helpers/backend";
