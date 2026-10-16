@@ -50,6 +50,7 @@ export function applyConfigToBody(app: App): void {
     const v = leaf.view as MarkdownView;
     editorHandles.get(v.cm)?.reconfigure({
       tabSize: app.vault.getConfig("tabSize"), useTabs: app.vault.getConfig("useTab"), spellcheck: app.vault.getConfig("spellcheck"),
+      autoPairBrackets: app.vault.getConfig("autoPairBrackets") !== false, autoPairMarkdown: app.vault.getConfig("autoPairMarkdown") !== false,
       showLineNumbers: !!app.vault.getConfig("showLineNumber"), foldHeading: app.vault.getConfig("foldHeading"), foldIndent: app.vault.getConfig("foldIndent"),
       strictLineBreaks: !!app.vault.getConfig("strictLineBreaks"), vimMode: !!app.vault.getConfig("vimMode"),
     });

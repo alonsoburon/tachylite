@@ -213,6 +213,7 @@ export function installBridge(app: App): () => void {
       const handle = createEditor(parent, {
         doc, host, mode, extraExtensions: extensions,
         tabSize: cfg("tabSize"), useTabs: cfg("useTab"), spellcheck: cfg("spellcheck"),
+        autoPairBrackets: cfg("autoPairBrackets") !== false, autoPairMarkdown: cfg("autoPairMarkdown") !== false,
         showLineNumbers: cfg("showLineNumber"), foldHeading: cfg("foldHeading"), foldIndent: cfg("foldIndent"),
         vimMode: !!cfg("vimMode"),
       });

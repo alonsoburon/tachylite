@@ -85,6 +85,10 @@ export interface EditorOptions {
   /** Indent with a tab character (default true, like Obsidian). */
   useTabs?: boolean;
   spellcheck?: boolean;
+  /** Pair brackets as you type (app.json `autoPairBrackets`, default on). */
+  autoPairBrackets?: boolean;
+  /** Pair backticks and wrap selections in emphasis marks (app.json `autoPairMarkdown`, default on). */
+  autoPairMarkdown?: boolean;
   showLineNumbers?: boolean;
   /** Show fold markers for headings (default true). */
   foldHeading?: boolean;

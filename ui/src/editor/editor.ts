@@ -89,6 +89,8 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
     tabSize: opts.tabSize ?? 4,
     useTabs: opts.useTabs ?? true,
     spellcheck: opts.spellcheck ?? false,
+    autoPairBrackets: opts.autoPairBrackets ?? true,
+    autoPairMarkdown: opts.autoPairMarkdown ?? true,
     showLineNumbers: opts.showLineNumbers ?? false,
     foldHeading: opts.foldHeading ?? true,
     foldIndent: opts.foldIndent ?? true,
@@ -105,6 +107,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
   const tabC = new Compartment();
   const roC = new Compartment();
   const spellC = new Compartment();
+  const pairC = new Compartment();
   const numC = new Compartment();
   const foldC = new Compartment();
   const extraC = new Compartment();
@@ -125,6 +128,15 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
       autocorrect: "off",
       autocapitalize: "off",
     });
+  // Brackets and quotes pair with "Auto pair brackets"; backticks and the emphasis helpers with "Auto pair Markdown syntax".
+  const pairExt = (): Extension => {
+    const brackets = [...(cur.autoPairBrackets ? ["(", "[", "{"] : []), ...(cur.autoPairMarkdown ? ["`"] : [])];
+    return [
+      EditorState.languageData.of(() => [{ closeBrackets: { brackets } }]),
+      brackets.length ? closeBrackets() : [],
+      cur.autoPairMarkdown ? markupInputHandler : [],
+    ];
+  };
   const numExt = () => (cur.showLineNumbers ? lineNumbers() : []);
   const foldExt = (): Extension => {
     const svc: Extension[] = [];
@@ -290,14 +302,12 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
     // Ours stays the document language even if a plugin adds its own (Templater registers a CM5-mode StreamLanguage
     // that, in Obsidian, overlays the CM5 markdown mode; here it would replace the markdown parser entirely).
     Prec.highest(markdownLang.language.extension), markdownLang,
-    EditorState.languageData.of(() => [{ closeBrackets: { brackets: ["(", "[", "{", "`"] } }]),
     hist.ext,
     drawSelection(),
     dropCursor(),
     EditorState.allowMultipleSelections.of(true),
     bracketMatching(),
-    closeBrackets(),
-    markupInputHandler,
+    pairC.of(pairExt()),
     autocompletion({
       override: [wikilinkCompletionSource(env), tagCompletionSource(env)],
       activateOnTyping: true,
@@ -377,6 +387,11 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
         effects.push(tabC.reconfigure(tabExt()));
       }
       if (o.readOnly !== undefined) { cur.readOnly = o.readOnly; effects.push(roC.reconfigure(roExt())); }
+      if (o.autoPairBrackets !== undefined || o.autoPairMarkdown !== undefined) {
+        if (o.autoPairBrackets !== undefined) cur.autoPairBrackets = o.autoPairBrackets;
+        if (o.autoPairMarkdown !== undefined) cur.autoPairMarkdown = o.autoPairMarkdown;
+        effects.push(pairC.reconfigure(pairExt()));
+      }
       if (o.spellcheck !== undefined) { cur.spellcheck = o.spellcheck; effects.push(spellC.reconfigure(spellExt())); }
       if (o.showLineNumbers !== undefined) { cur.showLineNumbers = o.showLineNumbers; effects.push(numC.reconfigure(numExt())); }
       if (o.foldHeading !== undefined || o.foldIndent !== undefined) {
