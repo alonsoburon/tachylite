@@ -1,5 +1,7 @@
 // Tags core view ("tag-pane"): nested tag tree from metadataCache.getTags().
-import { Menu, type App, type WorkspaceLeaf } from "../../obsidian";
+import { Menu, Notice, type App, type WorkspaceLeaf } from "../../obsidian";
+import { promptText } from "../dialogs";
+import { renameTag, validateTagName } from "./tagRename";
 import { activateView, addCommand, PanelView, whileCoreEnabled, type CoreModule } from "./util";
 import { collapseIcon, naturalCompare, navButton, navHeader } from "./panel";
 import { copyText } from "../files";
@@ -112,10 +114,28 @@ export class TagView extends PanelView {
       e.preventDefault();
       new Menu()
         .addItem((i) => i.setTitle("New search for #" + n.full).setIcon("lucide-search").onClick(() => { void this.searchTag(n.full); }))
+        .addItem((i) => i.setTitle("Require tag in search").setIcon("lucide-plus-circle").onClick(() => { void this.refineSearch("tag:#" + n.full); }))
+        .addItem((i) => i.setTitle("Exclude tag from search").setIcon("lucide-minus-circle").onClick(() => { void this.refineSearch("-tag:#" + n.full); }))
+        .addItem((i) => i.setTitle("Rename tag...").setIcon("lucide-pencil").onClick(() => { void this.rename(n.full); }))
         .addItem((i) => i.setTitle("Copy tag").setIcon("lucide-copy").onClick(() => copyText("#" + n.full)))
         .showAtMouseEvent(e);
     });
     if (hasKids && open) for (const c of n.children) this.renderNode(c, item.createDiv({ cls: "tree-item-children" }));
+  }
+
+  /** Add a term to the search already open (or start one). */
+  async refineSearch(term: string): Promise<void> {
+    const leaf = await activateView(this.app, "search", "left");
+    const view = leaf.view as any;
+    view.setQuery?.(`${view.query ?? ""} ${term}`.trim());
+  }
+
+  async rename(tag: string): Promise<void> {
+    const to = await promptText(this.app, { title: `Rename #${tag}`, value: tag, cta: "Rename", validate: validateTagName });
+    if (to === null || to.replace(/^#/, "") === tag) return;
+    const n = await renameTag(this.app, tag, to);
+    new Notice(`Renamed #${tag} to #${to.replace(/^#/, "")} in ${n} note${n === 1 ? "" : "s"}.`);
+    this.refresh();
   }
 
   async searchTag(tag: string): Promise<void> {

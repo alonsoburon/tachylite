@@ -95,7 +95,7 @@ export function parseMeta(text: string): any {
     const item: any = { link: m[2], original: m[0], displayText: m[3] ?? m[2], position: { start: pos(text, base + m.index), end: pos(text, base + m.index + m[0].length) } };
     (m[1] ? (meta.embeds ??= []) : (meta.links ??= [])).push(item);
   });
-  each(/(?:^|\s)(#[\w/-]+)/g, (m) => { (meta.tags ??= []).push({ tag: m[1], position: { start: pos(text, base + m.index), end: pos(text, base + m.index + m[0].length) } }); });
+  each(/(?:^|\s)(#[\w/-]+)/g, (m) => { (meta.tags ??= []).push({ tag: m[1], position: { start: pos(text, base + m.index + m[0].length - m[1].length), end: pos(text, base + m.index + m[0].length) } }); });
   each(/\s\^([\w-]+)$/gm, (m) => { (meta.blocks ??= {})[m[1].toLowerCase()] = { id: m[1], position: { start: pos(text, base + m.index + 1), end: pos(text, base + m.index + m[0].length) } }; });
   each(/^(#{1,6})\s+(.*)$/gm, (m) => { (meta.headings ??= []).push({ heading: m[2], level: m[1].length, position: { start: pos(text, base + m.index), end: pos(text, base + m.index + m[0].length) } }); });
   parseFootnotes(text, base, meta);
