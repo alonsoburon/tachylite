@@ -239,7 +239,8 @@ fn adapter_exists(state: State<App>, path: String) -> Res<bool> {
 
 #[tauri::command]
 fn adapter_read(state: State<App>, path: String) -> Res<String> {
-    state.with(|ws| fs::read_to_string(adapter_abs(ws, &path)?).map_err(e))
+    // A leading byte order mark is dropped so frontmatter, JSON and the editor see the same text.
+    state.with(|ws| fs::read_to_string(adapter_abs(ws, &path)?).map(|t| t.strip_prefix('\u{feff}').map_or_else(|| t.clone(), str::to_string)).map_err(e))
 }
 
 #[tauri::command]

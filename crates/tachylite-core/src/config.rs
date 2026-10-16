@@ -41,7 +41,9 @@ pub const CORE_PLUGINS: &[(&str, bool)] = &[
 ];
 
 fn read_json(path: &Path) -> Option<Value> {
-    serde_json::from_str(&fs::read_to_string(path).ok()?).ok()
+    // Tools that write a UTF-8 byte order mark would otherwise make a valid config file unreadable.
+    let text = fs::read_to_string(path).ok()?;
+    serde_json::from_str(text.strip_prefix('\u{feff}').unwrap_or(&text)).ok()
 }
 
 fn write_json(path: &Path, v: &Value) -> io::Result<()> {

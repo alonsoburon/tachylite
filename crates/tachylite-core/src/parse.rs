@@ -184,12 +184,14 @@ fn re_hr() -> &'static Regex {
 
 /// Extract the YAML frontmatter block. Returns (end byte offset, yaml text) when present.
 fn split_frontmatter(text: &str) -> Option<(usize, usize, &str)> {
-    let rest = text.strip_prefix("---")?;
+    // A byte order mark (Notepad and some exporters write one) may precede the opening fence; offsets still count it.
+    let bom = if text.starts_with('\u{feff}') { '\u{feff}'.len_utf8() } else { 0 };
+    let rest = text[bom..].strip_prefix("---")?;
     let nl = rest.find('\n')?;
     if !rest[..nl].trim().is_empty() {
         return None;
     }
-    let body_start = 3 + nl + 1;
+    let body_start = bom + 3 + nl + 1;
     let mut cursor = body_start;
     for line in text[body_start..].split_inclusive('\n') {
         let t = line.trim_end_matches(['\n', '\r']);
@@ -974,6 +976,29 @@ mod tests {
         assert_eq!(m.frontmatter_links[0].link, "Parent");
         assert_eq!(m.links[0].position.start.line, 5);
         assert_eq!(m.links[0].position.start.col, 5);
+    }
+
+    #[test]
+    fn a_byte_order_mark_does_not_hide_the_frontmatter() {
+        let m = parse("\u{feff}---\ntitle: x\ntags: [a]\n---\n# Head\nbody #t [[Z]]\n");
+        assert_eq!(m.frontmatter.as_ref().unwrap()["title"], "x");
+        assert_eq!(m.headings.len(), 1); // the fence is not a (setext) heading any more
+        assert_eq!(m.headings[0].heading, "Head");
+        assert_eq!(m.tags[0].tag, "#t");
+        assert_eq!(m.links[0].link, "Z");
+        assert_eq!(m.links[0].position.start.line, 5); // lines are unchanged by the BOM
+        assert_eq!(m.frontmatter_position.as_ref().unwrap().start.line, 0);
+    }
+
+    #[test]
+    fn crlf_line_endings_parse_like_lf() {
+        let lf = parse("---\ntitle: x\n---\n# H\n- [ ] t #tag [[L]]\n");
+        let crlf = parse("---\r\ntitle: x\r\n---\r\n# H\r\n- [ ] t #tag [[L]]\r\n");
+        assert_eq!(lf.frontmatter, crlf.frontmatter);
+        assert_eq!(lf.headings.iter().map(|h| h.heading.clone()).collect::<Vec<_>>(), crlf.headings.iter().map(|h| h.heading.clone()).collect::<Vec<_>>());
+        assert_eq!(lf.tags.iter().map(|t| t.tag.clone()).collect::<Vec<_>>(), crlf.tags.iter().map(|t| t.tag.clone()).collect::<Vec<_>>());
+        assert_eq!(lf.links[0].link, crlf.links[0].link);
+        assert_eq!(lf.links[0].position.start.line, crlf.links[0].position.start.line);
     }
 
     #[test]

@@ -159,11 +159,17 @@ impl Vault {
         Ok(self.root.join(rel))
     }
 
+    /// Read a text file. A leading byte order mark (Notepad and some exporters write one) is dropped, so the
+    /// frontmatter, the editor and the cached offsets all see the same text; the file keeps its BOM until it is saved.
     pub fn read(&self, rel: &str) -> Result<String> {
         let p = self.abs(rel)?;
-        fs::read_to_string(&p).map_err(|e| match e.kind() {
+        let text = fs::read_to_string(&p).map_err(|e| match e.kind() {
             io::ErrorKind::NotFound => VaultError::NotFound(rel.into()),
-            _ => e.into(),
+            _ => VaultError::from(e),
+        })?;
+        Ok(match text.strip_prefix('\u{feff}') {
+            Some(rest) => rest.to_string(),
+            None => text,
         })
     }
 

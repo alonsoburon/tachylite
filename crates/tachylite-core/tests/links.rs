@@ -129,3 +129,27 @@ fn case_only_rename_keeps_a_distinct_target() {
     assert!(ws.vault.get("Note.md").is_none());
     assert!(fs::read_dir(d.path()).unwrap().any(|e| e.unwrap().file_name() == "note.md"));
 }
+
+#[test]
+fn a_file_with_a_byte_order_mark_reads_and_indexes_like_one_without() {
+    let (_d, ws) = vault(&[("Bom.md", "\u{feff}---\ntitle: T\ntags: [a]\n---\n# Heading\nbody [[Other]] #inline\n"), ("Other.md", "")]);
+    let text = ws.vault.read("Bom.md").unwrap();
+    assert!(text.starts_with("---\n"), "the BOM is dropped on read");
+    let m = ws.meta.get("Bom.md").unwrap();
+    assert_eq!(m.frontmatter.as_ref().unwrap()["title"], "T");
+    assert_eq!(m.headings.iter().map(|h| h.heading.as_str()).collect::<Vec<_>>(), ["Heading"]);
+    assert_eq!(m.links[0].link, "Other");
+    assert_eq!(ws.meta.backlinks("Other.md").get("Bom.md"), Some(&1));
+}
+
+#[test]
+fn config_files_with_a_byte_order_mark_are_still_read() {
+    let d = tempfile::tempdir().unwrap();
+    fs::create_dir_all(d.path().join(".obsidian")).unwrap();
+    fs::write(d.path().join(".obsidian/core-plugins.json"), "\u{feff}{\"graph\": false, \"slides\": true}").unwrap();
+    let ws = Workspace::open(d.path()).unwrap();
+    let plugins = tachylite_core::config::core_plugin_state(d.path());
+    assert!(plugins.iter().any(|(id, on)| id == "slides" && *on));
+    assert!(plugins.iter().any(|(id, on)| id == "graph" && !*on));
+    drop(ws);
+}
