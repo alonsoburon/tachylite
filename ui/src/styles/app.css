@@ -384,3 +384,6 @@ kbd, .setting-hotkey { padding: 1px 6px; border-radius: var(--hotkey-radius, var
 
 /* Settings > Appearance > Show ribbon off */
 body.is-ribbon-hidden .workspace-ribbon.side-dock-ribbon { display: none; }
+
+/* Audio recorder core plugin: the recording indicator */
+.status-bar-item.plugin-audio-recorder.mod-recording { color: var(--text-error); }

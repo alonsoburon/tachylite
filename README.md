@@ -89,7 +89,7 @@ Prebuilt Linux AppImage and `.deb` builds are on the
 expect rough edges: Canvas (`.canvas`), Bases (`.base` with table, cards and list views, and only
 part of the formula language), editable tables, Dataview-style inline and block widgets in Live
 Preview, syntax highlighting, Vim mode, popout windows, OS trash, Templates, Daily notes,
-Properties, Note composer, File recovery, Workspaces, Page preview (hover popovers, nested,
+Properties, Note composer, Unique note creator, Slides, File recovery, Workspaces, Page preview (hover popovers, nested,
 per-source Ctrl/Cmd setting, plus the `hover-link` API that Hover Editor builds on), the graph view
 (global and local, filters, color groups, display and force settings in `graph.json`, still
 interactive at 5k notes), `tachylite://` links, and an opt-in Node bridge (`child_process`, real
@@ -118,6 +118,9 @@ completing tasks), Kanban (boards, adding cards), QuickAdd (capture choices) and
   notes with links, tags and frontmatter) opening a vault and building the full index takes about
   0.3 s for 10,000 notes and 1.5 s for 50,000, and a search over all of them adds roughly 0.1 to
   0.5 s. That is only the indexer; I haven't measured the UI at that size beyond the graph note above.
+- Audio recorder is written and tested against a fake recorder, but I haven't tried it with a real
+  microphone, and I haven't checked that the webview is allowed to open one. Format converter and
+  Web viewer don't exist yet.
 - Sync and Publish are out of scope.
 
 ## License

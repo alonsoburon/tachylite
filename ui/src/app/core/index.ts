@@ -16,6 +16,7 @@ import { randomNote } from "./randomNote";
 import { wordCount } from "./wordCount";
 import { uniqueNote } from "./uniqueNote";
 import { slides } from "./slides";
+import { audioRecorder } from "./audioRecorder";
 import { properties } from "../properties";
 import { fileRecovery } from "./fileRecovery";
 import { workspaces } from "./workspaces";
@@ -23,4 +24,4 @@ import { pagePreview } from "./pagePreview";
 
 /** Core views installed on vault open (in ribbon order). */
 export const coreModules: CoreModule[] = [explorer, search, backlinks, outgoingLinks, tags, outline, bookmarks, graph, canvas, bases,
-  properties, fileRecovery, workspaces, pagePreview, dailyNotes, templates, noteComposer, randomNote, slashCommands, wordCount, uniqueNote, slides];
+  properties, fileRecovery, workspaces, pagePreview, dailyNotes, templates, noteComposer, randomNote, slashCommands, wordCount, uniqueNote, slides, audioRecorder];
