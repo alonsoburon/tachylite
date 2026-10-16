@@ -35,6 +35,7 @@ export class HotkeysSettingTab extends SettingTab {
   icon = "lucide-keyboard";
   private query = "";
   private customizedOnly = false;
+  private hotkeyFilter: Hotkey | null = null;
   private listEl: HTMLElement | null = null;
   private stopCapture: (() => void) | null = null;
   constructor(app: App) { super(app); }
@@ -43,8 +44,10 @@ export class HotkeysSettingTab extends SettingTab {
     const el = this.containerEl;
     el.empty();
     this.stopCapture?.();
+    this.hotkeyFilter = null;
     const bar = el.createDiv({ cls: "hotkey-search-container" });
-    new Setting(bar).setName("Filter commands").addSearch((c) => c.setPlaceholder("Filter commands...").setValue(this.query).onChange((v) => { this.query = v.trim().toLowerCase(); this.renderList(); }));
+    const filterRow = new Setting(bar).setName("Filter commands").addSearch((c) => c.setPlaceholder("Filter commands...").setValue(this.query).onChange((v) => { this.query = v.trim().toLowerCase(); this.renderList(); }));
+    filterRow.addExtraButton((b) => b.setIcon("lucide-keyboard").setTooltip("Filter by hotkey").onClick(() => this.captureFilter(filterRow)));
     new Setting(bar).setName("Customized only").setDesc("Show only commands whose hotkeys you changed.").addToggle((t) => t.setValue(this.customizedOnly).onChange((v) => { this.customizedOnly = v; this.renderList(); }));
     this.listEl = el.createDiv({ cls: "hotkey-list-container" });
     this.renderList();
@@ -77,6 +80,10 @@ export class HotkeysSettingTab extends SettingTab {
     for (const cmd of cmds) {
       const custom = cmd.id in hm.customKeys;
       if (this.customizedOnly && !custom) continue;
+      if (this.hotkeyFilter) {
+        const want = hotkeyId(this.hotkeyFilter);
+        if (!hm.getHotkeys(cmd.id).some((h) => hotkeyId(h) === want)) continue;
+      }
       if (this.query && !(cmd.name.toLowerCase().includes(this.query) || cmd.id.toLowerCase().includes(this.query))) continue;
       this.row(list, cmd, custom, conflicts);
       shown++;
@@ -102,13 +109,53 @@ export class HotkeysSettingTab extends SettingTab {
       chip.createSpan({ cls: "setting-hotkey-label", text: prettyHotkey(h) });
       const x = chip.createSpan({ cls: "setting-hotkey-icon setting-delete-hotkey", attr: { role: "button", "aria-label": "Delete hotkey", tabindex: 0 }, text: "×" });
       x.addEventListener("click", () => {
-        hm.setHotkeys(cmd.id, keys.filter((k) => k !== h));
+        this.assign(cmd.id, keys.filter((k) => k !== h));
         this.renderList();
       });
     }
     if (!keys.length) chips.createSpan({ cls: "setting-hotkey mod-empty", text: "Blank" });
     s.addExtraButton((b) => b.setIcon("lucide-plus-circle").setTooltip("Customize this command").onClick(() => this.capture(cmd, chips, keys)));
     if (custom) s.addExtraButton((b) => b.setIcon("lucide-rotate-ccw").setTooltip("Restore default").onClick(() => { hm.removeHotkeys(cmd.id); this.renderList(); }));
+  }
+
+  /** Store a command's hotkeys, dropping the override when it matches the defaults again. */
+  private assign(id: string, keys: Hotkey[]): void {
+    const hm = this.app.hotkeyManager;
+    const same = (a: Hotkey[], b: Hotkey[]) => a.length === b.length && a.every((h, i) => hotkeyId(h) === hotkeyId(b[i]));
+    if (same(keys, hm.getDefaultHotkeys(id))) hm.removeHotkeys(id);
+    else hm.setHotkeys(id, keys);
+  }
+
+  /** Wait for a key combination and show only the commands bound to it; clicking the search icon again clears it. */
+  private captureFilter(row: Setting): void {
+    if (this.hotkeyFilter) {
+      this.hotkeyFilter = null;
+      row.settingEl.removeClass("mod-hotkey-filter");
+      this.renderList();
+      return;
+    }
+    this.stopCapture?.();
+    const doc = row.settingEl.doc;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      if (e.key === "Escape" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) { stop(); return; }
+      const h = eventToHotkey(e);
+      if (!h) return;
+      stop();
+      this.hotkeyFilter = h;
+      row.settingEl.addClass("mod-hotkey-filter");
+      row.setDesc(`Showing commands bound to ${prettyHotkey(h)}`);
+      this.renderList();
+    };
+    const stop = () => {
+      doc.removeEventListener("keydown", onKey, true);
+      doc.removeEventListener("mousedown", onClick, true);
+      if (this.stopCapture === stop) this.stopCapture = null;
+    };
+    const onClick = () => stop();
+    doc.addEventListener("keydown", onKey, true);
+    doc.addEventListener("mousedown", onClick, true);
+    this.stopCapture = stop;
   }
 
   /** Listen for the next key combination and add it to the command. Escape cancels. */
@@ -122,15 +169,18 @@ export class HotkeysSettingTab extends SettingTab {
       if (!h) return;
       stop();
       const id = hotkeyId(h);
-      if (!current.some((k) => hotkeyId(k) === id)) this.app.hotkeyManager.setHotkeys(cmd.id, [...current, h]);
+      if (!current.some((k) => hotkeyId(k) === id)) this.assign(cmd.id, [...current, h]);
       this.renderList();
     };
     const stop = () => {
       prompt.doc.removeEventListener("keydown", onKey, true);
+      prompt.doc.removeEventListener("mousedown", onClick, true);
       prompt.remove();
       if (this.stopCapture === stop) this.stopCapture = null;
     };
+    const onClick = (e: MouseEvent) => { if (!prompt.contains(e.target as Node)) stop(); };
     prompt.doc.addEventListener("keydown", onKey, true);
+    prompt.doc.addEventListener("mousedown", onClick, true);
     this.stopCapture = stop;
   }
 }

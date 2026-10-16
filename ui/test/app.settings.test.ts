@@ -195,7 +195,7 @@ describe("Hotkeys tab", () => {
     // remove stores an empty list (so a default can be removed) and shows reset
     r1().querySelector<HTMLElement>(".setting-delete-hotkey")!.click();
     await flush();
-    expect(readJson(v, ".obsidian/hotkeys.json")["t:one"]).toEqual([]);
+    expect(readJson(v, ".obsidian/hotkeys.json")["t:one"]).toBeUndefined(); // back to the (empty) default
     const two = row(t.containerEl, "Zed two");
     two.querySelector<HTMLElement>(".setting-delete-hotkey")!.click();
     await flush();
