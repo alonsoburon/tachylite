@@ -258,6 +258,7 @@ export class BookmarksView extends PanelView {
     if (file) {
       m.addItem((i) => i.setSection("open").setTitle("Open in new tab").setIcon("lucide-file-plus").onClick(() => { void this.app.workspace.getLeaf("tab").openFile(file, { active: true, eState: it.subpath ? { subpath: it.subpath } : undefined }); }));
       m.addItem((i) => i.setSection("open").setTitle("Open to the right").setIcon("lucide-separator-vertical").onClick(() => { void this.app.workspace.getLeaf("split").openFile(file, { active: true }); }));
+      m.addItem((i) => i.setSection("open").setTitle("Open in new window").setIcon("lucide-app-window").onClick(() => { void this.app.workspace.openPopoutLeaf().openFile(file, { active: true }); }));
     }
     if (it.type === "group") m.addItem((i) => i.setSection("action").setTitle("New group").setIcon("lucide-folder-plus").onClick(() => { void this.newGroup(it); }));
     m.addItem((i) => i.setSection("action").setTitle("Rename...").setIcon("lucide-pencil").onClick(async () => {

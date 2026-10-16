@@ -67,6 +67,7 @@ describe("bookmarks", () => {
     expect(v.contentEl.querySelectorAll(".bookmark")).toHaveLength(2);
     expect(v.getState().collapsedGroups).toEqual(["G"]);
     const menu: Menu = v.menu(getStore(c.app)!.items[0]);
+    expect(menu.items.map((i: any) => i.titleEl?.textContent)).toEqual(expect.arrayContaining(["Open in new tab", "Open to the right", "Open in new window", "Rename...", "Remove"]));
     const remove = menu.items.find((i: any) => i.titleEl?.textContent === "Remove") as any;
     remove.dom.click();
     await vi.waitFor(() => expect(v.contentEl.querySelectorAll(".bookmark")).toHaveLength(1));
