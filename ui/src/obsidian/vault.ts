@@ -4,6 +4,12 @@ import { Events, Platform } from "./events";
 import { TAbstractFile, TFile, TFolder } from "./files";
 import { normalizePath } from "./util";
 import type { App } from "./app";
+import { nodeBridge, createBridgeFs } from "./nodeBridge";
+
+function bridgeFs(): any {
+  if (!nodeBridge.active) throw new Error("Access outside the vault needs Settings > Community plugins > \"Allow plugins to run programs and access files outside the vault\"");
+  return createBridgeFs();
+}
 
 export interface Stat { type: "file" | "folder"; ctime: number; mtime: number; size: number }
 export interface DataWriteOptions { ctime?: number; mtime?: number }
@@ -45,6 +51,15 @@ export const DEFAULT_CONFIG: Record<string, any> = {
 
 /** FileSystemAdapter equivalent: raw access (including dot folders) through adapter_* commands. */
 export class FileSystemAdapter {
+  /** Read a file by absolute path. Needs the Node bridge, as access outside the vault does everywhere else. */
+  static async readLocalFile(path: string): Promise<ArrayBuffer> {
+    const buf: Uint8Array = await bridgeFs().promises.readFile(path);
+    return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+  }
+  /** Create a directory (and missing parents) by absolute path. Needs the Node bridge. */
+  static async mkdir(path: string): Promise<void> {
+    await bridgeFs().promises.mkdir(path, { recursive: true });
+  }
   private known = new Map<string, Stat>();
   constructor(private vault: Vault) {}
   getName(): string { return this.vault.getName(); }
