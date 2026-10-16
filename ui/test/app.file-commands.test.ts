@@ -114,3 +114,27 @@ describe("more Obsidian command ids", () => {
     expect(view.editor.getLine(0)).toBe("%%see%% [[Target]] here");
   });
 });
+
+describe("editor command defaults", () => {
+  it("lists the formatting hotkeys Obsidian ships and Ctrl+Alt+Arrow for back/forward", async () => {
+    const app = await boot();
+    const keys = (id: string) => app.hotkeyManager.getHotkeys(id).map((h) => [...h.modifiers, h.key].join("+"));
+    expect(keys("editor:toggle-bold")).toEqual(["Mod+b"]);
+    expect(keys("editor:toggle-italics")).toEqual(["Mod+i"]);
+    expect(keys("editor:insert-link")).toEqual(["Mod+k"]);
+    expect(keys("editor:toggle-checklist-status")).toEqual(["Mod+Enter"]);
+    expect(keys("editor:indent-list")).toEqual(["Mod+]"]);
+    expect(keys("app:go-back")).toContain("Mod+Alt+ArrowLeft");
+  });
+  it("Toggle checkbox status ticks a task and turns a plain line into one", async () => {
+    const app = await boot();
+    const ed = (app.workspace.activeLeaf!.view as any).editor;
+    ed.setValue("- [ ] a\nplain");
+    ed.setCursor({ line: 0, ch: 0 });
+    app.commands.executeCommandById("editor:toggle-checklist-status");
+    expect(ed.getLine(0)).toBe("- [x] a");
+    ed.setCursor({ line: 1, ch: 0 });
+    app.commands.executeCommandById("editor:toggle-checklist-status");
+    expect(ed.getLine(1)).toBe("- [ ] plain");
+  });
+});

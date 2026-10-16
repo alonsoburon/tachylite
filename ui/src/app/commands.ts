@@ -1,7 +1,7 @@
 // Core commands (ids follow Obsidian's public command ids) and their default hotkeys.
 import { FileView, FuzzySuggestModal, MarkdownView, Notice, TFile, TFolder, WorkspaceTabs, WorkspaceWindow, type App, type Command, type Hotkey, type WorkspaceLeaf } from "../obsidian";
 import {
-  indentListLess, indentListMore, insertLink, toggleBold, toggleChecklist, toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough,
+  indentListLess, indentListMore, insertLink, toggleBold, toggleChecklist, toggleTask, toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough,
 } from "../editor";
 import { linkAt } from "../editor";
 import { openExternal } from "./bridge";
@@ -71,8 +71,8 @@ export function installCommands(app: App, history: History): () => void {
   add({ id: "app:zoom-out", name: "Zoom out", hotkeys: mod("-"), callback: zoom(-ZOOM_STEP) });
   add({ id: "app:zoom-reset", name: "Reset zoom", hotkeys: mod("0"), callback: zoom(null) });
   add({ id: "app:open-settings", name: "Open settings", hotkeys: mod(","), callback: () => app.setting.open() });
-  add({ id: "app:go-back", name: "Navigate back", hotkeys: [{ modifiers: ["Alt"], key: "ArrowLeft" }], checkCallback: (c) => { if (!history.canGo(-1)) return false; if (!c) void history.go(-1); return true; } });
-  add({ id: "app:go-forward", name: "Navigate forward", hotkeys: [{ modifiers: ["Alt"], key: "ArrowRight" }], checkCallback: (c) => { if (!history.canGo(1)) return false; if (!c) void history.go(1); return true; } });
+  add({ id: "app:go-back", name: "Navigate back", hotkeys: [{ modifiers: ["Alt"], key: "ArrowLeft" }, { modifiers: ["Mod", "Alt"], key: "ArrowLeft" }], checkCallback: (c) => { if (!history.canGo(-1)) return false; if (!c) void history.go(-1); return true; } });
+  add({ id: "app:go-forward", name: "Navigate forward", hotkeys: [{ modifiers: ["Alt"], key: "ArrowRight" }, { modifiers: ["Mod", "Alt"], key: "ArrowRight" }], checkCallback: (c) => { if (!history.canGo(1)) return false; if (!c) void history.go(1); return true; } });
   add({ id: "app:toggle-ribbon", name: "Toggle ribbon", callback: () => { app.vault.setConfig("showRibbon", app.vault.getConfig("showRibbon") === false); app.workspace.trigger("config-changed"); } });
   add({ id: "app:toggle-left-sidebar", name: "Toggle left sidebar", callback: () => ws.leftSplit.toggle() });
   add({ id: "app:toggle-right-sidebar", name: "Toggle right sidebar", callback: () => ws.rightSplit.toggle() });
@@ -162,15 +162,17 @@ export function installCommands(app: App, history: History): () => void {
 
   // ---- editor formatting (hotkeys come from the editor's own keymap)
   const ed = (id: string, name: string, run: (v: EditorView) => boolean, hotkeys?: Hotkey[]) => add({ id, name, hotkeys, editorCallback: (e) => { run(cm(e as any)); } });
-  ed("editor:toggle-bold", "Toggle bold", toggleBold);
-  ed("editor:toggle-italics", "Toggle italics", toggleItalic);
+  ed("editor:toggle-bold", "Toggle bold", toggleBold, mod("b"));
+  ed("editor:toggle-italics", "Toggle italics", toggleItalic, mod("i"));
   ed("editor:toggle-strikethrough", "Toggle strikethrough", toggleStrikethrough);
   ed("editor:toggle-highlight", "Toggle highlight", toggleHighlight);
   ed("editor:toggle-code", "Toggle code", toggleInlineCode);
-  ed("editor:insert-link", "Insert Markdown link", insertLink);
-  ed("editor:toggle-checklist-status", "Toggle checkbox status", toggleChecklist);
-  ed("editor:indent-list", "Indent list item", indentListMore);
-  ed("editor:unindent-list", "Unindent list item", indentListLess);
+  ed("editor:insert-link", "Insert Markdown link", insertLink, mod("k"));
+  // Ctrl+Enter ticks a task and turns a plain or list line into one; the list conversion is Tachylite's own command.
+  ed("editor:toggle-checklist-status", "Toggle checkbox status", toggleTask, mod("Enter"));
+  ed("editor:toggle-checklist", "Toggle checklist", toggleChecklist, mod("l"));
+  ed("editor:indent-list", "Indent list item", indentListMore, mod("]"));
+  ed("editor:unindent-list", "Unindent list item", indentListLess, mod("["));
   ed("editor:fold-all", "Fold all headings and lists", foldAll);
   ed("editor:unfold-all", "Unfold all headings and lists", unfoldAll);
   ed("editor:toggle-fold", "Toggle fold on the current line", toggleFold);

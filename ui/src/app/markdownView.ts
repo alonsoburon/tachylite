@@ -139,7 +139,7 @@ export class TachyMarkdownView extends MarkdownView {
     });
     sub("Format", "lucide-bold", [["Bold", "editor:toggle-bold"], ["Italic", "editor:toggle-italics"], ["Strikethrough", "editor:toggle-strikethrough"], ["Highlight", "editor:toggle-highlight"], ["Code", "editor:toggle-code"]]);
     sub("Paragraph", "lucide-pilcrow", [
-      ["Bullet list", "editor:toggle-bullet-list"], ["Numbered list", "editor:toggle-numbered-list"], ["Task list", "editor:toggle-checklist-status"], ["Quote", "editor:toggle-blockquote"],
+      ["Bullet list", "editor:toggle-bullet-list"], ["Numbered list", "editor:toggle-numbered-list"], ["Task list", "editor:toggle-checklist"], ["Quote", "editor:toggle-blockquote"],
       ...[1, 2, 3, 4, 5, 6].map((n): [string, string] => [`Heading ${n}`, `editor:set-heading-${n}`]), ["Remove heading", "editor:set-heading-0"],
     ]);
     sub("Insert", "lucide-plus", [["Callout", "editor:insert-callout"], ["Code block", "editor:insert-codeblock"], ["Horizontal rule", "editor:insert-horizontal-rule"], ["Table", "editor:insert-table"], ["Math block", "editor:insert-mathblock"], ["Embed", "editor:insert-embed"], ["Tag", "editor:insert-tag"]]);
