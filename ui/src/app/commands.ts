@@ -13,7 +13,7 @@ import { foldAll, toggleFold, unfoldAll } from "@codemirror/language";
 import { addCursorAbove, addCursorBelow, moveLineDown, moveLineUp } from "@codemirror/commands";
 import { openSearchPanel } from "@codemirror/search";
 import type { EditorView } from "@codemirror/view";
-import { copyText, deleteWithPrompt, moveInto, newNote, promptRename, revealInExplorer } from "./files";
+import { copyText, deleteWithPrompt, FolderPicker, newNote, promptRename, revealInExplorer } from "./files";
 import type { History } from "./history";
 import { coreEnabled, whileCoreEnabled } from "./core/util";
 import { TachyMarkdownView } from "./markdownView";
@@ -29,14 +29,6 @@ export function openVaultSwitcher(): void {
 }
 
 const safeDecode = (s: string) => { try { return decodeURIComponent(s); } catch { return s; } };
-/** Picker behind "Move current file to another folder": every folder, the vault root first. */
-class FolderPicker extends FuzzySuggestModal<TFolder> {
-  constructor(app: App, private file: TFile) { super(app); this.setPlaceholder("Move file to..."); }
-  getItems(): TFolder[] { return this.app.vault.getAllFolders(true); }
-  getItemText(f: TFolder): string { return f.isRoot() ? "/" : f.path; }
-  onChooseItem(f: TFolder): void { void moveInto(this.app, this.file, f).catch((e) => new Notice(String(e?.message ?? e))); }
-}
-
 const ZOOM_KEY = "zoom";
 const ZOOM_STEP = 0.1;
 /** Page zoom: persisted per vault, applied by the shell (the webview's own zoom, so layout and popovers stay correct). */

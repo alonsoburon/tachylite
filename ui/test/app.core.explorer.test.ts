@@ -233,3 +233,22 @@ describe("file menu system actions", () => {
     expect(folder.items.map((i: any) => i.titleEl?.textContent ?? i.title)).not.toContain("Open in default app");
   });
 });
+
+describe("file menu extras", () => {
+  it("offers Open in new window, Move file to..., and Copy Obsidian URL", async () => {
+    const { buildFileMenu } = await import("../src/app/files");
+    const titles = (m: any) => m.items.map((i: any) => i.titleEl?.textContent ?? i.title);
+    const menu = buildFileMenu(c.app, c.app.vault.getFileByPath("Alpha.md")!, "file-explorer");
+    expect(titles(menu)).toEqual(expect.arrayContaining(["Open in new window", "Move file to...", "Copy Obsidian URL"]));
+    let copied = "";
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: async (t: string) => { copied = t; } }, configurable: true });
+    (menu.items.find((i: any) => (i.titleEl?.textContent ?? i.title) === "Copy Obsidian URL") as any).dom.click();
+    expect(copied).toBe(`obsidian://open?vault=${encodeURIComponent(c.app.vault.getName())}&file=Alpha`);
+    (menu.items.find((i: any) => (i.titleEl?.textContent ?? i.title) === "Move file to...") as any).dom.click();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(document.querySelector(".prompt-input")).toBeTruthy();
+    const folder = buildFileMenu(c.app, c.app.vault.getFolderByPath("docs")!, "file-explorer");
+    expect(titles(folder)).toContain("Move folder to...");
+    expect(titles(folder)).not.toContain("Open in new window");
+  });
+});
