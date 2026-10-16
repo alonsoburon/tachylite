@@ -6,7 +6,7 @@ import { TAbstractFile, TFile, TFolder } from "./files";
 import { type CachedMetadata, getFrontMatterInfo, normalizePath, parseFrontMatterTags, parseYaml, stringifyYaml, parseLinktext } from "./util";
 import type { App } from "./app";
 
-function lc(s: string): string { return s.toLowerCase(); }
+function lc(s: string): string { return s.normalize("NFC").toLowerCase(); }
 function dirOf(p: string): string { const i = p.lastIndexOf("/"); return i < 0 ? "" : p.slice(0, i); }
 
 function resolveRel(base: string, rel: string): string {

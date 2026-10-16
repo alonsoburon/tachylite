@@ -5,7 +5,7 @@
 
 use crate::canvas::canvas_links;
 use crate::parse::{self, CachedMetadata};
-use crate::path::{basename, dirname, extension, strip_ext};
+use crate::path::{basename, dirname, extension, strip_ext, FoldKey};
 use crate::vault::Vault;
 use std::collections::{BTreeMap, HashMap};
 
@@ -53,7 +53,7 @@ impl MetadataCache {
     }
 
     fn register(&mut self, path: &str) {
-        let key = basename(path).to_lowercase();
+        let key = basename(path).fold_key();
         let v = self.lookup.entry(key).or_default();
         if !v.iter().any(|p| p == path) {
             v.push(path.to_string());
@@ -62,7 +62,7 @@ impl MetadataCache {
     }
 
     fn unregister(&mut self, path: &str) {
-        if let Some(v) = self.lookup.get_mut(&basename(path).to_lowercase()) {
+        if let Some(v) = self.lookup.get_mut(&basename(path).fold_key()) {
             v.retain(|p| p != path);
         }
         self.paths.remove(path);
@@ -137,14 +137,14 @@ impl MetadataCache {
         if linkpath.is_empty() {
             return if self.paths.contains_key(source) { vec![source.to_string()] } else { vec![] };
         }
-        let mut target = linkpath.to_lowercase();
+        let mut target = linkpath.fold_key();
         let mut name = basename(&target).to_string();
         let mut found: Option<&Vec<String>> = None;
         if name.contains('.') {
             found = self.lookup.get(&name).filter(|c| !c.is_empty());
         }
         if found.is_none() {
-            target = format!("{linkpath}.md").to_lowercase();
+            target = format!("{linkpath}.md").fold_key();
             name = basename(&target).to_string();
             found = self.lookup.get(&name);
         }
@@ -152,7 +152,7 @@ impl MetadataCache {
         if name == target && cands.len() == 1 {
             return cands.clone();
         }
-        let mut src_dir = dirname(source).to_lowercase();
+        let mut src_dir = dirname(source).fold_key();
         if target.starts_with("./") || target.starts_with("../") {
             if target.starts_with("./../") {
                 target = target[2..].to_string();
@@ -172,12 +172,12 @@ impl MetadataCache {
                 }
                 target = format!("{src_dir}{target}");
             }
-            if let Some(c) = cands.iter().find(|c| c.to_lowercase() == target) {
+            if let Some(c) = cands.iter().find(|c| c.fold_key() == target) {
                 return vec![c.clone()];
             }
         }
         let target = target.strip_prefix('/').unwrap_or(&target).to_string();
-        if let Some(c) = cands.iter().find(|c| c.to_lowercase() == target) {
+        if let Some(c) = cands.iter().find(|c| c.fold_key() == target) {
             return vec![c.clone()];
         }
         if linkpath.starts_with('/') {
@@ -187,7 +187,7 @@ impl MetadataCache {
         // matches `Folder/Note.md`, and a source in `a` counts `ab/x.md` as near (observed app behaviour).
         let (mut near, mut far): (Vec<String>, Vec<String>) = (vec![], vec![]);
         for c in cands {
-            let lc = c.to_lowercase();
+            let lc = c.fold_key();
             if lc.ends_with(&target) {
                 if lc.starts_with(&src_dir) {
                     near.push(c.clone())
@@ -295,10 +295,10 @@ pub enum SubpathResult {
 pub fn resolve_subpath(meta: &CachedMetadata, subpath: &str) -> Option<SubpathResult> {
     let sp = subpath.strip_prefix('#').unwrap_or(subpath);
     if let Some(id) = sp.strip_prefix('^') {
-        let b = meta.blocks.get(&id.to_lowercase())?;
+        let b = meta.blocks.get(&id.fold_key())?;
         return Some(SubpathResult::Block { block: b.clone(), start: b.position.start, end: b.position.end });
     }
-    let parts: Vec<String> = sp.split('#').map(|p| strip_heading(p).to_lowercase()).filter(|p| !p.is_empty()).collect();
+    let parts: Vec<String> = sp.split('#').map(|p| strip_heading(p).fold_key()).filter(|p| !p.is_empty()).collect();
     let hs = &meta.headings;
     let (mut from, mut cur): (usize, Option<usize>) = (0, None);
     for part in parts {
@@ -307,7 +307,7 @@ pub fn resolve_subpath(meta: &CachedMetadata, subpath: &str) -> Option<SubpathRe
             if cur.is_some_and(|c| h.level <= hs[c].level) {
                 break;
             }
-            if strip_heading(&h.heading).to_lowercase() == part {
+            if strip_heading(&h.heading).fold_key() == part {
                 found = Some(i);
                 break;
             }

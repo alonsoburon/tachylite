@@ -153,3 +153,12 @@ fn config_files_with_a_byte_order_mark_are_still_read() {
     assert!(plugins.iter().any(|(id, on)| id == "graph" && !*on));
     drop(ws);
 }
+
+#[test]
+fn links_match_across_unicode_normalization_forms() {
+    // The file name is stored decomposed (e + combining acute, as macOS writes it); the link is typed precomposed.
+    let (_d, ws) = vault(&[("Cafe\u{301}.md", ""), ("src.md", "[[Caf\u{e9}]]")]);
+    assert_eq!(ws.meta.first_linkpath_dest("Caf\u{e9}", "src.md").as_deref(), Some("Cafe\u{301}.md"));
+    assert_eq!(ws.meta.first_linkpath_dest("CAF\u{c9}", "src.md").as_deref(), Some("Cafe\u{301}.md"));
+    assert_eq!(ws.meta.resolved_links["src.md"]["Cafe\u{301}.md"], 1);
+}

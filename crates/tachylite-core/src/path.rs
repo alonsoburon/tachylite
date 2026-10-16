@@ -1,5 +1,18 @@
 //! Vault path helpers. Vault paths are always `/`-separated, relative to the vault root.
 
+use unicode_normalization::UnicodeNormalization;
+
+/// Case- and normalization-insensitive comparison key: NFC, then lowercase.
+pub trait FoldKey {
+    fn fold_key(&self) -> String;
+}
+
+impl FoldKey for str {
+    fn fold_key(&self) -> String {
+        self.nfc().collect::<String>().to_lowercase()
+    }
+}
+
 pub fn basename(p: &str) -> &str {
     p.rsplit_once('/').map_or(p, |(_, b)| b)
 }

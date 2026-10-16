@@ -193,6 +193,13 @@ describe("MetadataCache", () => {
     expect(mc.getFirstLinkpathDest("Home", "folder/Deep.md")!.path).toBe("folder/Home.md"); // closest to source
     expect(mc.getFirstLinkpathDest("Home", "Note.md")!.path).toBe("Home.md");
   });
+  it("getFirstLinkpathDest ignores Unicode normalization form", async () => {
+    await app.vault.create("Cafe\u0301.md", "x");
+    const hit = (l: string) => app.metadataCache.getFirstLinkpathDest(l, "Home.md")?.name.normalize("NFC");
+    expect(hit("Caf\u00e9")).toBe("Caf\u00e9.md");
+    expect(hit("Cafe\u0301")).toBe("Caf\u00e9.md");
+    expect(hit("CAFE\u0301")).toBe("Caf\u00e9.md");
+  });
   it("fileToLinktext gives the shortest unambiguous link", async () => {
     const mc = app.metadataCache;
     expect(mc.fileToLinktext(app.vault.getFileByPath("folder/Deep.md")!, "Home.md")).toBe("Deep");
