@@ -6,7 +6,7 @@ import {
   type App, type LayoutHost, type View, type WorkspaceItem, type WorkspaceLeaf, type WorkspaceWindowInitData,
 } from "../obsidian";
 import { setIcon } from "../obsidian/icons";
-import { buildFileMenu, copyText, revealInExplorer } from "./files";
+import { buildFileMenu } from "./files";
 import { Popouts } from "./popout";
 
 const MIN_PANE = 90;
@@ -342,8 +342,6 @@ export class Shell implements LayoutHost {
     const v = leaf.view;
     if (v instanceof FileView && v.file) {
       const f = v.file;
-      menu.addItem((i) => i.setSection("file").setTitle("Copy path").setIcon("lucide-clipboard").onClick(() => copyText(f.path)));
-      menu.addItem((i) => i.setSection("file").setTitle("Reveal file in navigation").setIcon("lucide-folder-search").onClick(() => revealInExplorer(this.app, f)));
       buildFileMenu(this.app, f, "tab-header", menu);
     }
     v.onPaneMenu(menu, "tab-header");

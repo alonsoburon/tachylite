@@ -129,7 +129,7 @@ export function buildFileMenu(app: App, file: TAbstractFile, source: string, men
     menu.addItem((i) => i.setSection("action").setTitle("New note").setIcon("lucide-edit").onClick(() => { void newNote(app, { folder: file as TFolder }); }));
     menu.addItem((i) => i.setSection("action").setTitle("New folder").setIcon("lucide-folder-plus").onClick(() => { void newFolder(app, file as TFolder); }));
   }
-  if (isFile) menu.addItem((i) => i.setSection("open").setTitle("Open in new window").setIcon("lucide-app-window").onClick(() => { void app.workspace.openPopoutLeaf().openFile(file, { active: true }); }));
+  if (isFile && source !== "tab-header") menu.addItem((i) => i.setSection("open").setTitle("Open in new window").setIcon("lucide-app-window").onClick(() => { void app.workspace.openPopoutLeaf().openFile(file, { active: true }); }));
   if (isFile) menu.addItem((i) => i.setSection("action").setTitle("Make a copy").setIcon("lucide-copy").onClick(() => { void duplicateFile(app, file).catch((e) => new Notice(String(e.message ?? e))); }));
   menu.addItem((i) => i.setSection("action").setTitle(isFile ? "Move file to..." : "Move folder to...").setIcon("lucide-folder-tree").onClick(() => new FolderPicker(app, file).open()));
   const sys = (reveal: boolean) => () => { void ipc.openInSystem(file.path, reveal).catch((e) => new Notice(String(e?.message ?? e))); };
