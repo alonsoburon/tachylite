@@ -371,3 +371,13 @@ kbd, .setting-hotkey { padding: 1px 6px; border-radius: var(--hotkey-radius, var
 .cm-code-block-widget { position: relative; margin: var(--size-4-2) 0; }
 .cm-code-block-widget .edit-block-button { position: absolute; top: 4px; right: 4px; z-index: 2; padding: 1px 6px; border-radius: var(--radius-s); font-family: var(--font-monospace); font-size: var(--font-ui-smaller); color: var(--text-faint); opacity: 0; cursor: var(--cursor); }
 .cm-code-block-widget:hover .edit-block-button { opacity: 1; background: var(--background-modifier-hover); color: var(--text-muted); }
+
+/* Slides core plugin: the presentation overlay */
+.slides-presentation { position: fixed; inset: 0; z-index: calc(var(--layer-modal, 50) + 10); display: flex; align-items: center; justify-content: center; background: var(--background-primary); color: var(--text-normal); cursor: var(--cursor); }
+.slides-stage { width: min(90vw, 1100px); max-height: 90vh; overflow: auto; }
+.slides-slide { font-size: 1.6em; text-align: center; padding: var(--size-4-8); }
+.slides-slide > div > :first-child { margin-top: 0; }
+.slides-counter { position: absolute; right: var(--size-4-4); bottom: var(--size-4-3); color: var(--text-faint); font-size: var(--font-ui-small); }
+.slides-close { position: absolute; top: var(--size-4-3); right: var(--size-4-4); font-size: 1.6em; color: var(--text-faint); padding: 0 var(--size-4-2); border-radius: var(--radius-s); }
+.slides-close:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.slides-slide ul, .slides-slide ol { display: inline-block; text-align: left; }
