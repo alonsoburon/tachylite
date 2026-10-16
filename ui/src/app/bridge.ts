@@ -200,6 +200,7 @@ export function makeRenderContext(app: App, sourcePath: string, component?: { ad
       return !!h;
     } : undefined,
     strictLineBreaks: !!app.vault.getConfig("strictLineBreaks"),
+    foldHeading: component instanceof MarkdownPreviewView && app.vault.getConfig("foldHeading") !== false,
   };
 }
 

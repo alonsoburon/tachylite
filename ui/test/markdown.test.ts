@@ -338,3 +338,25 @@ describe("html containers spanning blank lines", () => {
     expect(el.querySelectorAll(".markdown-preview-section").length).toBe(2);
   });
 });
+
+describe("reading view heading folds", () => {
+  const md = "# A\nunder A\n\n## B\nunder B\n\n## C\nunder C\n\n# D\nunder D";
+  const visible = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>(".markdown-preview-section")].filter((s) => !s.classList.contains("is-folded-away")).map((s) => s.textContent!.replace(/\s+/g, " ").trim());
+  it("adds no arrows unless the context asks for them (embeds, plugin renders)", async () => {
+    const { el } = await render(md);
+    expect(el.querySelector(".heading-collapse-indicator")).toBeNull();
+  });
+  it("folding a heading hides everything up to the next heading of the same or higher level, and unfolding restores it", async () => {
+    const { el } = await render(md, { foldHeading: true });
+    const arrows = el.querySelectorAll<HTMLElement>(".heading-collapse-indicator");
+    expect(arrows).toHaveLength(4);
+    arrows[0].click(); // fold "A": hides B, C and their text, not D
+    expect(visible(el)).toEqual(["A", "D", "under D"]);
+    expect(el.querySelector("h1")!.classList.contains("is-collapsed")).toBe(true);
+    arrows[1].click(); // fold "B" while A is folded: still hidden
+    arrows[0].click(); // unfold A: B stays folded, so "under B" is hidden but C shows
+    expect(visible(el)).toEqual(["A", "under A", "B", "C", "under C", "D", "under D"]);
+    arrows[1].click();
+    expect(visible(el)).toHaveLength(8);
+  });
+});

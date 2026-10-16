@@ -50,6 +50,8 @@ export interface RenderContext {
   renderProperties?(el: HTMLElement, frontmatter: Record<string, unknown>, sourcePath: string): boolean;
   /** When true a single newline is NOT a line break. Default false (Obsidian default). */
   strictLineBreaks?: boolean;
+  /** Show fold arrows on headings (the note's own reading view only, not embeds). */
+  foldHeading?: boolean;
 }
 
 export interface RenderViewOptions {

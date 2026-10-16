@@ -11,7 +11,7 @@ import { processCallouts } from "./callouts";
 import { paneFor } from "./pane";
 import { highlightCodeBlocks } from "./highlight";
 import { renderFrontmatter } from "./frontmatter";
-import { linkIcon } from "./icons";
+import { chevronIcon, linkIcon } from "./icons";
 
 const parsers = new Map<boolean, MarkdownIt>();
 function getParser(strict: boolean): MarkdownIt {
@@ -156,6 +156,42 @@ function sectionClass(first: Token): string {
   }
 }
 
+/**
+ * Fold arrows on reading-view headings: folding a heading hides the sections after it up to the next heading of the
+ * same or a higher level (`.heading-collapse-indicator` and `.is-collapsed`, the classes themes style).
+ */
+function installHeadingFolds(sections: HTMLElement[]): void {
+  const level = (sec: HTMLElement): { h: HTMLElement; n: number } | null => {
+    const h = sec.firstElementChild;
+    const m = h && /^H([1-6])$/.exec(h.tagName);
+    return m ? { h: h as HTMLElement, n: Number(m[1]) } : null;
+  };
+  const apply = () => {
+    let hideBelow = 0; // level of the folded heading currently swallowing sections (0 = none)
+    for (const sec of sections) {
+      const hd = level(sec);
+      if (hd && hideBelow && hd.n <= hideBelow) hideBelow = 0;
+      sec.classList.toggle("is-folded-away", hideBelow > 0);
+      if (hd && !hideBelow && hd.h.classList.contains("is-collapsed")) hideBelow = hd.n;
+    }
+  };
+  for (const sec of sections) {
+    const hd = level(sec);
+    if (!hd) continue;
+    const arrow = document.createElement("div");
+    arrow.className = "heading-collapse-indicator collapse-indicator collapse-icon";
+    arrow.appendChild(chevronIcon());
+    hd.h.insertBefore(arrow, hd.h.firstChild);
+    arrow.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hd.h.classList.toggle("is-collapsed");
+      arrow.classList.toggle("is-collapsed", hd.h.classList.contains("is-collapsed"));
+      apply();
+    });
+  }
+}
+
 const CONTAINER = "details|div|section|aside|figure|center|blockquote|fieldset";
 /** How many HTML container elements an html_block opens without closing (negative if it only closes). */
 function unclosedContainers(html: string): number {
@@ -250,6 +286,8 @@ async function renderInternal(md: string, el: HTMLElement, ctx: RenderContext, s
     sections.push(sec);
     sizer.appendChild(sec);
   }
+
+  if (ctx.foldHeading) installHeadingFolds(sections);
 
   const pctx: PostProcessorContext = {
     docId: "doc-" + ++docCounter,

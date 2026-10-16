@@ -379,3 +379,11 @@ pre.frontmatter { margin: 0; }
 .markdown-rendered pre code .token:is(.regex, .important) { color: var(--code-important); }
 .markdown-rendered pre code .token.bold { font-weight: var(--font-bold); }
 .markdown-rendered pre code .token.italic { font-style: italic; }
+
+/* Reading view: heading fold arrows and the sections a folded heading hides. */
+.markdown-preview-view .markdown-preview-section > :is(h1, h2, h3, h4, h5, h6) { position: relative; }
+.markdown-preview-view .heading-collapse-indicator { position: absolute; inset-inline-start: -1.25em; top: 50%; transform: translateY(-50%); display: flex; align-items: center; opacity: 0; cursor: var(--cursor); color: var(--text-faint); transition: opacity var(--anim-duration-fast); }
+.markdown-preview-view :is(h1, h2, h3, h4, h5, h6):hover > .heading-collapse-indicator, .markdown-preview-view .heading-collapse-indicator.is-collapsed { opacity: 1; }
+.markdown-preview-view .heading-collapse-indicator .svg-icon { width: 1em; height: 1em; transition: transform var(--anim-duration-fast); }
+.markdown-preview-view .heading-collapse-indicator.is-collapsed .svg-icon { transform: rotate(-90deg); }
+.markdown-preview-view .markdown-preview-section.is-folded-away { display: none; }
