@@ -96,3 +96,21 @@ describe("footnote and clear-formatting commands", () => {
     await vi.waitFor(() => expect(editor.getValue()).toBe("bold[^1] text\n\n[^1]: "));
   });
 });
+
+describe("more Obsidian command ids", () => {
+  it("creates a note in a new pane to the right", async () => {
+    const app = await boot();
+    const before = app.workspace.getLeavesOfType("markdown").length;
+    app.commands.executeCommandById("file-explorer:new-file-in-new-pane");
+    await vi.waitFor(() => expect(exists("Untitled.md")).toBe(true));
+    await vi.waitFor(() => expect(app.workspace.getLeavesOfType("markdown").length).toBe(before + 1));
+  });
+  it("registers the cycle, comment and multi-cursor editor commands", async () => {
+    const app = await boot();
+    for (const id of ["editor:cycle-list-checklist", "editor:toggle-comments", "editor:add-cursor-above", "editor:add-cursor-below"]) expect(app.commands.commands[id], id).toBeTruthy();
+    const view = app.workspace.activeLeaf!.view as any;
+    view.editor.setSelection({ line: 0, ch: 0 }, { line: 0, ch: 3 });
+    app.commands.executeCommandById("editor:toggle-comments");
+    expect(view.editor.getLine(0)).toBe("%%see%% [[Target]] here");
+  });
+});

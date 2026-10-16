@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { EditorSelection, EditorState, type StateCommand } from "@codemirror/state";
+import { toggleWrap } from "../src/editor/commands";
 import {
   clearFormatting, insertFootnote, stripFormatting, deleteParagraph, insertCallout, insertCodeBlock, insertEmbed, insertHorizontalRule, insertTag, insertWikilink, setHeading,
-  toggleBlockquote, toggleBulletList, toggleNumberedList,
+  toggleBlockquote, cycleListChecklist, toggleBulletList, toggleNumberedList,
 } from "../src/editor/blockCommands";
 
 function run(cmd: StateCommand, doc: string, anchor: number, head = anchor) {
@@ -100,5 +101,26 @@ describe("insert footnote", () => {
   });
   it("copes with notes that do not end in a newline", () => {
     expect(run(insertFootnote, "abc", 3).doc).toBe("abc[^1]\n\n[^1]: ");
+  });
+});
+
+describe("cycleListChecklist", () => {
+  it("goes plain → bullet → task → plain", () => {
+    const a = run(cycleListChecklist, "text", 0);
+    expect(a.doc).toBe("- text");
+    const b = run(cycleListChecklist, a.doc, 0);
+    expect(b.doc).toBe("- [ ] text");
+    expect(run(cycleListChecklist, b.doc, 0).doc).toBe("text");
+  });
+  it("works per line, keeps indentation, and skips blank lines", () => {
+    expect(run(cycleListChecklist, "a\n\n  - b\n1. c [x]", 0, 17).doc).toBe("- a\n\n  - [ ] b\n1. [ ] c [x]");
+  });
+});
+
+describe("toggle comment", () => {
+  it("wraps the selection in %% and unwraps it again", () => {
+    const a = run(toggleWrap("%%"), "hide me", 0, 7);
+    expect(a.doc).toBe("%%hide me%%");
+    expect(run(toggleWrap("%%"), a.doc, 2, 9).doc).toBe("hide me");
   });
 });

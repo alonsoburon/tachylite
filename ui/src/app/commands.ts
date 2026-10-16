@@ -7,10 +7,10 @@ import { linkAt } from "../editor";
 import { openExternal } from "./bridge";
 import {
   deleteParagraph, insertCallout, insertCodeBlock, insertEmbed, insertHorizontalRule, insertMathBlock, insertTable, insertTag, insertWikilink,
-  clearFormatting, insertFootnote, setHeading, toggleBlockquote, toggleBulletList, toggleNumberedList,
+  clearFormatting, cycleListChecklist, toggleWrap, insertFootnote, setHeading, toggleBlockquote, toggleBulletList, toggleNumberedList,
 } from "../editor";
 import { foldAll, toggleFold, unfoldAll } from "@codemirror/language";
-import { moveLineDown, moveLineUp } from "@codemirror/commands";
+import { addCursorAbove, addCursorBelow, moveLineDown, moveLineUp } from "@codemirror/commands";
 import { openSearchPanel } from "@codemirror/search";
 import type { EditorView } from "@codemirror/view";
 import { copyText, deleteWithPrompt, moveInto, newNote, promptRename, revealInExplorer } from "./files";
@@ -84,6 +84,7 @@ export function installCommands(app: App, history: History): () => void {
   // ---- files
   add({ id: "file-explorer:new-file", name: "Create new note", hotkeys: mod("n"), callback: () => { void newNote(app, { open: ws.activeLeaf?.view.getViewType() === "empty" && ws.activeLeaf.getRoot() === ws.rootSplit ? true : "tab" }); } });
   add({ id: "file-explorer:new-file-in-new-tab", name: "Create note in new tab", callback: () => { void newNote(app, { open: "tab" }); } });
+  add({ id: "file-explorer:new-file-in-new-pane", name: "Create note in new pane", callback: () => { void newNote(app, { open: "split" }); } });
   add({ id: "file-explorer:new-file-in-current-tab", name: "Create note in current tab", callback: () => { void newNote(app, { open: true }); } });
   add({ id: "file-explorer:reveal-active-file", name: "Reveal current file in navigation", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) revealInExplorer(app, f); return true; } });
   add({ id: "workspace:rename-file", name: "Rename current file", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) void promptRename(app, f); return true; } });
@@ -189,6 +190,10 @@ export function installCommands(app: App, history: History): () => void {
   ed("editor:delete-paragraph", "Delete paragraph", deleteParagraph);
   ed("editor:clear-formatting", "Clear formatting", clearFormatting);
   ed("editor:insert-footnote", "Insert footnote", insertFootnote);
+  ed("editor:cycle-list-checklist", "Cycle bullet/checkbox", cycleListChecklist);
+  ed("editor:toggle-comments", "Toggle comment", toggleWrap("%%"));
+  ed("editor:add-cursor-above", "Add cursor above", addCursorAbove);
+  ed("editor:add-cursor-below", "Add cursor below", addCursorBelow);
   ed("editor:swap-line-up", "Move line up", moveLineUp);
   ed("editor:swap-line-down", "Move line down", moveLineDown);
   add({

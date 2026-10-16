@@ -203,3 +203,22 @@ export const insertFootnote: StateCommand = ({ state, dispatch }) => {
   }));
   return true;
 };
+
+/** "Cycle bullet/checkbox": plain line → bullet → task → plain line, on each selected line. */
+export const cycleListChecklist: StateCommand = ({ state, dispatch }) => {
+  if (state.readOnly) return false;
+  const changes: ChangeSpec[] = [];
+  for (const l of selectedLines(state)) {
+    const pre = prefixLength(l.text);
+    const rest = l.text.slice(pre);
+    const task = /^((?:[-*+]|\d+[.)])\s+)\[.\]\s?/.exec(rest);
+    if (task) changes.push({ from: l.from + pre, to: l.from + pre + task[0].length });
+    else if (/^(?:[-*+]|\d+[.)])\s+/.test(rest)) {
+      const m = /^(?:[-*+]|\d+[.)])\s+/.exec(rest)![0];
+      changes.push({ from: l.from + pre + m.length, insert: "[ ] " });
+    } else if (rest.trim()) changes.push({ from: l.from + pre, insert: "- " });
+  }
+  if (!changes.length) return false;
+  dispatch(state.update({ changes, userEvent: "input", scrollIntoView: true }));
+  return true;
+};
