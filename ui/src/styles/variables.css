@@ -2,6 +2,25 @@
    contract so community themes can override them; all VALUES are original. */
 
 body {
+  /* chrome that themes restyle */
+  --clickable-icon-radius: var(--radius-s);
+  --toggle-radius: 11px;
+  --toggle-s-width: 40px;
+  --slider-thumb-height: 16px;
+  --slider-track-background: var(--background-modifier-border);
+  --status-bar-background: var(--background-secondary);
+  --status-bar-text-color: var(--text-muted);
+  --status-bar-font-size: var(--font-ui-smaller);
+  --status-bar-radius: var(--radius-s);
+  --status-bar-border-color: var(--divider-color);
+  --ribbon-padding: var(--size-4-2) 0;
+  --file-header-font-size: var(--font-ui-small);
+  --file-header-height: 36px;
+  --titlebar-background: var(--background-secondary);
+  --titlebar-background-focused: var(--background-secondary-alt);
+  --titlebar-text-color: var(--text-muted);
+  --titlebar-text-color-focused: var(--text-normal);
+  --titlebar-border-color: var(--divider-color);
   /* typography */
   --font-interface-theme: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
   --font-text-theme: "Charter", "Iowan Old Style", "Noto Serif", Georgia, serif;
