@@ -213,6 +213,12 @@ export class TachyMarkdownView extends MarkdownView {
     const reading = this.getMode() === "preview";
     menu.addItem((i) => i.setSection("view").setTitle(reading ? "Editing view" : "Reading view").setIcon(reading ? "lucide-edit-3" : "lucide-book-open").onClick(() => this.toggleReading()));
     if (!reading) menu.addItem((i) => i.setSection("view").setTitle("Source mode").setIcon("lucide-code-2").setChecked(this.editMode.sourceMode).onClick(() => this.toggleSource()));
+    const run = (id: string) => () => { this.app.commands.executeCommandById(id); };
+    if (!reading) {
+      menu.addItem((i) => i.setSection("find").setTitle("Find...").setIcon("lucide-search").onClick(run("editor:open-search")));
+      menu.addItem((i) => i.setSection("find").setTitle("Replace...").setIcon("lucide-replace").onClick(run("editor:open-search-replace")));
+    }
+    menu.addItem((i) => i.setSection("properties").setTitle("Add file property").setIcon("lucide-archive").onClick(run("markdown:add-metadata-property")));
     menu.addItem((i) => i.setSection("pane").setTitle("Split right").setIcon("lucide-separator-vertical").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "vertical"); }));
     menu.addItem((i) => i.setSection("pane").setTitle("Split down").setIcon("lucide-separator-horizontal").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "horizontal"); }));
     menu.addItem((i) => i.setSection("pane").setTitle(this.leaf.pinned ? "Unpin" : "Pin").setIcon("lucide-pin").onClick(() => this.leaf.togglePinned()));

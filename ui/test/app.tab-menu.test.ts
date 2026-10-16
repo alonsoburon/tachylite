@@ -18,3 +18,17 @@ it("tab header menu has no duplicate entries", async () => {
   expect(el).toEqual(expect.arrayContaining(["Close", "Pin", "Open in new window", "Reveal file in navigation", "Copy path from vault folder"]));
   await s.stop();
 });
+
+it("the More options menu has Find, Replace and Add file property, and no duplicate entries", async () => {
+  document.body.innerHTML = "";
+  const v = makeVault({ "Note.md": "x\n" });
+  setBackend(async (cmd, a) => { switch (cmd) { case "meta_backlinks": case "meta_tags": return {}; case "vault_search": return []; case "launch_args": return { vault: null, script: null }; case "log_frontend": return null; default: return v.backend(cmd, a); } });
+  const s = await startSession((await v.backend("vault_info")) as any, document.body.appendChild(document.createElement("div")));
+  await s.app.workspace.openLinkText("Note", "", false);
+  (s.app.workspace.activeLeaf!.view as any).showMoreMenu(new MouseEvent("click"));
+  const el = [...document.querySelectorAll(".menu-item-title")].map((e) => e.textContent);
+  expect(el.filter((t, i) => el.indexOf(t) !== i)).toEqual([]);
+  expect(el).toEqual(expect.arrayContaining(["Find...", "Replace...", "Add file property", "Split right", "Pin", "Open in new window", "Rename...", "Delete"]));
+  expect(el).not.toContain("Open in new tab");
+  await s.stop();
+});

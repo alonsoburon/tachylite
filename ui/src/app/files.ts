@@ -122,10 +122,10 @@ export function revealInExplorer(app: App, file: TAbstractFile): void {
 /** Standard file/folder context menu; plugins extend it through the `file-menu` workspace event. */
 export function buildFileMenu(app: App, file: TAbstractFile, source: string, menu = new Menu()): Menu {
   const isFile = file instanceof TFile;
-  if (isFile) {
+  if (isFile && source !== "more-options") {
     menu.addItem((i) => i.setSection("open").setTitle("Open in new tab").setIcon("lucide-file-plus").onClick(() => { void app.workspace.getLeaf("tab").openFile(file, { active: true }); }));
     menu.addItem((i) => i.setSection("open").setTitle("Open to the right").setIcon("lucide-separator-vertical").onClick(() => { void app.workspace.getLeaf("split").openFile(file, { active: true }); }));
-  } else {
+  } else if (!isFile) {
     menu.addItem((i) => i.setSection("action").setTitle("New note").setIcon("lucide-edit").onClick(() => { void newNote(app, { folder: file as TFolder }); }));
     menu.addItem((i) => i.setSection("action").setTitle("New folder").setIcon("lucide-folder-plus").onClick(() => { void newFolder(app, file as TFolder); }));
   }
