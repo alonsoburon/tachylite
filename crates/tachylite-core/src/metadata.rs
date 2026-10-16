@@ -207,15 +207,33 @@ impl MetadataCache {
         self.resolved_links.iter().filter_map(|(src, targets)| targets.get(path).map(|n| (src.clone(), *n))).collect()
     }
 
-    /// Every tag in the vault (body and frontmatter) with usage counts. Nested tags also count toward parents.
+    /// Every tag in the vault (body and frontmatter) with usage counts, in file counts. Nested tags also count toward
+    /// parents. Tags are case-insensitive: `#Tag` and `#tag` are one entry, shown with its most used spelling.
     pub fn tags(&self) -> BTreeMap<String, usize> {
-        let mut out = BTreeMap::new();
+        // folded tag -> (spelling -> files using it)
+        let mut seen: BTreeMap<String, BTreeMap<String, usize>> = BTreeMap::new();
         for meta in self.cache.values() {
+            let mut in_file: Vec<String> = vec![];
             for t in all_tags(meta) {
-                *out.entry(t).or_insert(0) += 1;
+                let key = t.fold_key();
+                if in_file.contains(&key) {
+                    continue;
+                }
+                in_file.push(key.clone());
+                *seen.entry(key).or_default().entry(t).or_insert(0) += 1;
             }
         }
-        out
+        seen.into_values()
+            .map(|spellings| {
+                let total = spellings.values().sum();
+                // Most used spelling; ties go to the first in sort order (BTreeMap iterates sorted).
+                let best = spellings.iter().fold(None::<(&String, &usize)>, |b, (k, n)| match b {
+                    Some((_, bn)) if bn >= n => b,
+                    _ => Some((k, n)),
+                });
+                (best.unwrap().0.clone(), total)
+            })
+            .collect()
     }
 
     /// Link text Obsidian would insert for `target` when linking from `source`, per `newLinkFormat`.
@@ -259,7 +277,7 @@ pub fn all_tags(meta: &CachedMetadata) -> Vec<String> {
             }
         }
     }
-    let mut out = vec![];
+    let mut out: Vec<String> = vec![];
     for t in raw {
         let mut acc = String::new();
         for (i, seg) in t.split('/').enumerate() {
@@ -267,7 +285,7 @@ pub fn all_tags(meta: &CachedMetadata) -> Vec<String> {
                 acc.push('/');
             }
             acc.push_str(seg);
-            if !out.contains(&acc) {
+            if !out.iter().any(|o| o.fold_key() == acc.fold_key()) {
                 out.push(acc.clone());
             }
         }

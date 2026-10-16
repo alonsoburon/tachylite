@@ -162,3 +162,17 @@ fn links_match_across_unicode_normalization_forms() {
     assert_eq!(ws.meta.first_linkpath_dest("CAF\u{c9}", "src.md").as_deref(), Some("Cafe\u{301}.md"));
     assert_eq!(ws.meta.resolved_links["src.md"]["Cafe\u{301}.md"], 1);
 }
+
+#[test]
+fn tags_are_case_insensitive_and_count_files() {
+    let (_d, ws) = vault(&[("a.md", "#Idea #idea and #Idea/Sub"), ("b.md", "#idea"), ("c.md", "---\ntags: [IDEA]\n---\n")]);
+    let tags = ws.meta.tags();
+    // One entry per tag; the spelling used by most files wins ("idea": a and b; "Idea": a; "IDEA": c -> tie broken by files).
+    assert_eq!(tags.len(), 2, "{tags:?}");
+    assert_eq!(tags.values().copied().max(), Some(3));
+    let (name, _) = tags.iter().find(|(k, _)| !k.contains('/')).unwrap();
+    assert!(name.eq_ignore_ascii_case("#idea"));
+    assert!(tags.keys().any(|k| k.to_lowercase() == "#idea/sub"));
+    // Within one file, case variants are a single tag.
+    assert_eq!(ws.meta.get("a.md").map(|m| tachylite_core::metadata::all_tags(m).len()), Some(3 - 1));
+}

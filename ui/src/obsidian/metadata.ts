@@ -185,11 +185,23 @@ export class MetadataCache extends Events {
     return strip(file.path);
   }
 
+  /** Tag usage counts. Tags are case-insensitive, so `#Tag` and `#tag` are one entry under their most used spelling. */
   getTags(): Record<string, number> {
-    const out: Record<string, number> = {};
+    const byFold = new Map<string, Map<string, number>>();
     for (const c of this.cache.values()) {
       const seen = [...(c.tags ?? []).map((t) => t.tag), ...(parseFrontMatterTags(c.frontmatter) ?? [])];
-      for (const t of seen) out[t] = (out[t] ?? 0) + 1;
+      for (const t of seen) {
+        const k = lc(t);
+        const spellings = byFold.get(k) ?? new Map<string, number>();
+        spellings.set(t, (spellings.get(t) ?? 0) + 1);
+        byFold.set(k, spellings);
+      }
+    }
+    const out: Record<string, number> = {};
+    for (const spellings of byFold.values()) {
+      let best = "", bestN = 0, total = 0;
+      for (const [t, n] of spellings) { total += n; if (n > bestN || (n === bestN && t < best)) { best = t; bestN = n; } }
+      out[best] = total;
     }
     return out;
   }

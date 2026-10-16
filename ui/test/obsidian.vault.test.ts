@@ -208,6 +208,12 @@ describe("MetadataCache", () => {
     await app.vault.create("folder/Home.md", "dup");
     expect(mc.fileToLinktext(app.vault.getFileByPath("folder/Home.md")!, "Note.md")).toBe("folder/Home");
   });
+  it("getTags merges tags that differ only in case", async () => {
+    await app.vault.create("Cased1.md", "#Zed #Zed #zed");
+    await app.vault.create("Cased2.md", "#ZED");
+    await vi.waitFor(() => expect(app.metadataCache.getTags()["#Zed"]).toBe(4));
+    expect(Object.keys(app.metadataCache.getTags()).filter((t) => t.toLowerCase() === "#zed")).toEqual(["#Zed"]);
+  });
   it("getTags", () => {
     expect(app.metadataCache.getTags()).toMatchObject({ "#tag1": 1, "#a": 1, "#b": 1 });
   });
