@@ -3,12 +3,12 @@ import { ipc } from "../../ipc";
 import type { App } from "../../obsidian";
 import { hexToHsl } from "./util";
 
-interface State { mql: MediaQueryList | null; handler: (() => void) | null; system: boolean }
+interface State { mql: MediaQueryList | null; handler: (() => void) | null; system: boolean; quickFontSize: boolean }
 const states = new WeakMap<App, State>();
 
 function stateOf(app: App): State {
   let s = states.get(app);
-  if (!s) { s = { mql: null, handler: null, system: true }; states.set(app, s); }
+  if (!s) { s = { mql: null, handler: null, system: true, quickFontSize: true }; states.set(app, s); }
   return s;
 }
 
@@ -55,6 +55,21 @@ export function hslToRgb(h: number, s: number, l: number): [number, number, numb
   return [f(0), f(8), f(4)];
 }
 
+export const DEFAULT_FONT_SIZE = 16;
+const MIN_FONT_SIZE = 10, MAX_FONT_SIZE = 32;
+
+/** Whether Ctrl/Cmd+scroll adjusts the font size (Settings > Appearance > Quick font size adjustment; on by default). */
+export function quickFontSizeEnabled(app: App): boolean { return stateOf(app).quickFontSize; }
+
+/** Change the base font size by `delta` pixels (clamped), persisting it like the settings slider does. */
+export async function adjustFontSize(app: App, delta: number): Promise<number> {
+  const ap = await readAppearance();
+  const cur = Number(ap.baseFontSize);
+  const next = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, (Number.isFinite(cur) && cur >= 8 ? cur : DEFAULT_FONT_SIZE) + delta));
+  await updateAppearance(app, { baseFontSize: next === DEFAULT_FONT_SIZE ? undefined : next });
+  return next;
+}
+
 /** Idempotent; tolerates a missing or partial appearance.json. */
 export async function applyAppearance(app: App): Promise<void> {
   const ap = await readAppearance();
@@ -90,7 +105,8 @@ export async function applyAppearance(app: App): Promise<void> {
     for (const v of ["--accent-h", "--accent-s", "--accent-l", "--interactive-accent-rgb"]) body.style.removeProperty(v);
   }
 
-  // Font size.
+  // Font size (and whether Ctrl/Cmd+scroll may change it).
+  st.quickFontSize = ap.baseFontSizeAction !== false;
   const size = Number(ap.baseFontSize);
   if (Number.isFinite(size) && size >= 8 && size <= 48) body.style.setProperty("--font-text-size", `${size}px`);
   else body.style.removeProperty("--font-text-size");

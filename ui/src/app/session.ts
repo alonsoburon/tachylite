@@ -1,13 +1,13 @@
 // One vault session: builds the App, installs the shell, core views, commands and settings, restores the layout.
 import { ipc, type VaultInfo } from "../ipc";
-import { App, Notice, MarkdownView, type WorkspaceLeaf } from "../obsidian";
+import { App, Notice, MarkdownView, Platform, type WorkspaceLeaf } from "../obsidian";
 import { refreshBlocks } from "../editor";
 import { editorHandles, installBridge } from "./bridge";
 import { installCommands, restoreZoom } from "./commands";
 import { coreModules } from "./core";
 import { History } from "./history";
 import { installMarkdownView } from "./markdownView";
-import { applyAppearance, installSettings } from "./settings";
+import { adjustFontSize, applyAppearance, installSettings, quickFontSizeEnabled } from "./settings";
 import { Shell } from "./shell";
 import { installStatusBar } from "./statusbar";
 import { installMenuCommands } from "./platform";
@@ -22,6 +22,22 @@ export interface Session {
 }
 
 /** Reflect app.json options that are plain CSS/DOM switches (and push editor options into open editors). */
+/** Ctrl (Cmd on macOS) + scroll over a note changes the font size by a pixel per notch, when the setting is on. */
+function installQuickFontSize(app: App): () => void {
+  let last = 0;
+  const onWheel = (e: WheelEvent) => {
+    if (!(Platform.isMacOS ? e.metaKey : e.ctrlKey) || !quickFontSizeEnabled(app)) return;
+    if (!(e.target as HTMLElement | null)?.closest?.(".markdown-source-view, .markdown-preview-view, .markdown-embed")) return;
+    e.preventDefault(); // otherwise the webview zooms the whole page
+    const now = Date.now();
+    if (now - last < 60) return; // trackpads emit bursts of wheel events
+    last = now;
+    void adjustFontSize(app, e.deltaY < 0 ? 1 : -1);
+  };
+  document.addEventListener("wheel", onWheel, { passive: false });
+  return () => document.removeEventListener("wheel", onWheel);
+}
+
 export function applyConfigToBody(app: App): void {
   const b = document.body;
   b.classList.toggle("show-inline-title", app.vault.getConfig("showInlineTitle") !== false);
@@ -29,6 +45,7 @@ export function applyConfigToBody(app: App): void {
   b.classList.toggle("is-readable-line-width", app.vault.getConfig("readableLineLength") !== false);
   b.classList.toggle("show-line-numbers", !!app.vault.getConfig("showLineNumber"));
   b.classList.toggle("is-rtl", !!app.vault.getConfig("rightToLeft"));
+  b.classList.toggle("is-ribbon-hidden", app.vault.getConfig("showRibbon") === false);
   for (const leaf of app.workspace.getLeavesOfType("markdown")) {
     const v = leaf.view as MarkdownView;
     editorHandles.get(v.cm)?.reconfigure({
@@ -111,6 +128,7 @@ export async function startSession(info: VaultInfo, host: HTMLElement, opts: { s
   const cssRef = app.workspace.on("css-change", () => { void applyAppearance(app); });
   applyConfigToBody(app);
   disposers.push(installUriHandling(app));
+  disposers.push(installQuickFontSize(app));
   await app.start();
   applyConfigToBody(app);
   void applyAppearance(app);

@@ -381,3 +381,6 @@ kbd, .setting-hotkey { padding: 1px 6px; border-radius: var(--hotkey-radius, var
 .slides-close { position: absolute; top: var(--size-4-3); right: var(--size-4-4); font-size: 1.6em; color: var(--text-faint); padding: 0 var(--size-4-2); border-radius: var(--radius-s); }
 .slides-close:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
 .slides-slide ul, .slides-slide ol { display: inline-block; text-align: left; }
+
+/* Settings > Appearance > Show ribbon off */
+body.is-ribbon-hidden .workspace-ribbon.side-dock-ribbon { display: none; }

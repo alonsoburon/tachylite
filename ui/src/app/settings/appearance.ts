@@ -41,6 +41,9 @@ export class AppearanceSettingTab extends SettingTab {
       .addExtraButton((b) => b.setIcon("lucide-rotate-ccw").setTooltip("Restore default").onClick(() => { void updateAppearance(app, { baseFontSize: undefined }).then(() => this.display()); }))
       .addSlider((s) => s.setLimits(12, 24, 1).setValue(Number(ap.baseFontSize) || 16).setDynamicTooltip().onChange((v) => { void updateAppearance(app, { baseFontSize: v }); }));
 
+    new Setting(el).setName("Quick font size adjustment").setDesc("Adjust the font size of notes with Ctrl + scroll (Cmd + scroll on macOS).").addToggle((t) =>
+      t.setValue(ap.baseFontSizeAction !== false).onChange((v) => { void updateAppearance(app, { baseFontSizeAction: v ? undefined : false }); }));
+
     const fonts: [string, string, string, string][] = [
       ["interfaceFontFamily", "Interface font", "Font used by the interface.", "System default"],
       ["textFontFamily", "Text font", "Font used in the editor and reading view.", "Theme default"],
@@ -54,6 +57,8 @@ export class AppearanceSettingTab extends SettingTab {
 
     new Setting(el).setName("Show inline title").setDesc("Show the note title above the content.").addToggle((t) =>
       t.setValue(app.vault.getConfig("showInlineTitle") !== false).onChange((v) => { commitConfig(app, "showInlineTitle", v); void applyAppearance(app); }));
+    new Setting(el).setName("Show ribbon").setDesc("Show the ribbon of quick actions at the left edge.").addToggle((t) =>
+      t.setValue(app.vault.getConfig("showRibbon") !== false).onChange((v) => commitConfig(app, "showRibbon", v)));
     new Setting(el).setName("Show tab title bar").setDesc("Show the title bar at the top of each tab.").addToggle((t) =>
       t.setValue(app.vault.getConfig("showViewHeader") !== false).onChange((v) => { commitConfig(app, "showViewHeader", v); void applyAppearance(app); }));
 

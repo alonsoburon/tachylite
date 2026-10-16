@@ -1,6 +1,6 @@
 import type { App } from "../../obsidian";
 import { AboutSettingTab } from "./about";
-import { applyAppearance, disposeAppearance } from "./appearanceApply";
+import { applyAppearance, disposeAppearance, adjustFontSize, quickFontSizeEnabled } from "./appearanceApply";
 import { AppearanceSettingTab } from "./appearance";
 import { CommunityPluginsSettingTab } from "./community";
 import { CorePluginsSettingTab } from "./corePlugins";
@@ -8,7 +8,7 @@ import { EditorSettingTab } from "./editor";
 import { FilesSettingTab } from "./files";
 import { HotkeysSettingTab } from "./hotkeys";
 
-export { applyAppearance };
+export { applyAppearance, adjustFontSize, quickFontSizeEnabled };
 
 /** Install the settings tabs on `app.setting`; returns a disposer. */
 export function installSettings(app: App): () => void {

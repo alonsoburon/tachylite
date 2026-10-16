@@ -65,6 +65,7 @@ export function installCommands(app: App, history: History): () => void {
   add({ id: "app:open-settings", name: "Open settings", hotkeys: mod(","), callback: () => app.setting.open() });
   add({ id: "app:go-back", name: "Navigate back", hotkeys: [{ modifiers: ["Alt"], key: "ArrowLeft" }], checkCallback: (c) => { if (!history.canGo(-1)) return false; if (!c) void history.go(-1); return true; } });
   add({ id: "app:go-forward", name: "Navigate forward", hotkeys: [{ modifiers: ["Alt"], key: "ArrowRight" }], checkCallback: (c) => { if (!history.canGo(1)) return false; if (!c) void history.go(1); return true; } });
+  add({ id: "app:toggle-ribbon", name: "Toggle ribbon", callback: () => { app.vault.setConfig("showRibbon", app.vault.getConfig("showRibbon") === false); app.workspace.trigger("config-changed"); } });
   add({ id: "app:toggle-left-sidebar", name: "Toggle left sidebar", callback: () => ws.leftSplit.toggle() });
   add({ id: "app:toggle-right-sidebar", name: "Toggle right sidebar", callback: () => ws.rightSplit.toggle() });
   add({ id: "app:open-vault-switcher", name: "Open another vault", callback: openVaultSwitcher });
