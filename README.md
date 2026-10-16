@@ -114,6 +114,10 @@ completing tasks), Kanban (boards, adding cards), QuickAdd (capture choices) and
   every corner. If one breaks, file an issue with the plugin id and version.
 - Bases formulas and some Canvas details are incomplete.
 - CI builds for Linux, macOS and Windows, but only Linux has been run by a human.
+- Speed numbers, so you can judge: on my laptop (release build of the Rust core, 40 MB of generated
+  notes with links, tags and frontmatter) opening a vault and building the full index takes about
+  0.3 s for 10,000 notes and 1.5 s for 50,000, and a search over all of them adds roughly 0.1 to
+  0.5 s. That is only the indexer; I haven't measured the UI at that size beyond the graph note above.
 - Sync and Publish are out of scope.
 
 ## License
