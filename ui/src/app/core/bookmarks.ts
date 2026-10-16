@@ -302,6 +302,19 @@ export const bookmarks: CoreModule = {
           },
         }),
         addCommand(app, {
+          id: "bookmarks:bookmark-current-section", name: "Bookmarks: Bookmark current heading", icon: "lucide-bookmark-plus",
+          editorCheckCallback: (checking, editor, ctx) => {
+            const f = (ctx as any).file as TFile | null;
+            if (!f || f.extension !== "md") return false;
+            const line = editor.getCursor().line;
+            const heads = (app.metadataCache.getFileCache(f)?.headings ?? []).filter((h) => h.position.start.line <= line);
+            const head = heads[heads.length - 1];
+            if (!head) return false;
+            if (!checking) store.toggleFile(f, "#" + head.heading);
+            return true;
+          },
+        }),
+        addCommand(app, {
           id: "bookmarks:bookmark-all-tabs", name: "Bookmarks: Bookmark all tabs", icon: "lucide-bookmarks",
           checkCallback: (checking) => {
             // The files open in the main area (and popouts), once each, in tab order.

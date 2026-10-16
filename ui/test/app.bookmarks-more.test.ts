@@ -10,7 +10,7 @@ let session: Session | null = null;
 
 beforeEach(() => {
   document.body.innerHTML = ""; localStorage.clear();
-  v = makeVault({ "A.md": "a\n", "B.md": "b\n", "C.md": "c\n" });
+  v = makeVault({ "A.md": "a\n", "B.md": "b\n", "C.md": "c\n", "Doc.md": "intro\n\n# First\ntext\n\n## Second part\nmore text\n" });
   setBackend(async (cmd, a) => {
     switch (cmd) {
       case "meta_backlinks": case "meta_tags": return {};
@@ -60,5 +60,24 @@ describe("Bookmark current search", () => {
     app.commands.executeCommandById("bookmarks:bookmark-current-search");
     await new Promise((r) => setTimeout(r, 50));
     expect(saved().length).toBe(1);
+  });
+});
+
+describe("Bookmark current heading", () => {
+  it("bookmarks the heading at or above the cursor, toggles it off again, and needs a heading", async () => {
+    const app = await boot();
+    await app.workspace.openLinkText("Doc", "", false);
+    const view = app.workspace.activeLeaf!.view as any;
+    await vi.waitFor(() => expect(app.metadataCache.getFileCache(app.vault.getFileByPath("Doc.md")!)?.headings?.length).toBe(2));
+    view.editor.setCursor({ line: 0, ch: 0 }); // before any heading
+    expect(app.commands.executeCommandById("bookmarks:bookmark-current-section")).toBe(false);
+    view.editor.setCursor({ line: 6, ch: 2 }); // under "Second part"
+    expect(app.commands.executeCommandById("bookmarks:bookmark-current-section")).toBe(true);
+    await vi.waitFor(() => expect(saved()).toEqual([expect.objectContaining({ type: "file", path: "Doc.md", subpath: "#Second part" })]));
+    view.editor.setCursor({ line: 3, ch: 0 }); // under "First"
+    app.commands.executeCommandById("bookmarks:bookmark-current-section");
+    await vi.waitFor(() => expect(saved().map((i: any) => i.subpath)).toEqual(["#Second part", "#First"]));
+    app.commands.executeCommandById("bookmarks:bookmark-current-section"); // same heading again removes it
+    await vi.waitFor(() => expect(saved().map((i: any) => i.subpath)).toEqual(["#Second part"]));
   });
 });
