@@ -35,6 +35,14 @@ const DESCRIPTIONS: Record<string, string> = {
   webviewer: "Open web pages inside the app.",
 };
 
+/** Core plugins Tachylite does not provide: Sync and Publish are paid services (out of scope), the others are not built yet. */
+const UNAVAILABLE: Record<string, string> = {
+  sync: "Not available in Tachylite (paid Obsidian service).",
+  publish: "Not available in Tachylite (paid Obsidian service).",
+  webviewer: "Not available in Tachylite yet.",
+  "markdown-importer": "Not available in Tachylite yet.",
+};
+
 export class CorePluginsSettingTab extends SettingTab {
   id = "core-plugins";
   name = "Core plugins";
@@ -64,7 +72,9 @@ export class CorePluginsSettingTab extends SettingTab {
       const item = new Setting(list).setName(p.name).setDesc(desc).setClass("core-plugin-item");
       const tab = p.enabled && this.app.setting.settingTabs.find((t) => (t as any).corePluginId === p.id);
       if (tab) item.addExtraButton((b) => b.setIcon("lucide-settings").setTooltip("Options").onClick(() => this.app.setting.openTabById(p.id)));
-      item.addToggle((t) => t.setValue(p.enabled).onChange(async (v) => { await (v ? p.enable() : p.disable()); this.renderList(); }));
+      const missing = UNAVAILABLE[p.id];
+      if (missing) { item.setDesc(`${desc} ${missing}`.trim()); item.settingEl.addClass("is-unavailable"); }
+      item.addToggle((t) => t.setValue(p.enabled && !missing).setDisabled(!!missing).onChange(async (v) => { await (v ? p.enable() : p.disable()); this.renderList(); }));
       list.lastElementChild?.setAttribute("data-plugin-id", p.id);
       shown++;
     }
