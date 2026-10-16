@@ -797,6 +797,14 @@ fn is_tag_char(c: char) -> bool {
     c.is_alphanumeric() || matches!(c, '_' | '-' | '/')
 }
 
+/// Byte index of the character after the one at `i` (or the end of the line), so scanning never lands inside a multibyte character.
+fn next_char(line: &str, i: usize) -> usize {
+    if i >= line.len() {
+        return line.len();
+    }
+    i + line[i..].chars().next().map_or(1, char::len_utf8)
+}
+
 /// Find links, embeds and tags in one line of body text.
 fn scan_inline(idx: &Index, line: &str, line_start: usize, meta: &mut CachedMetadata, in_table: bool) {
     let mut spans = code_spans(line);
@@ -806,12 +814,12 @@ fn scan_inline(idx: &Index, line: &str, line_start: usize, meta: &mut CachedMeta
     let mut i = 0;
     while i < b.len() {
         if in_code(i) {
-            i += 1;
+            i = next_char(line, i);
             continue;
         }
         // Escaped characters are literal.
         if b[i] == b'\\' {
-            i += 2;
+            i = next_char(line, next_char(line, i));
             continue;
         }
         let embed = b[i] == b'!' && i + 1 < b.len() && (b[i + 1] == b'[');
