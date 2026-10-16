@@ -159,3 +159,47 @@ export const deleteParagraph: StateCommand = ({ state, dispatch }) => {
   else if (from > 0) return dispatchChanges(state, dispatch, [{ from: from - 1, to }]);
   return dispatchChanges(state, dispatch, [{ from, to }]);
 };
+
+/** Markdown formatting removed by "Clear formatting": emphasis, strikethrough, highlight, inline code, and block prefixes. */
+export function stripFormatting(text: string): string {
+  return text
+    .replace(/(\*\*|__)(?=\S)(.+?)(?<=\S)\1/g, "$2")
+    .replace(/(?<![\w*])\*(?=[^\s*])(.+?)(?<=[^\s*])\*(?![\w*])/g, "$1")
+    .replace(/(?<![\w_])_(?=[^\s_])(.+?)(?<=[^\s_])_(?![\w_])/g, "$1")
+    .replace(/~~(.+?)~~/g, "$1")
+    .replace(/==(.+?)==/g, "$1")
+    .replace(/`([^`\n]+)`/g, "$1")
+    .replace(/^[ \t]{0,3}(?:#{1,6}[ \t]+|>[ \t]?|[-*+][ \t]+(?:\[.\][ \t]+)?|\d+[.)][ \t]+)/gm, "");
+}
+
+/** Strip Markdown formatting from the selection, or from the current line when nothing is selected. */
+export const clearFormatting: StateCommand = ({ state, dispatch }) => {
+  if (state.readOnly) return false;
+  const changes: ChangeSpec[] = [];
+  for (const r of state.selection.ranges) {
+    const from = r.empty ? state.doc.lineAt(r.head).from : r.from;
+    const to = r.empty ? state.doc.lineAt(r.head).to : r.to;
+    const before = state.sliceDoc(from, to), after = stripFormatting(before);
+    if (after !== before) changes.push({ from, to, insert: after });
+  }
+  return dispatchChanges(state, dispatch, changes);
+};
+
+/** Add `[^n]` at the cursor and an empty `[^n]: ` definition at the end of the note, with the cursor in the definition. */
+export const insertFootnote: StateCommand = ({ state, dispatch }) => {
+  if (state.readOnly) return false;
+  const text = state.doc.toString();
+  const ids = [...text.matchAll(/\[\^(\d+)\]/g)].map((m) => Number(m[1]));
+  const n = (ids.length ? Math.max(...ids) : 0) + 1;
+  const ref = `[^${n}]`;
+  const head = state.selection.main.head;
+  const sep = text.endsWith("\n\n") ? "" : text.endsWith("\n") ? "\n" : "\n\n";
+  const def = `${sep}${ref}: `;
+  dispatch(state.update({
+    changes: [{ from: head, insert: ref }, { from: state.doc.length, insert: def }],
+    selection: { anchor: text.length + ref.length + def.length },
+    userEvent: "input",
+    scrollIntoView: true,
+  }));
+  return true;
+};

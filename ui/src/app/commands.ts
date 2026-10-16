@@ -1,5 +1,5 @@
 // Core commands (ids follow Obsidian's public command ids) and their default hotkeys.
-import { FileView, MarkdownView, Notice, WorkspaceTabs, WorkspaceWindow, type App, type Command, type Hotkey, type WorkspaceLeaf } from "../obsidian";
+import { FileView, FuzzySuggestModal, MarkdownView, Notice, TFile, TFolder, WorkspaceTabs, WorkspaceWindow, type App, type Command, type Hotkey, type WorkspaceLeaf } from "../obsidian";
 import {
   indentListLess, indentListMore, insertLink, toggleBold, toggleChecklist, toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough,
 } from "../editor";
@@ -7,13 +7,13 @@ import { linkAt } from "../editor";
 import { openExternal } from "./bridge";
 import {
   deleteParagraph, insertCallout, insertCodeBlock, insertEmbed, insertHorizontalRule, insertMathBlock, insertTable, insertTag, insertWikilink,
-  setHeading, toggleBlockquote, toggleBulletList, toggleNumberedList,
+  clearFormatting, insertFootnote, setHeading, toggleBlockquote, toggleBulletList, toggleNumberedList,
 } from "../editor";
 import { foldAll, toggleFold, unfoldAll } from "@codemirror/language";
 import { moveLineDown, moveLineUp } from "@codemirror/commands";
 import { openSearchPanel } from "@codemirror/search";
 import type { EditorView } from "@codemirror/view";
-import { copyText, deleteWithPrompt, newNote, promptRename, revealInExplorer } from "./files";
+import { copyText, deleteWithPrompt, moveInto, newNote, promptRename, revealInExplorer } from "./files";
 import type { History } from "./history";
 import { coreEnabled, whileCoreEnabled } from "./core/util";
 import { TachyMarkdownView } from "./markdownView";
@@ -29,6 +29,14 @@ export function openVaultSwitcher(): void {
 }
 
 const safeDecode = (s: string) => { try { return decodeURIComponent(s); } catch { return s; } };
+/** Picker behind "Move current file to another folder": every folder, the vault root first. */
+class FolderPicker extends FuzzySuggestModal<TFolder> {
+  constructor(app: App, private file: TFile) { super(app); this.setPlaceholder("Move file to..."); }
+  getItems(): TFolder[] { return this.app.vault.getAllFolders(true); }
+  getItemText(f: TFolder): string { return f.isRoot() ? "/" : f.path; }
+  onChooseItem(f: TFolder): void { void moveInto(this.app, this.file, f).catch((e) => new Notice(String(e?.message ?? e))); }
+}
+
 const ZOOM_KEY = "zoom";
 const ZOOM_STEP = 0.1;
 /** Page zoom: persisted per vault, applied by the shell (the webview's own zoom, so layout and popovers stay correct). */
@@ -107,6 +115,12 @@ export function installCommands(app: App, history: History): () => void {
     return true;
   } });
   add({ id: "app:show-release-notes", name: "Show release notes", callback: () => openExternal("https://github.com/alonsoburon/tachylite/releases", app) });
+  add({ id: "file-explorer:move-file", name: "Move current file to another folder", checkCallback: (c) => {
+    const f = ws.getActiveFile();
+    if (!f) return false;
+    if (!c) new FolderPicker(app, f).open();
+    return true;
+  } });
   add({ id: "workspace:close-others", name: "Close other tabs", checkCallback: (c) => { const t = mainTabs(); if (!t) return false; if (!c) for (const l of [...t.tabs.children] as WorkspaceLeaf[]) if (l !== t.leaf && !l.pinned) l.detach(); return true; } });
 
   // ---- markdown view modes
@@ -142,6 +156,8 @@ export function installCommands(app: App, history: History): () => void {
   ed("editor:insert-table", "Insert table", insertTable);
   ed("editor:insert-mathblock", "Insert math block", insertMathBlock);
   ed("editor:delete-paragraph", "Delete paragraph", deleteParagraph);
+  ed("editor:clear-formatting", "Clear formatting", clearFormatting);
+  ed("editor:insert-footnote", "Insert footnote", insertFootnote);
   ed("editor:swap-line-up", "Move line up", moveLineUp);
   ed("editor:swap-line-down", "Move line down", moveLineDown);
   add({
@@ -157,6 +173,22 @@ export function installCommands(app: App, history: History): () => void {
       return true;
     },
   });
+  // The link under the cursor, opened somewhere other than this tab.
+  const openLinkIn = (id: string, name: string, where: "tab" | "split" | "window") => add({
+    id, name, editorCheckCallback: (checking, editor, ctx) => {
+      const cur = editor.getCursor();
+      const link = linkAt(editor.getLine(cur.line), cur.ch);
+      if (!link) return false;
+      if (!checking) {
+        if (link.external) openExternal(link.target, app);
+        else void app.workspace.openLinkText(link.kind === "markdown" ? safeDecode(link.target) : link.target, ctx?.file?.path ?? "", where);
+      }
+      return true;
+    },
+  });
+  openLinkIn("editor:open-link-in-new-leaf", "Open link under cursor in new tab", "tab");
+  openLinkIn("editor:open-link-in-new-split", "Open link under cursor to the right", "split");
+  openLinkIn("editor:open-link-in-new-window", "Open link under cursor in new window", "window");
   ed("editor:open-search", "Search current file", openSearchPanel, mod("f"));
   ed("editor:open-search-replace", "Search and replace in current file", openSearchPanel, mod("h"));
 
