@@ -12,6 +12,8 @@ export interface LinkTarget {
   /** Secondary text (folder, heading level, block excerpt...). */
   detail?: string;
   type: "file" | "heading" | "block" | "alias" | "unresolved";
+  /** Full Markdown link (`[text](path.md)`) to insert instead of `linktext` when the vault has wikilinks switched off. */
+  markdown?: string;
 }
 
 export interface EditorHost {

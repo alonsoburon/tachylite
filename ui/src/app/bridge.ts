@@ -131,6 +131,21 @@ export async function openTagSearch(app: App, tag: string): Promise<void> {
 }
 
 function linkTargets(app: App, query: string, source: string): LinkTarget[] {
+  const out = wikiTargets(app, query, source);
+  if (!app.vault.getConfig("useMarkdownLinks")) return out;
+  // Markdown-links vaults get `[text](path)` from the same suggestions.
+  return out.map((t) => {
+    const [target, alias] = t.linktext.split("|");
+    const hash = target.indexOf("#");
+    const name = hash >= 0 ? target.slice(0, hash) : target;
+    const sub = hash >= 0 ? target.slice(hash) : "";
+    const file = name ? app.metadataCache.getFirstLinkpathDest(name, source) : app.vault.getFileByPath(source);
+    if (!file) return t;
+    return { ...t, markdown: app.fileManager.generateMarkdownLink(file, source, sub, alias).replace(/^!/, "") };
+  });
+}
+
+function wikiTargets(app: App, query: string, source: string): LinkTarget[] {
   const hash = query.indexOf("#");
   if (hash >= 0) {
     const name = query.slice(0, hash), sub = query.slice(hash + 1);
@@ -155,7 +170,7 @@ function linkTargets(app: App, query: string, source: string): LinkTarget[] {
       const aliases = app.metadataCache.getFileCache(file)?.frontmatter?.aliases;
       for (const a of Array.isArray(aliases) ? aliases : typeof aliases === "string" ? [aliases] : []) {
         const am = f(String(a));
-        if (am) out.push({ score: am.score - 0.01, t: { linktext: `${file.path.replace(/\.md$/, "")}|${a}`, label: String(a), detail: file.path, type: "alias" } });
+        if (am) out.push({ score: am.score - 0.01, t: { linktext: `${app.metadataCache.fileToLinktext(file, source, true)}|${a}`, label: String(a), detail: file.path, type: "alias" } });
       }
     }
   }

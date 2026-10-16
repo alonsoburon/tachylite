@@ -41,6 +41,12 @@ export function wikilinkCompletionSource(env: WidgetEnv): CompletionSource {
       detail: t.detail,
       type: TYPE_MAP[t.type] ?? "text",
       apply: (view, _c, f, to) => {
+        if (t.markdown) {
+          // Wikilinks are off: replace the `[[query` (and its `]]` when already typed) with a Markdown link.
+          const end = closed ? to + 2 : to;
+          view.dispatch({ changes: { from: f - 2, to: end, insert: t.markdown }, selection: { anchor: f - 2 + t.markdown.length }, userEvent: "input.complete" });
+          return;
+        }
         const insert = t.linktext + (closed || piped ? "" : "]]");
         const cursor = f + t.linktext.length + (closed ? 2 : piped ? 0 : 2);
         view.dispatch({
