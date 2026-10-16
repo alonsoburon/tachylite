@@ -275,6 +275,7 @@ body {
 body.theme-light {
   color-scheme: light;
   --accent-h: 262; --accent-s: 62%; --accent-l: 52%;
+  --interactive-accent-rgb: 112, 57, 208; /* hsl(262, 62%, 52%) as r, g, b; Settings > Appearance > accent colour keeps it in step */
   --color-accent-hsl: var(--accent-h), var(--accent-s), var(--accent-l);
   --color-accent: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
   --color-accent-1: hsl(var(--accent-h), var(--accent-s), calc(var(--accent-l) - 4%));

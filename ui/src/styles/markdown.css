@@ -218,7 +218,7 @@
   display: block;
   margin: var(--p-spacing) 0;
   padding: var(--embed-padding);
-  border-inline-start: 2px solid var(--interactive-accent);
+  border-inline-start: var(--embed-border-left, 2px solid var(--interactive-accent));
   border-top: var(--embed-border-top);
   border-bottom: var(--embed-border-bottom);
   border-inline-end: var(--embed-border-right);

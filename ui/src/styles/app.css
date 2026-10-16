@@ -50,8 +50,8 @@ body.is-grabbing, body.is-grabbing * { cursor: grabbing !important; }
 
 /* ribbon */
 .workspace-ribbon.side-dock-ribbon {
-  flex: 0 0 auto; width: 44px; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-  padding: var(--size-4-2) 0; background: var(--background-secondary); border-right: var(--divider-width) solid var(--divider-color);
+  flex: 0 0 auto; width: var(--ribbon-width, 44px); display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: var(--size-4-2) 0; background: var(--ribbon-background, var(--background-secondary)); border-right: var(--divider-width) solid var(--divider-color);
 }
 .workspace-ribbon.mod-right { display: none; }
 .side-dock-actions, .side-dock-settings { display: flex; flex-direction: column; align-items: center; gap: var(--size-2-1); }
@@ -102,8 +102,11 @@ body.is-grabbing, body.is-grabbing * { cursor: grabbing !important; }
 .workspace-tab-header:hover { background: var(--background-modifier-hover); }
 .workspace-tab-header.is-active {
   background: var(--tab-background-active); color: var(--tab-text-color-active);
-  border-color: var(--divider-color);
+  border-color: var(--tab-outline-color, var(--divider-color));
+  border-radius: var(--tab-radius-active, var(--tab-radius)) var(--tab-radius-active, var(--tab-radius)) 0 0;
 }
+.workspace-tabs.mod-active .workspace-tab-header:not(.is-active):hover { color: var(--tab-text-color-focused, var(--tab-text-color)); }
+.workspace-tabs.mod-active .workspace-tab-header.is-active { color: var(--tab-text-color-focused-active, var(--tab-text-color-active)); }
 .workspace-tab-header.is-active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--tab-background-active); }
 .workspace-tabs.mod-active .workspace-tab-header.is-active { color: var(--tab-text-color-focused-active-current); }
 .workspace-tab-header-inner { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: var(--size-2-3); }
@@ -257,9 +260,9 @@ input[type="range"], .slider { appearance: none; height: 4px; background: var(--
 input[type="range"]::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--interactive-accent); border: 0; cursor: var(--cursor); }
 .checkbox-container { position: relative; flex: none; width: 40px; height: 22px; border-radius: 11px; background: var(--background-modifier-border); cursor: var(--cursor); transition: background var(--anim-duration-fast); }
 .checkbox-container input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: var(--cursor); }
-.checkbox-container::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--text-muted); transition: transform var(--anim-duration-fast), background var(--anim-duration-fast); }
+.checkbox-container::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--toggle-thumb-color, var(--text-muted)); transition: transform var(--anim-duration-fast), background var(--anim-duration-fast); }
 .checkbox-container.is-enabled { background: var(--interactive-accent); }
-.checkbox-container.is-enabled::after { transform: translateX(18px); background: var(--text-on-accent); }
+.checkbox-container.is-enabled::after { transform: translateX(18px); background: var(--toggle-thumb-color, var(--text-on-accent)); }
 .checkbox-container.is-disabled { opacity: 0.5; pointer-events: none; }
 .search-input-container { position: relative; display: flex; flex: 1 1 auto; }
 .search-input-container input { width: 100%; padding-right: 26px; }

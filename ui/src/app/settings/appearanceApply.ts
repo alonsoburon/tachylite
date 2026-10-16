@@ -48,6 +48,13 @@ const FONT_VARS: [string, string][] = [
   ["monospaceFontFamily", "--font-monospace-theme"],
 ];
 
+/** h in degrees, s and l in percent -> [r, g, b] (0-255), for the `--interactive-accent-rgb` variable themes use in rgba(). */
+export function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  const S = s / 100, L = l / 100, k = (n: number) => (n + h / 30) % 12, a = S * Math.min(L, 1 - L);
+  const f = (n: number) => Math.round(255 * (L - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))));
+  return [f(0), f(8), f(4)];
+}
+
 /** Idempotent; tolerates a missing or partial appearance.json. */
 export async function applyAppearance(app: App): Promise<void> {
   const ap = await readAppearance();
@@ -78,8 +85,9 @@ export async function applyAppearance(app: App): Promise<void> {
     body.style.setProperty("--accent-h", String(hsl.h));
     body.style.setProperty("--accent-s", `${hsl.s}%`);
     body.style.setProperty("--accent-l", `${hsl.l}%`);
+    body.style.setProperty("--interactive-accent-rgb", hslToRgb(hsl.h, hsl.s, hsl.l).join(", "));
   } else {
-    for (const v of ["--accent-h", "--accent-s", "--accent-l"]) body.style.removeProperty(v);
+    for (const v of ["--accent-h", "--accent-s", "--accent-l", "--interactive-accent-rgb"]) body.style.removeProperty(v);
   }
 
   // Font size.
