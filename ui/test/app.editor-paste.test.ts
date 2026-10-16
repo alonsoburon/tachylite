@@ -117,6 +117,42 @@ describe("paste and drop into the editor", () => {
   });
 });
 
+describe("pasting HTML", () => {
+  const htmlPaste = (cm: any, html: string, plain: string) => {
+    const ev = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(ev, "clipboardData", { value: { files: [], items: [], types: ["text/html"], getData: (t: string) => (t === "text/html" ? html : plain) } });
+    cm.contentDOM.dispatchEvent(ev);
+    return ev;
+  };
+  it("converts it to Markdown by default", async () => {
+    const { cm } = await openNote();
+    cm.dispatch({ selection: { anchor: 6, head: 6 } });
+    const ev = htmlPaste(cm, "<p>a <b>b</b></p>", "a b");
+    expect(ev.defaultPrevented).toBe(true);
+    expect(cm.state.doc.toString()).toBe("beforea **b** after\n");
+  });
+  it("is left alone with autoConvertHtml off or when the HTML is only plain text", async () => {
+    const { app, cm } = await openNote();
+    cm.dispatch({ selection: { anchor: 0 } });
+    htmlPaste(cm, "<span>x</span>", "x");
+    expect(cm.state.doc.toString()).toBe("xbefore after\n");
+    app.vault.setConfig("autoConvertHtml", false);
+    htmlPaste(cm, "<p><b>y</b></p>", "y");
+    expect(cm.state.doc.toString()).not.toContain("**");
+  });
+});
+
+describe("pasting a URL over a selection", () => {
+  it("wraps the selected text in a Markdown link", async () => {
+    const { cm } = await openNote();
+    cm.dispatch({ selection: { anchor: 0, head: 6 } });
+    const ev = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(ev, "clipboardData", { value: { files: [], items: [], types: ["text/plain"], getData: (t: string) => (t === "text/plain" ? "https://example.com/a" : "") } });
+    cm.contentDOM.dispatchEvent(ev);
+    expect(cm.state.doc.toString()).toBe("[before](https://example.com/a) after\n");
+  });
+});
+
 describe("quit event", () => {
   it("lets plugins delay the close until their tasks finish", async () => {
     const { app } = await openNote();

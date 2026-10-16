@@ -71,6 +71,7 @@ export function makeEditorHost(app: App): EditorHost {
       return links.join("\n");
     },
     // Only Linux has a primary selection; elsewhere the middle button does nothing special in the editor.
+    autoConvertHtml: () => app.vault.getConfig("autoConvertHtml") !== false,
     readPrimarySelection: Platform.isLinux ? () => ipc.readPrimarySelection().catch(() => null) : undefined,
     save: (path) => {
       for (const leaf of app.workspace.getLeavesOfType("markdown")) {

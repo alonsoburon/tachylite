@@ -29,6 +29,7 @@ export class EditorSettingTab extends SettingTab {
     new Setting(el).setName("Properties in document").setDesc("Choose how properties are displayed at the top of notes. Select \"source\" to show properties as raw YAML.").addDropdown((d) =>
       d.addOptions({ visible: "Visible", hidden: "Hidden", source: "Source" }).setValue(app.vault.getConfig("propertiesInDocument") ?? "visible")
         .onChange((v) => commitConfig(app, "propertiesInDocument", v)));
+    this.toggle("Auto convert HTML", "Convert pasted HTML to Markdown. Paste with Ctrl/Cmd+Shift+V to keep plain text.", "autoConvertHtml");
     this.toggle("Spellcheck", "Underline misspelled words while typing.", "spellcheck");
 
     heading(el, "Display");

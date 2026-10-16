@@ -39,6 +39,8 @@ export interface EditorHost {
    * Linux: the primary selection (the text last selected anywhere). When provided, a middle-click in the editor
    * pastes it at the click position through this instead of the webview's own paste, which can hang the page.
    */
+  /** Whether pasted HTML is converted to Markdown (app.json `autoConvertHtml`, default on). */
+  autoConvertHtml?(): boolean;
   readPrimarySelection?(): Promise<string | null>;
   /** Fired for paste and drop before the editor handles them, so the app can emit `editor-paste` / `editor-drop`; `preventDefault()` on the event cancels the default handling. */
   editorEvent?(name: "editor-paste" | "editor-drop", e: ClipboardEvent | DragEvent, view: EditorView): void;

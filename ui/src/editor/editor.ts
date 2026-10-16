@@ -1,3 +1,4 @@
+import { htmlToMarkdown } from "./htmlPaste";
 import {
   Annotation, Compartment, EditorState, Prec, type Extension,
 } from "@codemirror/state";
@@ -154,12 +155,35 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
   };
 
   /** Paste and drop: let the app (and plugins) look first, then turn files into attachments; text is left to CodeMirror. */
+  // Mod+Shift+V pastes as plain text; the paste event itself doesn't say whether Shift was down.
+  let plainPaste = false;
   const intake = (e: ClipboardEvent | DragEvent, view: EditorView, data: DataTransfer | null, pasted: boolean): boolean => {
     opts.host.editorEvent?.(pasted ? "editor-paste" : "editor-drop", e, view);
     if (e.defaultPrevented) return true;
     const vaultPath = !pasted ? data?.getData("application/x-tachylite-vault-path") : "";
     const files = data?.files ? [...data.files] : [];
     const link = vaultPath ? opts.host.linkForFile?.(vaultPath, cur.sourcePath) ?? null : null;
+    if (!link && !files.length && pasted && !plainPaste) {
+      // A URL pasted over selected text turns the selection into a link.
+      const url = (data?.getData("text/plain") ?? "").trim();
+      const r = view.state.selection.main;
+      const sel = view.state.sliceDoc(r.from, r.to);
+      if (!r.empty && /^(https?|ftp):\/\/\S+$/i.test(url) && !/[\n[\]]/.test(sel)) {
+        e.preventDefault();
+        const text = `[${sel}](${url.replace(/ /g, "%20")})`;
+        view.dispatch({ changes: { from: r.from, to: r.to, insert: text }, selection: { anchor: r.from + text.length }, userEvent: "input.paste", scrollIntoView: true });
+        return true;
+      }
+    }
+    if (!link && !files.length && pasted && opts.host.autoConvertHtml?.() !== false && !plainPaste) {
+      const md = htmlToMarkdown(data?.getData("text/html") ?? "", data?.getData("text/plain") ?? "");
+      if (md) {
+        e.preventDefault();
+        const r = view.state.selection.main;
+        view.dispatch({ changes: { from: r.from, to: r.to, insert: md }, selection: { anchor: r.from + md.length }, userEvent: "input.paste", scrollIntoView: true });
+        return true;
+      }
+    }
     if (!link && (!files.length || !opts.host.saveAttachments)) return false;
     e.preventDefault();
     let at = view.state.selection.main.head;
@@ -177,6 +201,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorHa
   };
 
   const linkClicks = EditorView.domEventHandlers({
+    keydown(e) { plainPaste = e.shiftKey && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v"; return false; },
     paste(e, view) { return intake(e, view, e.clipboardData, true); },
     drop(e, view) { return intake(e, view, e.dataTransfer, false); },
     // On Linux the middle button pastes the primary selection on mouseup. A link click must not paste, and a paste
