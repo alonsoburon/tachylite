@@ -356,10 +356,12 @@ async function processEmbeds(root: HTMLElement, ctx: RenderContext, st: Internal
   }
 }
 
-function parseSize(alias: string): { w?: number; h?: number } | null {
-  const m = /^(\d+)(?:x(\d+))?$/.exec(alias.trim());
+/** Size from an embed alias: `100`, `100x50`, or after a caption (`caption|100x50`, which also returns the caption as `text`). */
+function parseSize(alias: string): { w?: number; h?: number; text?: string } | null {
+  const m = /(?:^|\|)\s*(\d+)(?:x(\d+))?\s*$/.exec(alias);
   if (!m) return null;
-  return { w: Number(m[1]), h: m[2] ? Number(m[2]) : undefined };
+  const text = alias.slice(0, m.index).trim();
+  return { w: Number(m[1]), h: m[2] ? Number(m[2]) : undefined, text: text || undefined };
 }
 
 async function renderEmbed(span: HTMLElement, ctx: RenderContext, st: Internal): Promise<void> {
@@ -382,7 +384,7 @@ async function renderEmbed(span: HTMLElement, ctx: RenderContext, st: Internal):
     if (size) {
       img.setAttribute("width", String(size.w));
       if (size.h !== undefined) img.setAttribute("height", String(size.h));
-      img.alt = baseName(target);
+      img.alt = size.text ?? baseName(target);
     } else img.alt = alias || baseName(target);
     span.replaceChildren(img);
     return;
@@ -429,7 +431,9 @@ async function renderEmbed(span: HTMLElement, ctx: RenderContext, st: Internal):
   if (alias) box.setAttribute("alt", alias);
   const title = document.createElement("div");
   title.className = "markdown-embed-title";
-  title.textContent = alias && !parseSize(alias) ? alias : path ? defaultDisplay(src) : defaultDisplay(baseName(target) + subpath);
+  const size = parseSize(alias);
+  const caption = size ? size.text : alias;
+  title.textContent = caption || (path ? defaultDisplay(src) : defaultDisplay(baseName(target) + subpath));
   const content = document.createElement("div");
   content.className = "markdown-embed-content";
   const link = document.createElement("div");

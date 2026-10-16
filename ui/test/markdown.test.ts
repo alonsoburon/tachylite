@@ -311,3 +311,13 @@ describe("markdown renderer", () => {
     expect(extractSubpath(md, "#Zed")).toBeNull();
   });
 });
+
+describe("image embed sizes", () => {
+  it("reads a size after a caption and keeps the caption as the alt text", async () => {
+    const { el } = await render("![[img/pic.png|alt text|200]] ![[img/pic.png|caption|100x50]] ![[img/pic.png|80]]");
+    const imgs = [...el.querySelectorAll("img")];
+    expect(imgs.map((i) => [i.getAttribute("alt"), i.getAttribute("width"), i.getAttribute("height")])).toEqual([
+      ["alt text", "200", null], ["caption", "100", "50"], ["pic.png", "80", null],
+    ]);
+  });
+});
