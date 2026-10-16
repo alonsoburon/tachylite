@@ -121,7 +121,10 @@ completing tasks), Kanban (boards, adding cards), QuickAdd (capture choices) and
 - Audio recorder is written and tested against a fake recorder, but I haven't tried it with a real
   microphone, and I haven't checked that the webview is allowed to open one. Format converter and
   Web viewer don't exist yet.
-- Sync and Publish are out of scope.
+- A handful of Obsidian commands and features don't exist yet: stacked tabs, "Fold more/less", "Export to
+  PDF" and heading folds that survive closing a note. Some command ids and default hotkeys here are written
+  from memory of Obsidian's, not checked against it, so a plugin that calls one by id may not find it.
+- Sync and Publish are out of scope. They show up as unavailable in the Core plugins list.
 
 ## License
 
