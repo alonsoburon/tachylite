@@ -67,7 +67,7 @@ describe("tag menu", () => {
     const leaf = await app.workspace.ensureSideLeaf("tag", "right", { active: true, reveal: true });
     const view = leaf.view as any;
     await vi.waitFor(() => expect(view.containerEl.querySelector(".tag-pane-tag-text")).toBeTruthy());
-    const self = [...view.containerEl.querySelectorAll<HTMLElement>(".tree-item-self")].find((e) => e.textContent?.includes("#idea"))!;
+    const self = ([...(view.containerEl as HTMLElement).querySelectorAll<HTMLElement>(".tree-item-self")]).find((e) => e.textContent?.includes("#idea"))!;
     self.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
     const titles = [...document.querySelectorAll(".menu-item-title")].map((e) => e.textContent);
     expect(titles).toEqual(expect.arrayContaining(["Require tag in search", "Exclude tag from search", "Rename tag...", "Copy tag"]));
