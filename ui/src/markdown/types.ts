@@ -52,6 +52,8 @@ export interface RenderContext {
   strictLineBreaks?: boolean;
   /** Show fold arrows on headings (the note's own reading view only, not embeds). */
   foldHeading?: boolean;
+  /** Show fold arrows on list items that have sub-lists (same scope as `foldHeading`). */
+  foldIndent?: boolean;
 }
 
 export interface RenderViewOptions {

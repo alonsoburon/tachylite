@@ -360,3 +360,22 @@ describe("reading view heading folds", () => {
     expect(visible(el)).toHaveLength(8);
   });
 });
+
+describe("reading view list folds", () => {
+  const md = "- a\n  - a1\n  - a2\n- b\n- c\n  1. c1\n";
+  it("adds arrows only to items with sub-lists, and folding toggles is-collapsed", async () => {
+    const { el } = await render(md, { foldIndent: true });
+    const arrows = el.querySelectorAll<HTMLElement>(".list-collapse-indicator");
+    expect(arrows).toHaveLength(2);
+    expect(arrows[0].parentElement!.textContent).toContain("a1");
+    arrows[0].click();
+    expect(arrows[0].parentElement!.classList.contains("is-collapsed")).toBe(true);
+    expect(arrows[0].classList.contains("is-collapsed")).toBe(true);
+    arrows[0].click();
+    expect(arrows[0].parentElement!.classList.contains("is-collapsed")).toBe(false);
+  });
+  it("adds nothing by default", async () => {
+    const { el } = await render(md);
+    expect(el.querySelector(".list-collapse-indicator")).toBeNull();
+  });
+});

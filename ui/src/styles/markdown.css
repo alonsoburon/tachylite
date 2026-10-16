@@ -387,3 +387,11 @@ pre.frontmatter { margin: 0; }
 .markdown-preview-view .heading-collapse-indicator .svg-icon { width: 1em; height: 1em; transition: transform var(--anim-duration-fast); }
 .markdown-preview-view .heading-collapse-indicator.is-collapsed .svg-icon { transform: rotate(-90deg); }
 .markdown-preview-view .markdown-preview-section.is-folded-away { display: none; }
+
+/* Reading view: list fold arrows; a folded item hides its sub-list. */
+.markdown-preview-view li { position: relative; }
+.markdown-preview-view .list-collapse-indicator { position: absolute; inset-inline-start: -2.2em; top: 0.15em; display: flex; align-items: center; opacity: 0; cursor: var(--cursor); color: var(--text-faint); transition: opacity var(--anim-duration-fast); }
+.markdown-preview-view li:hover > .list-collapse-indicator, .markdown-preview-view .list-collapse-indicator.is-collapsed { opacity: 1; }
+.markdown-preview-view .list-collapse-indicator .svg-icon { width: 1em; height: 1em; transition: transform var(--anim-duration-fast); }
+.markdown-preview-view .list-collapse-indicator.is-collapsed .svg-icon { transform: rotate(-90deg); }
+.markdown-preview-view li.is-collapsed > :is(ul, ol) { display: none; }

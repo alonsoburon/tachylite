@@ -192,6 +192,25 @@ function installHeadingFolds(sections: HTMLElement[]): void {
   }
 }
 
+/** Fold arrows on list items that have a sub-list (`.list-collapse-indicator`); folding hides the sub-list (CSS keys on `.is-collapsed`). */
+function installListFolds(sections: HTMLElement[]): void {
+  for (const sec of sections) {
+    for (const li of sec.querySelectorAll<HTMLElement>("li")) {
+      if (!li.querySelector(":scope > ul, :scope > ol")) continue;
+      const arrow = document.createElement("div");
+      arrow.className = "list-collapse-indicator collapse-indicator collapse-icon";
+      arrow.appendChild(chevronIcon());
+      li.insertBefore(arrow, li.firstChild);
+      arrow.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const folded = li.classList.toggle("is-collapsed");
+        arrow.classList.toggle("is-collapsed", folded);
+      });
+    }
+  }
+}
+
 const CONTAINER = "details|div|section|aside|figure|center|blockquote|fieldset";
 /** How many HTML container elements an html_block opens without closing (negative if it only closes). */
 function unclosedContainers(html: string): number {
@@ -288,6 +307,7 @@ async function renderInternal(md: string, el: HTMLElement, ctx: RenderContext, s
   }
 
   if (ctx.foldHeading) installHeadingFolds(sections);
+  if (ctx.foldIndent) installListFolds(sections);
 
   const pctx: PostProcessorContext = {
     docId: "doc-" + ++docCounter,
