@@ -65,6 +65,15 @@ share `scripts/lib/isolated.sh`, which keeps the app away from your session: own
 Wayland session that exports `GDK_BACKEND=wayland` would otherwise open the window on your real desktop), no
 Wayland socket or session bus, private config and data directories, and single-instance forwarding off.
 
+### The UI tests run on Linux, macOS and Windows
+
+CI runs the UI typecheck and tests on all three. A few tests depend on Unix-only facts and are skipped on Windows
+(`it.skipIf(win)`): the Node-bridge tests that run `sh` commands and `sleep`, the one that compares temp paths (Windows
+returns 8.3 short names such as `RUNNER~1` and `\\?\` verbatim paths), the first-turn-on bridge test that uses them, the
+resource-URL test whose file names contain `?`, and the URI test that builds a POSIX vault path. They are skipped, not
+passing: Windows behavior of those features is not covered by a test. On macOS, FSEvents reports extra events for a
+watched directory, so the watch test waits for the right one.
+
 ### Seeing console output in tests
 
 Vitest hides console output from passing tests in some environments (it does so when it detects an automated

@@ -11,6 +11,8 @@ import { installSettings } from "../src/app/settings";
 import { NODE_BRIDGE_SETTING } from "../src/app/settings/community";
 import { nodeBridge } from "../src/obsidian/nodeBridge";
 import type { App } from "../src/obsidian/app";
+// These tests rely on Unix-only facts (sh, sleep, "?" in file names, 8.3 temp paths); see CONTRIBUTING.md.
+const win = process.platform === "win32";
 
 let v: FakeVault | undefined, app: App | undefined, out: string | undefined, dispose: (() => void) | undefined;
 afterEach(async () => {
@@ -71,7 +73,7 @@ describe("child_process", () => {
     expect(child.exitCode).toBe(0);
   });
 
-  it("exec works with util.promisify (stdout/stderr object; Node's error shape on failure)", async () => {
+  it.skipIf(win)("exec works with util.promisify (stdout/stderr object; Node's error shape on failure)", async () => {
     await bridged();
     const exec = req("util").promisify(req("child_process").exec);
     await expect(exec("echo hi && echo warn >&2")).resolves.toEqual({ stdout: "hi\n", stderr: "warn\n" });
@@ -83,7 +85,7 @@ describe("child_process", () => {
     expect((await exec("echo $TACHY_X", { env: { ...process.env, TACHY_X: "from-env" } })).stdout).toBe("from-env\n");
   });
 
-  it("exec callback: timeout kills, maxBuffer, encoding buffer", async () => {
+  it.skipIf(win)("exec callback: timeout kills, maxBuffer, encoding buffer", async () => {
     await bridged();
     const { exec } = req("child_process");
     const run = (cmd: string, o: object) => new Promise<any[]>((r) => exec(cmd, o, (...a: any[]) => r(a)));
@@ -127,7 +129,7 @@ describe("child_process", () => {
     expect([code, sig, sleeper.killed]).toEqual([null, "SIGTERM", true]);
   });
 
-  it("sync variants go through the sync channel", async () => {
+  it.skipIf(win)("sync variants go through the sync channel", async () => {
     await bridged();
     const cp = req("child_process");
     expect(cp.execSync("echo sync").toString()).toBe("sync\n");
@@ -140,7 +142,7 @@ describe("child_process", () => {
 });
 
 describe("fs, os, process, electron", () => {
-  it("reads and writes absolute paths anywhere, with Node's API shapes", async () => {
+  it.skipIf(win)("reads and writes absolute paths anywhere, with Node's API shapes", async () => {
     await bridged();
     out = fs.mkdtempSync(path.join(os.tmpdir(), "tachy-out-"));
     const nfs = req("fs"), fsp = req("fs/promises");
@@ -200,7 +202,10 @@ describe("fs, os, process, electron", () => {
     const first = it.next();
     await flush();
     fs.writeFileSync(path.join(out, "touched"), "1");
-    expect((await first).value).toMatchObject({ filename: "touched" });
+    // FSEvents on macOS may report other events first (the directory itself); wait for the file.
+    let ev: any = (await first).value;
+    for (let i = 0; i < 10 && ev?.filename !== "touched"; i++) ev = (await it.next()).value;
+    expect(ev).toMatchObject({ filename: "touched" });
     ac.abort();
     await expect(it.next()).rejects.toMatchObject({ name: "AbortError" });
   });
@@ -227,7 +232,7 @@ module.exports = class P extends Plugin {
   const modal = () => document.querySelector<HTMLElement>(".modal.mod-node-bridge-warning");
   const modalBtn = (t: string) => [...modal()!.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === t)!;
 
-  it("first turn-on asks with a warning modal; cancel keeps it off, accept enables, toggle turns it off", async () => {
+  it.skipIf(win)("first turn-on asks with a warning modal; cancel keeps it off, accept enables, toggle turns it off", async () => {
     v = makeVault({ "A.md": "# A" }, { plugins: { probe: { main: PLUGIN } }, enabled: ["probe"] });
     app = await makeApp(v);
     dispose = installSettings(app);

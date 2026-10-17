@@ -10,6 +10,8 @@ import { detectOS, Platform } from "../src/obsidian/events";
 import { fileUrl, joinNative } from "../src/obsidian/vault";
 import { dispatchUri, handleUri, matchVault, parseUri, relativeTo, vaultForUri } from "../src/app/uri";
 import { installBodyClasses } from "../src/app/platform";
+// These tests rely on Unix-only facts (sh, sleep, "?" in file names, 8.3 temp paths); see CONTRIBUTING.md.
+const win = process.platform === "win32";
 
 let v: FakeVault;
 let session: Session | null = null;
@@ -58,7 +60,7 @@ describe("platform detection and paths", () => {
     expect(fileUrl("\\\\server\\share\\x.md")).toBe("file://server/share/x.md");
   });
 
-  it("encodes resource URLs like Tauri's convertFileSrc (#, ?, %, spaces, unicode)", async () => {
+  it.skipIf(win)("encodes resource URLs like Tauri's convertFileSrc (#, ?, %, spaces, unicode)", async () => {
     v.write("img/a #1 ?50% é.png", "x");
     const s = await boot();
     const url = s.app.vault.adapter.getResourcePath("img/a #1 ?50% é.png");
@@ -121,8 +123,10 @@ describe("tachylite:// URI actions (fake backend)", () => {
     expect(s.app.workspace.getActiveFile()?.path).toBe("Note.md");
     await handleUri(s.app, `tachylite://vault/${encodeURIComponent(name)}/folder/Deep%20note`);
     expect(s.app.workspace.getActiveFile()?.path).toBe("folder/Deep note.md");
-    await handleUri(s.app, `tachylite://${encodeURI(v.root)}/Log.md`.replace("tachylite:///", "tachylite:///"));
-    expect(s.app.workspace.getActiveFile()?.path).toBe("Log.md");
+    if (!win) { // a vault given by absolute path: the test builds a POSIX path
+      await handleUri(s.app, `tachylite://${encodeURI(v.root)}/Log.md`);
+      expect(s.app.workspace.getActiveFile()?.path).toBe("Log.md");
+    }
     await handleUri(s.app, `tachylite://open?file=Missing`);
     expect(noticeText()).toContain("File not found");
   });
