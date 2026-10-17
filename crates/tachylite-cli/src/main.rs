@@ -7,6 +7,7 @@ const USAGE: &str = "tachy <vault> <command>
 commands:
   files                         list indexed files
   meta <note>                   print cached metadata (JSON)
+  links-json                    resolved and unresolved links of the whole vault, as JSON
   links <note>                  resolved and unresolved links of a note
   backlinks <note>              notes linking to <note>
   resolve <link> <from-note>    resolve a link the way the app does
@@ -17,7 +18,10 @@ commands:
   plugin-search <query>         search the community catalog
   plugin-install <id>           download a community plugin
   plugin-enable|plugin-disable <id>
-  plugin-remove <id>";
+  plugin-remove <id>
+
+Without a vault:
+  parse-json                    read a note on stdin, print its metadata JSON";
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -31,6 +35,15 @@ fn main() -> ExitCode {
 }
 
 fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    // `tachy parse-json`: note text on stdin, its metadata-cache JSON on stdout. The UI tests use this to run the real
+    // parser instead of a JavaScript imitation of it.
+    if args.first().map(String::as_str) == Some("parse-json") {
+        use std::io::Read;
+        let mut text = String::new();
+        std::io::stdin().read_to_string(&mut text)?;
+        println!("{}", serde_json::to_string(&tachylite_core::parse::parse(&text))?);
+        return Ok(());
+    }
     let [vault, cmd, rest @ ..] = args else {
         println!("{USAGE}");
         return Ok(());
@@ -60,6 +73,8 @@ fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             match cmd.as_str() {
                 "files" => ws.vault.files().for_each(|f| println!("{}", f.path)),
                 "meta" => println!("{}", serde_json::to_string_pretty(&ws.meta.get(arg(0)?))?),
+                // The same JSON the desktop app's `meta_links` command returns; the UI tests use it for the whole vault.
+                "links-json" => println!("{}", serde_json::json!({ "resolved": ws.meta.resolved_links, "unresolved": ws.meta.unresolved_links })),
                 "links" => {
                     let n = arg(0)?;
                     println!("resolved:   {:?}", ws.meta.resolved_links.get(n));

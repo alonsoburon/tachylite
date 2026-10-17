@@ -29,6 +29,14 @@ cd ui && bun run typecheck && bun run test && bun run build
 CI run of that commit and exits non-zero unless every job is green. `--no-push` stops after the commit.
 Pick work from [ROADMAP.md](ROADMAP.md).
 
+### The UI tests run the real Rust parser
+
+`ui/test/helpers/backend.ts` is a fake desktop backend (file system and the rest), but note parsing and link
+resolution come from `tachylite-core`: the vitest global setup runs `cargo build -p tachylite-cli`, and the helper
+calls `tachy parse-json` (one note on stdin) and `tachy <vault> links-json`. So the UI tests need a Rust toolchain,
+and a behavior that only exists in Rust (UTF-16 offsets, Unicode link matching, sections, list items) is visible
+to them. `ui/test/helpers.real-core.test.ts` proves it.
+
 ### Seeing console output in tests
 
 Vitest hides console output from passing tests in some environments (it does so when it detects an automated

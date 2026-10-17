@@ -3,7 +3,6 @@ import cproc from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import * as yaml from "js-yaml";
 import { setBackend, setListenBackend, setSyncBackend } from "../../src/ipc";
 
 /** Node bridge emulation state (bridge.rs): `consent` is the persisted per-vault choice, `active` the session gate. */
@@ -74,64 +73,18 @@ function walk(root: string, rel = "", out: { files: any[]; folders: string[] } =
   return out;
 }
 
-function pos(text: string, offset: number) {
-  const before = text.slice(0, offset);
-  const line = before.split("\n").length - 1;
-  return { line, col: offset - (before.lastIndexOf("\n") + 1), offset };
-}
-
+const parsed = new Map<string, any>();
+/** The note's metadata cache, from the real Rust parser (`tachy parse-json`, built by test/setup/realPlugins.ts). */
 export function parseMeta(text: string): any {
-  const meta: any = {};
-  let body = text, base = 0;
-  const fm = /^---\n(?:([\s\S]*?)\n)?---(\n|$)/.exec(text);
-  if (fm) {
-    try { meta.frontmatter = (fm[1] ?? "").trim() ? yaml.load(fm[1]) ?? {} : {}; } catch { /* ignore */ }
-    meta.frontmatterPosition = { start: pos(text, 0), end: pos(text, fm[0].length) };
-    base = fm[0].length;
-  }
-  body = text.slice(base);
-  const each = (re: RegExp, cb: (m: RegExpExecArray) => void) => { let m; while ((m = re.exec(body))) cb(m); };
-  each(/(!?)\[\[([^\]|]+)(?:\|([^\]]*))?\]\]/g, (m) => {
-    const item: any = { link: m[2], original: m[0], displayText: m[3] ?? m[2], position: { start: pos(text, base + m.index), end: pos(text, base + m.index + m[0].length) } };
-    (m[1] ? (meta.embeds ??= []) : (meta.links ??= [])).push(item);
-  });
-  each(/(?:^|\s)(#[\w/-]+)/g, (m) => { (meta.tags ??= []).push({ tag: m[1], position: { start: pos(text, base + m.index + m[0].length - m[1].length), end: pos(text, base + m.index + m[0].length) } }); });
-  each(/\s\^([\w-]+)$/gm, (m) => { (meta.blocks ??= {})[m[1].toLowerCase()] = { id: m[1], position: { start: pos(text, base + m.index + 1), end: pos(text, base + m.index + m[0].length) } }; });
-  each(/^(#{1,6})\s+(.*)$/gm, (m) => { (meta.headings ??= []).push({ heading: m[2], level: m[1].length, position: { start: pos(text, base + m.index), end: pos(text, base + m.index + m[0].length) } }); });
-  parseFootnotes(text, base, meta);
-  return meta;
-}
-
-/** `footnotes` (definitions, single-line here, and inline `^[...]` content) and `footnoteRefs`, like the Rust parser. */
-function parseFootnotes(text: string, base: number, meta: any): void {
-  const body = text.slice(base);
-  const at = (a: number, b: number) => ({ start: pos(text, base + a), end: pos(text, base + b) });
-  const defs = new Set<string>();
-  const labels = new Set<number>();
-  const fns: any[] = [];
-  for (const m of body.matchAll(/^ {0,3}\[\^([^\]\s]+)\]:.*$/gm)) {
-    const from = m.index! + m[0].indexOf("[");
-    defs.add(m[1].toLowerCase());
-    labels.add(from);
-    fns.push({ id: m[1].toLowerCase(), position: at(from, m.index! + m[0].length) });
-  }
-  for (const m of body.matchAll(/\^\[([^\]\n]+)\]/g)) fns.push({ id: "", position: at(m.index! + 2, m.index! + m[0].length - 1) });
-  const refs = [...body.matchAll(/\[\^([^\]\s]+)\]/g)].filter((m) => !labels.has(m.index!) && defs.has(m[1].toLowerCase()))
-    .map((m) => ({ id: m[1].toLowerCase(), position: at(m.index!, m.index! + m[0].length) }));
-  if (fns.length) meta.footnotes = fns.sort((a, b) => a.position.start.offset - b.position.start.offset);
-  if (refs.length) meta.footnoteRefs = refs;
-}
-
-/** Links a canvas contributes (crates/tachylite-core/src/canvas.rs): file cards by path, links inside text cards. */
-function canvasMeta(text: string): any {
-  let d: any;
-  try { d = JSON.parse(text || "{}"); } catch { return {}; }
-  const links: any[] = [];
-  for (const n of Array.isArray(d?.nodes) ? d.nodes : []) {
-    if (n?.type === "file" && typeof n.file === "string" && n.file) links.push({ link: n.file });
-    if (n?.type === "text" && typeof n.text === "string") { const m = parseMeta(n.text); links.push(...(m.links ?? []), ...(m.embeds ?? [])); }
-  }
-  return { links };
+  const hit = parsed.get(text);
+  if (hit) return structuredClone(hit);
+  const bin = process.env.TACHYLITE_PARSE_BIN;
+  if (!bin) throw new Error("TACHYLITE_PARSE_BIN is not set: the vitest globalSetup did not build tachy");
+  const r = cproc.spawnSync(bin, ["parse-json"], { input: text, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+  if (r.error || r.status !== 0) throw new Error(`tachy parse-json failed: ${r.error ?? r.stderr}`);
+  const meta = JSON.parse(r.stdout);
+  parsed.set(text, meta);
+  return structuredClone(meta);
 }
 
 export function makeVault(files: Record<string, string> = {}, opts: { plugins?: Record<string, { manifest?: any; main: string; styles?: string; data?: any }>; enabled?: string[]; root?: string; copyFrom?: string; bridgeConsent?: boolean } = {}): FakeVault {
@@ -172,23 +125,13 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
     return { path: rel, name, basename: dot > 0 ? name.slice(0, dot) : name, extension: dot > 0 ? name.slice(dot + 1) : "", stat: { ctime: Math.floor(st.birthtimeMs), mtime: Math.floor(st.mtimeMs), size: st.size } };
   };
   const vaultInfo = () => ({ name: path.basename(root), path: root, ...(() => { const w = walk(root); return { files: w.files, folders: w.folders }; })() });
+  // The vault's resolved and unresolved links come from the real core, as in the desktop app (`meta_links`).
   const links = () => {
-    const resolved: any = {}, unresolved: any = {};
-    const all = walk(root).files;
-    for (const f of all.filter((x) => x.extension === "md" || x.extension === "canvas")) {
-      const m = f.extension === "md" ? parseMeta(fs.readFileSync(abs(f.path), "utf8")) : canvasMeta(fs.readFileSync(abs(f.path), "utf8"));
-      resolved[f.path] = {}; unresolved[f.path] = {};
-      for (const l of [...(m.links ?? []), ...(m.embeds ?? [])]) {
-        const lp = l.link.split("#")[0];
-        const hit = all.find((x) => x.path === lp || x.path === lp + ".md" || x.name === lp || x.name === lp + ".md" || x.path.toLowerCase().endsWith("/" + lp.toLowerCase() + ".md"));
-        const tgt = hit ? resolved[f.path] : unresolved[f.path];
-        const key = hit ? hit.path : lp;
-        tgt[key] = (tgt[key] ?? 0) + 1;
-      }
-      if (!Object.keys(resolved[f.path]).length) delete resolved[f.path];
-      if (!Object.keys(unresolved[f.path]).length) delete unresolved[f.path];
-    }
-    return { resolved, unresolved };
+    const bin = process.env.TACHYLITE_PARSE_BIN;
+    if (!bin) throw new Error("TACHYLITE_PARSE_BIN is not set: the vitest globalSetup did not build tachy");
+    const r = cproc.spawnSync(bin, [root, "links-json"], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+    if (r.error || r.status !== 0) throw new Error(`tachy links-json failed: ${r.error ?? r.stderr}`);
+    return JSON.parse(r.stdout) as { resolved: any; unresolved: any };
   };
   const bytes = (a: number[] | Uint8Array) => Buffer.from(a as any);
   const popouts: FakeVault["popouts"] = { closed: [], focused: [], geometry: {} };
