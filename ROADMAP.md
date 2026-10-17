@@ -60,6 +60,10 @@ file, tab, More options and editor menus. What the report still lists (re-run it
 - **Parser positions:** a list item or math block at the very end of a note ends after the final newline in Obsidian;
   a lone `^id` line after a table, the `text`/`element` sections Obsidian reports for odd HTML, and the footnote id
   `[inline1` for inline footnotes. Also `frontmatterLinks: []` for notes with properties but no property links.
+- **Menus (all eight captured with real right clicks):** the Tags view opens no menu in Obsidian, Tachylite has one (New
+  search for #tag, Require/Exclude tag in search, Rename tag..., Copy tag); the bookmark menu here also has Move up/down
+  and New group (groups); the ribbon menu here lists "Create new note"-less buttons in a different order than Obsidian's
+  (switcher, graph, canvas, daily note, templates, command palette, bases).
 - **Intentional differences:** the zoom commands keep their Ctrl/Cmd +/-/0 hotkeys here (Obsidian handles those in the
   Electron menu, not as commands), and the tab menu keeps "Close others", "Close tabs to the right", "Close all" and
   "Duplicate tab".

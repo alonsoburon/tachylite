@@ -8,7 +8,8 @@ export interface Reference {
   commands?: RefCommand[];
   corePlugins?: { id: string; name: string; enabled: boolean }[];
   config?: Record<string, unknown>;
-  menus?: Record<string, string[] | { error: string } | null>;
+  /** A list of titles, null (the element to right-click was missing), `{ none: true }` (no menu opened) or `{ error }`. */
+  menus?: Record<string, string[] | { error: string } | { none: true } | null>;
 }
 
 const hk = (h: RefHotkey) => `${[...h.modifiers].sort().join("+")}${h.modifiers.length ? "+" : ""}${h.key.length === 1 ? h.key.toLowerCase() : h.key}`;
@@ -59,8 +60,13 @@ export function diffMenu(name: string, ref: string[], ours: string[]): string[] 
 export function diffMenus(ref: NonNullable<Reference["menus"]>, ours: Record<string, string[] | null>): string[] {
   const out: string[] = [];
   for (const [name, list] of Object.entries(ref)) {
-    if (!Array.isArray(list)) continue; // could not be opened in Obsidian
     const mine = ours[name];
+    if (list && !Array.isArray(list) && "none" in list) {
+      // Obsidian opened no menu on a (real) right click here.
+      if (mine) out.push(`${name}: Obsidian opens no menu here, Tachylite opens one (${mine.filter((t) => t !== "---").join(", ")})`);
+      continue;
+    }
+    if (!Array.isArray(list)) continue; // could not be opened in Obsidian
     if (!mine) { out.push(`${name}: not compared (Tachylite menu was not opened)`); continue; }
     out.push(...diffMenu(name, list, mine));
   }

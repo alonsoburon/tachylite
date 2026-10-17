@@ -12,14 +12,19 @@ function closeMenus() {
   document.querySelectorAll(".menu").forEach((m) => m.remove());
 }
 
-/** Run `trigger`, read the menu that opens (titles in order, "---" for separators), close it. null when none opened. */
+/**
+ * Run `trigger` (async, returns false when the element it needs is missing), read the menu that opens (titles in order, "---"
+ * for separators) and close it. null: the element was missing. { none: true }: the element was there but no menu opened.
+ */
 async function captureMenu(trigger) {
   closeMenus();
-  try { trigger(); } catch (e) { return { error: String(e) }; }
-  await wait(200);
+  let found;
+  try { found = await trigger(); } catch (e) { return { error: String(e) }; }
+  if (found === false) return null;
+  await wait(250);
   const menus = [...document.querySelectorAll(".menu")];
   const menu = menus[menus.length - 1];
-  if (!menu) return null;
+  if (!menu) return { none: true };
   const items = [];
   for (const el of menu.querySelectorAll(".menu-item, .menu-separator")) {
     if (el.classList.contains("menu-separator")) items.push("---");
@@ -29,10 +34,18 @@ async function captureMenu(trigger) {
   return items;
 }
 
-// A missing element simply opens no menu, which is recorded as null ("could not be opened").
-const contextmenu = (el) => el?.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 80, clientY: 80, button: 2 }));
+/** A right click on the first element matching `selector`. Uses a genuine (trusted) click when the automation exposes one. */
+async function rightClick(selector) {
+  const el = document.querySelector(selector);
+  if (!el) return false;
+  if (window.tachyRightClick) {
+    await new Promise((resolve) => { window.__rightClicked = resolve; window.tachyRightClick(selector); });
+  } else {
+    el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 80, clientY: 80, button: 2 }));
+  }
+  return true;
+}
 
-// Method names are prefixed `dump` so they cannot collide with members of the base Plugin class.
 module.exports = class TachyliteReferenceDump extends Plugin {
   async onload() {
     this.addCommand({ id: "dump-reference-data", name: "Dump Tachylite reference data", callback: () => { void this.dump(); } });
@@ -54,9 +67,11 @@ module.exports = class TachyliteReferenceDump extends Plugin {
         cache: await this.dumpCache(),
       };
       await app.vault.adapter.write(OUTPUT, JSON.stringify(out, null, 2));
+      window.__tachyDumpDone = true; // lets the automation (scripts/obsidian-reference.sh) know it can disconnect
       notice.hide();
       new Notice(`Wrote ${OUTPUT} to the vault root. Copy it to compat/obsidian-reference.json in the Tachylite repo.`, 10000);
     } catch (e) {
+      window.__tachyDumpDone = true;
       notice.hide();
       console.error("Tachylite reference dump failed", e);
       new Notice(`Dump failed: ${e}`, 10000);
@@ -103,20 +118,33 @@ module.exports = class TachyliteReferenceDump extends Plugin {
   async dumpMenus() {
     const app = this.app;
     const out = {};
-    // Make sure there is a note open and the side views exist; menus are read from the real DOM.
+    // Make sure there is a note open; menus are read from the real DOM, so each view is brought to the front first.
     const file = app.vault.getMarkdownFiles().find((f) => f.path.startsWith(CORPUS_FOLDER)) ?? app.vault.getMarkdownFiles()[0];
     if (file) await app.workspace.getLeaf(false).openFile(file);
-    for (const id of ["file-explorer:open", "tag-pane:open", "bookmarks:open"]) app.commands.executeCommandById(id);
-    await wait(500);
-    const one = (selector) => document.querySelector(selector);
-    out.fileMenu = await captureMenu(() => contextmenu(one('.workspace-leaf-content[data-type="file-explorer"] .nav-file-title')));
-    out.folderMenu = await captureMenu(() => contextmenu(one('.workspace-leaf-content[data-type="file-explorer"] .nav-folder-title')));
-    out.tabHeaderMenu = await captureMenu(() => contextmenu(one(".mod-root .workspace-tab-header.is-active")));
-    out.editorMenu = await captureMenu(() => contextmenu(one(".workspace-leaf.mod-active .cm-content")));
-    out.moreOptionsMenu = await captureMenu(() => one('.workspace-leaf.mod-active .view-action[aria-label="More options"]')?.click());
-    out.tagMenu = await captureMenu(() => contextmenu(one('.workspace-leaf-content[data-type="tag"] .tree-item-self')));
-    out.bookmarkMenu = await captureMenu(() => contextmenu(one('.workspace-leaf-content[data-type="bookmarks"] .tree-item-self')));
-    out.ribbonMenu = await captureMenu(() => contextmenu(one(".workspace-ribbon.mod-left .side-dock-actions")));
+    const show = async (commandId) => { app.commands.executeCommandById(commandId); await wait(700); };
+    const view = (type) => '.workspace-leaf-content[data-type="' + type + '"]';
+    const visible = (selector) => { const el = document.querySelector(selector); return !!el && el.getClientRects().length > 0; };
+    // A right click on `selector`, only when it is on screen (a hidden element would take the click somewhere else).
+    const onScreen = (selector) => async () => (visible(selector) ? rightClick(selector) : false);
+
+    await show("file-explorer:open");
+    out.fileMenu = await captureMenu(onScreen(view("file-explorer") + " .nav-file-title"));
+    out.folderMenu = await captureMenu(onScreen(view("file-explorer") + " .nav-folder-title"));
+    out.tabHeaderMenu = await captureMenu(onScreen(".mod-root .workspace-tab-header.is-active"));
+    out.editorMenu = await captureMenu(onScreen(".workspace-leaf.mod-active .cm-content"));
+    out.moreOptionsMenu = await captureMenu(async () => { const b = document.querySelector('.workspace-leaf.mod-active .view-action[aria-label="More options"]'); if (!b) return false; b.click(); return true; });
+    await show("tag-pane:open");
+    out.tagMenu = await captureMenu(onScreen(view("tag") + " .tree-item-self"));
+    // The bookmark menu needs a bookmark. Add one only if there is none, and take it away again afterwards.
+    const bookmarks = app.internalPlugins.getPluginById?.("bookmarks")?.instance;
+    let temporary = null;
+    if (bookmarks && file && !(bookmarks.items ?? []).length) {
+      try { temporary = { type: "file", path: file.path, title: "" }; bookmarks.addItem(temporary); } catch (e) { temporary = null; }
+    }
+    await show("bookmarks:open");
+    out.bookmarkMenu = await captureMenu(onScreen(view("bookmarks") + " .tree-item-self"));
+    if (temporary) { try { bookmarks.removeItem(temporary); } catch (e) { /* the throwaway vault keeps one bookmark */ } }
+    out.ribbonMenu = await captureMenu(onScreen(".workspace-ribbon.side-dock-ribbon"));
     return out;
   }
 

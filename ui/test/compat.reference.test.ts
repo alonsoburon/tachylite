@@ -68,7 +68,18 @@ describe.skipIf(!present)("Tachylite against the Obsidian reference dump", () =>
       moreOptionsMenu: capture(() => view.showMoreMenu(new MouseEvent("click"))),
       editorMenu: capture(() => view.editor.cm.contentDOM.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }))),
       ribbonMenu: capture(() => app.workspace.leftRibbon.showMenu(new MouseEvent("contextmenu"))),
+      tagMenu: null,
+      bookmarkMenu: null,
     };
+    // The tag and bookmark menus open from right clicks in their views.
+    const rightClick = async (type: string, side: "left" | "right") => {
+      const leaf = await app.workspace.ensureSideLeaf(type, side, { active: true, reveal: true });
+      await vi.waitFor(() => expect(leaf.view.containerEl.querySelector(".tree-item-self")).toBeTruthy());
+      return capture(() => leaf.view.containerEl.querySelector(".tree-item-self")!.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true })));
+    };
+    menus.tagMenu = await rightClick("tag", "right").catch(() => null);
+    app.commands.executeCommandById("bookmarks:bookmark-current-view");
+    menus.bookmarkMenu = await rightClick("bookmarks", "left").catch(() => null);
 
     const report = formatReport([
       [`Commands and default hotkeys (Obsidian API ${ref.apiVersion ?? "?"})`, diffCommands(ref.commands ?? [], ours)],

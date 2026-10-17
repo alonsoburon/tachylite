@@ -1,6 +1,6 @@
 {
   "_note": "Produced by the Tachylite reference dump plugin. Use a fresh vault with no community plugins and default settings, or the defaults below are not defaults.",
-  "generatedAt": "2026-10-17T04:23:11.191Z",
+  "generatedAt": "2026-10-17T04:38:04.968Z",
   "apiVersion": "1.14.4",
   "platform": {
     "isMacOS": false,
@@ -1720,9 +1720,33 @@
       "---",
       "Delete file"
     ],
-    "tagMenu": null,
-    "bookmarkMenu": null,
-    "ribbonMenu": null
+    "tagMenu": {
+      "none": true
+    },
+    "bookmarkMenu": [
+      "Open in new tab",
+      "Open to the right",
+      "Open in new window",
+      "---",
+      "Rename",
+      "Edit...",
+      "---",
+      "Reveal file in navigation",
+      "---",
+      "---",
+      "Remove"
+    ],
+    "ribbonMenu": [
+      "Open quick switcher",
+      "Open graph view",
+      "Create new canvas",
+      "Open today's daily note",
+      "Insert template",
+      "Open command palette",
+      "Create new base",
+      "---",
+      "Hide ribbon"
+    ]
   },
   "cache": {
     "unicode.md": {

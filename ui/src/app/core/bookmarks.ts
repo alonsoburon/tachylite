@@ -99,6 +99,8 @@ export class BookmarksStore extends Events {
     this.changed();
   }
   setTitle(item: BookmarkItem, title: string): void { item.title = title; this.changed(); }
+  /** Change the heading or block a file bookmark points at (`#Heading`, `#^block`, or "" for the whole file). */
+  setSubpath(item: BookmarkItem, subpath: string): void { if (subpath) item.subpath = subpath; else delete item.subpath; this.changed(); }
   newGroup(title: string, parent?: BookmarkItem | null): BookmarkItem { return this.addItem({ type: "group", title, items: [] }, parent); }
 
   findFileItem(file: TAbstractFile, subpath?: string): BookmarkItem | null {
@@ -261,10 +263,22 @@ export class BookmarksView extends PanelView {
       m.addItem((i) => i.setSection("open").setTitle("Open in new window").setIcon("lucide-app-window").onClick(() => { void this.app.workspace.openPopoutLeaf().openFile(file, { active: true }); }));
     }
     if (it.type === "group") m.addItem((i) => i.setSection("action").setTitle("New group").setIcon("lucide-folder-plus").onClick(() => { void this.newGroup(it); }));
-    m.addItem((i) => i.setSection("action").setTitle("Rename...").setIcon("lucide-pencil").onClick(async () => {
+    // Titles and order follow Obsidian 1.14.4's bookmark menu (compat/obsidian-reference.json).
+    m.addItem((i) => i.setSection("action").setTitle("Rename").setIcon("lucide-pencil").onClick(async () => {
       const v = await promptText(this.app, { title: "Rename bookmark", value: labelOf(it), cta: "Rename" });
       if (v !== null) st.setTitle(it, v);
     }));
+    m.addItem((i) => i.setSection("action").setTitle("Edit...").setIcon("lucide-edit").onClick(async () => {
+      // A file bookmark's heading or block, like `#Heading` or `#^block`; for the others the title.
+      if (file) {
+        const v = await promptText(this.app, { title: `Edit bookmark: ${file.path}`, value: it.subpath ?? "", placeholder: "#Heading or #^block (empty for the whole file)", cta: "Save" });
+        if (v !== null) st.setSubpath(it, v.trim());
+      } else {
+        const v = await promptText(this.app, { title: "Edit bookmark", value: labelOf(it), cta: "Save" });
+        if (v !== null) st.setTitle(it, v);
+      }
+    }));
+    if (file) m.addItem((i) => i.setSection("reveal").setTitle("Reveal file in navigation").setIcon("lucide-folder-search").onClick(() => revealInExplorer(this.app, file)));
     m.addItem((i) => i.setSection("move").setTitle("Move up").setIcon("lucide-arrow-up").onClick(() => st.shift(it, -1)));
     m.addItem((i) => i.setSection("move").setTitle("Move down").setIcon("lucide-arrow-down").onClick(() => st.shift(it, 1)));
     m.addItem((i) => i.setSection("danger").setTitle("Remove").setIcon("lucide-trash-2").setWarning(true).onClick(() => st.removeItem(it)));

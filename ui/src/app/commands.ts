@@ -255,15 +255,11 @@ export function installCommands(app: App, history: History): () => void {
   const disposers: (() => void)[] = [
     // core plugins whose commands live here
     whileCoreEnabled(app, "switcher", () => {
-      const el = ws.leftRibbon.addRibbonItemButton("switcher", "lucide-navigation", "Open quick switcher", () => { app.commands.executeCommandById("switcher:open"); });
+      const el = ws.leftRibbon.addRibbonItemButton("switcher:Open quick switcher", "lucide-navigation", "Open quick switcher", () => { app.commands.executeCommandById("switcher:open"); });
       return () => ws.leftRibbon.removeRibbonItemButton(el);
     }),
     whileCoreEnabled(app, "command-palette", () => {
-      const el = ws.leftRibbon.addRibbonItemButton("command-palette", "lucide-terminal", "Open command palette", () => { app.commands.executeCommandById("command-palette:open"); });
-      return () => ws.leftRibbon.removeRibbonItemButton(el);
-    }),
-    whileCoreEnabled(app, "file-explorer", () => {
-      const el = ws.leftRibbon.addRibbonItemButton("new-note", "lucide-square-pen", "Create new note", () => { app.commands.executeCommandById("file-explorer:new-file"); });
+      const el = ws.leftRibbon.addRibbonItemButton("command-palette:Open command palette", "lucide-terminal", "Open command palette", () => { app.commands.executeCommandById("command-palette:open"); });
       return () => ws.leftRibbon.removeRibbonItemButton(el);
     }),
   ];

@@ -291,7 +291,9 @@ export class WorkspaceRibbon {
   }
   showMenu(e: MouseEvent): void {
     const menu = new Menu();
-    for (const item of this.items) menu.addItem((m) => m.setTitle(item.title).setIcon(item.icon).setChecked(!this.isHidden(item)).onClick(() => this.setItemVisible(item, this.isHidden(item))));
+    for (const item of this.items) menu.addItem((m) => m.setSection("items").setTitle(item.title).setIcon(item.icon).setChecked(!this.isHidden(item)).onClick(() => this.setItemVisible(item, this.isHidden(item))));
+    // Obsidian ends the ribbon menu with "Hide ribbon" (Settings > Appearance > Show ribbon turns it back on).
+    menu.addItem((m) => m.setSection("hide").setTitle("Hide ribbon").setIcon("lucide-eye-off").onClick(() => { this.app.vault.setConfig("showRibbon", false); this.app.workspace.trigger("config-changed"); }));
     menu.showAtMouseEvent(e);
   }
   addRibbonItemButton(id: string, icon: string, title: string, callback: (evt: MouseEvent) => any): HTMLElement {

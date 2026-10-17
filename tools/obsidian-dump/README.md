@@ -50,8 +50,10 @@ evaluates a JavaScript file inside the running Obsidian and prints the result, f
    metadata cache). Add `TACHYLITE_STRICT_REFERENCE=1` to make any difference fail the run.
 
 The dump file is not secret, but it contains the text of the corpus notes and your Obsidian version, so look at it
-before committing it. If a menu comes out as `null` in the file, that menu could not be opened (for example, no
-bookmarks existed); that is fine, it is skipped in the comparison.
+before committing it.
 
-Menus are read by right-clicking real elements, so the sidebar views need to be visible and the window should not
-be too small.
+Menus are read by right-clicking real elements (with genuine mouse events when run through
+`scripts/obsidian-reference.sh`), after bringing the view that owns them to the front. In the file a menu is a list of titles
+(`"---"` is a separator), or `null` when the element to click did not exist, or `{"none": true}` when it existed and a real
+right click opened no menu. In Obsidian 1.14.4 that last case is the Tags view: right-clicking a tag opens nothing. The
+bookmark menu needs a bookmark, so the plugin adds one for a moment if the vault has none and removes it again.

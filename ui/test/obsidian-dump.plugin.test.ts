@@ -31,13 +31,14 @@ function fakeVault() {
     <div class="workspace-leaf-content" data-type="file-explorer"><div class="nav-file-title">a</div><div class="nav-folder-title">f</div></div>
     <div class="mod-root"><div class="workspace-tab-header is-active"></div></div>
     <div class="workspace-leaf mod-active"><div class="view-action" aria-label="More options"></div><div class="cm-content"></div></div>
-    <div class="workspace-ribbon mod-left"><div class="side-dock-actions"></div></div>`;
+    <div class="workspace-ribbon side-dock-ribbon mod-primary"><div class="side-dock-actions"></div></div>
+    <div class="workspace-leaf-content" data-type="bookmarks"><div class="tree-item-self"></div></div>`;
   menuOn(document.querySelector(".nav-file-title")!, ["Open in new tab", "---", "Delete"]);
   menuOn(document.querySelector(".nav-folder-title")!, ["New note", "Delete"]);
   menuOn(document.querySelector(".workspace-tab-header")!, ["Close", "Pin"]);
   menuOn(document.querySelector(".cm-content")!, ["Cut", "Copy", "Paste"]);
   document.querySelector(".view-action")!.addEventListener("click", () => document.querySelector(".cm-content")!.dispatchEvent(new MouseEvent("contextmenu")));
-  menuOn(document.querySelector(".side-dock-actions")!, ["Open quick switcher"]);
+  menuOn(document.querySelector(".side-dock-ribbon")!, ["Open quick switcher", "---", "Hide ribbon"]);
 
   const files = fs.readdirSync(CORPUS).map((n) => ({ path: `tachylite-corpus/${n}`, text: fs.readFileSync(path.join(CORPUS, n), "utf8") }));
   const written: Record<string, string> = {};
@@ -96,8 +97,9 @@ describe("tools/obsidian-dump plugin (against a stub Obsidian API)", () => {
     expect(out.menus.folderMenu).toEqual(["New note", "Delete"]);
     expect(out.menus.tabHeaderMenu).toEqual(["Close", "Pin"]);
     expect(out.menus.moreOptionsMenu).toEqual(["Cut", "Copy", "Paste"]); // the stub routes the button to a menu
-    expect(out.menus.ribbonMenu).toEqual(["Open quick switcher"]);
-    expect(out.menus.tagMenu).toBeNull(); // no such element in the stub, so it is recorded as "could not open"
+    expect(out.menus.ribbonMenu).toEqual(["Open quick switcher", "---", "Hide ribbon"]);
+    expect(out.menus.tagMenu).toBeNull(); // no such element in the stub: recorded as null
+    expect(out.menus.bookmarkMenu).toEqual({ none: true }) // the element exists but no menu opens: recorded as { none: true }
     const names = Object.keys(out.cache).sort();
     expect(names).toEqual(fs.readdirSync(CORPUS).sort());
     expect(out.cache["tags.md"].text).toBe(fs.readFileSync(path.join(CORPUS, "tags.md"), "utf8"));
@@ -115,5 +117,7 @@ describe("tools/obsidian-dump plugin (against a stub Obsidian API)", () => {
       expect.arrayContaining([expect.stringContaining("folderMenu: not compared")]),
     );
     expect(diffMenus(out.menus, { fileMenu: ["Open in new tab", "---", "Delete"] }).some((d) => d.startsWith("tagMenu"))).toBe(false);
+    // Obsidian opened no menu, Tachylite does: reported, not skipped.
+    expect(diffMenus(out.menus, { bookmarkMenu: ["Remove"] })).toContain("bookmarkMenu: Obsidian opens no menu here, Tachylite opens one (Remove)");
   });
 });
