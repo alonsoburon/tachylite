@@ -291,6 +291,12 @@ export function installCommands(app: App, history: History): () => void {
     return true;
   } });
 
+  // Insertion points for parallel feature work: each owner replaces ONLY its own line (and adds its code in its own module).
+  // [feature:stacked-tabs]
+  // [feature:export-pdf-and-linked-views]
+  // [feature:canvas-bases-graph]
+  // [feature:folders-trash-misc]
+
   const disposers: (() => void)[] = [
     // core plugins whose commands live here
     whileCoreEnabled(app, "switcher", () => {

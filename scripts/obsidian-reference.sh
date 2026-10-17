@@ -18,7 +18,7 @@ isolated_reexec "$0" "$bin"
 isolated_setup
 trap isolated_cleanup EXIT
 
-port=19222
+port="${OBSIDIAN_PORT:-19222}" # set a different port to run several at once
 vault="$work/vault"
 plugin="$vault/.obsidian/plugins/tachylite-reference-dump"
 mkdir -p "$plugin" "$vault/tachylite-corpus" "$vault/Folder" "$work/config/obsidian"
