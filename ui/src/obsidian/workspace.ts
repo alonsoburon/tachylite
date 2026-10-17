@@ -105,6 +105,8 @@ export abstract class WorkspaceParent extends WorkspaceItem {
 export class WorkspaceTabs extends WorkspaceParent {
   declare parent: WorkspaceSplit;
   currentTab = 0;
+  /** Stacked mode: panes slide over each other, each with a vertical title strip (`mod-stacked`, `stacked: true` in workspace.json). */
+  isStacked = false;
   tabHeaderContainerEl: HTMLElement;
   tabContainerEl: HTMLElement;
   constructor(app: App) {
@@ -115,10 +117,27 @@ export class WorkspaceTabs extends WorkspaceParent {
   protected childHost(): HTMLElement { return this.tabContainerEl; }
   insertChild(index: number, child: WorkspaceItem): void {
     super.insertChild(index, child);
-    if (child instanceof WorkspaceLeaf) {
+    if (child instanceof WorkspaceLeaf && !this.isStacked) {
       this.tabHeaderContainerEl.insertBefore(child.tabHeaderEl, this.tabHeaderContainerEl.children[index] ?? null);
     }
   }
+  setStacked(stacked: boolean): void {
+    if (this.isStacked === stacked) return;
+    this.isStacked = stacked;
+    this.containerEl.toggleClass("mod-stacked", stacked);
+    if (!stacked) {
+      // headers go back to the tab bar, panes lose their stacked geometry
+      for (const c of this.children as WorkspaceLeaf[]) {
+        this.tabHeaderContainerEl.appendChild(c.tabHeaderEl);
+        c.tabHeaderEl.style.left = c.tabHeaderEl.style.right = "";
+        c.containerEl.style.left = c.containerEl.style.minWidth = c.containerEl.style.maxWidth = "";
+      }
+    }
+    this.refreshTabs();
+    this.app.workspace.requestSaveLayout?.();
+    this.app.workspace.trigger("layout-change");
+  }
+  toggleStacked(): void { this.setStacked(!this.isStacked); }
   protected onChildRemoved(child: WorkspaceItem): void {
     if (child instanceof WorkspaceLeaf) child.tabHeaderEl.detach();
     if (this.currentTab >= this.children.length) this.currentTab = Math.max(0, this.children.length - 1);
@@ -132,7 +151,25 @@ export class WorkspaceTabs extends WorkspaceParent {
     this.currentTab = i;
     this.refreshTabs();
   }
+  private layoutStacked(): void {
+    const n = this.children.length, strip = 40;
+    this.children.forEach((c, i) => {
+      const leaf = c as WorkspaceLeaf, on = i === this.currentTab;
+      // each pane is preceded by its own header strip, in tab order
+      this.tabContainerEl.appendChild(leaf.tabHeaderEl);
+      this.tabContainerEl.appendChild(leaf.containerEl);
+      leaf.tabHeaderEl.style.left = `${i * strip}px`;
+      leaf.tabHeaderEl.style.right = `${(n - 1 - i) * strip}px`;
+      leaf.tabHeaderEl.toggleClass("is-active", on);
+      leaf.containerEl.style.display = "";
+      leaf.containerEl.removeClass("mod-hidden");
+      leaf.containerEl.style.left = `${(i + 1) * strip}px`;
+      leaf.containerEl.style.minWidth = "300px";
+      leaf.containerEl.style.maxWidth = "600px";
+    });
+  }
   refreshTabs(): void {
+    if (this.isStacked) { this.layoutStacked(); return; }
     this.children.forEach((c, i) => {
       const on = i === this.currentTab;
       c.containerEl.toggleClass("mod-hidden", !on);
@@ -873,7 +910,7 @@ export class Workspace extends Events {
     const ser = (n: WorkspaceItem): any => {
       const size = n.size !== null ? { size: Math.round(n.size * 100) / 100 } : {};
       if (n instanceof WorkspaceLeaf) return { id: n.id, type: "leaf", state: n.getViewState(), ...(n.group ? { group: n.group } : {}) };
-      if (n instanceof WorkspaceTabs) return { id: rid(), type: "tabs", ...size, currentTab: n.currentTab, children: n.children.map(ser) };
+      if (n instanceof WorkspaceTabs) return { id: rid(), type: "tabs", ...size, currentTab: n.currentTab, children: n.children.map(ser), ...(n.isStacked ? { stacked: true } : {}) };
       if (n instanceof WorkspaceWindow) {
         const g = n.geometry;
         const geo = Object.fromEntries((["x", "y", "width", "height"] as const).filter((k) => typeof g[k] === "number").map((k) => [k, Math.round(g[k]!)]));
@@ -908,6 +945,7 @@ export class Workspace extends Events {
             await leaf.setViewState(l.state ?? { type: "empty" });
           }
           tabs.currentTab = Math.min(c.currentTab ?? 0, Math.max(0, tabs.children.length - 1));
+          tabs.setStacked(c.stacked === true);
           tabs.refreshTabs();
         } else if (c.type === "split") {
           const sp = new WorkspaceSplit(this.app, c.direction ?? "vertical");

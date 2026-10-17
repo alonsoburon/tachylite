@@ -3,6 +3,7 @@ import "./variables.css";
 import "./markdown.css";
 import "./editor.css";
 import "./app.css";
+import "./stacked.css";
 import "./app-panels.css";
 import "./app-settings.css";
 import "./canvas.css";

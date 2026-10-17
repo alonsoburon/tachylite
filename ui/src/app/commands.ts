@@ -21,6 +21,7 @@ import { coreEnabled, whileCoreEnabled } from "./core/util";
 import { TachyMarkdownView } from "./markdownView";
 import { ipc } from "../ipc";
 import { uriForFile } from "./uri";
+import { registerStackedTabs } from "./stackedTabs";
 
 const HELP_URL = "https://github.com/alonsoburon/tachylite#readme";
 const mod = (key: string, ...more: Hotkey["modifiers"]): Hotkey[] => [{ modifiers: ["Mod", ...more], key }];
@@ -292,7 +293,7 @@ export function installCommands(app: App, history: History): () => void {
   } });
 
   // Insertion points for parallel feature work: each owner replaces ONLY its own line (and adds its code in its own module).
-  // [feature:stacked-tabs]
+  registerStackedTabs(add, ws);
   // [feature:export-pdf-and-linked-views]
   // [feature:canvas-bases-graph]
   // [feature:folders-trash-misc]
