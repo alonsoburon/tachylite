@@ -29,8 +29,10 @@ async function captureMenu(trigger) {
   return items;
 }
 
-const contextmenu = (el) => el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 80, clientY: 80, button: 2 }));
+// A missing element simply opens no menu, which is recorded as null ("could not be opened").
+const contextmenu = (el) => el?.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 80, clientY: 80, button: 2 }));
 
+// Method names are prefixed `dump` so they cannot collide with members of the base Plugin class.
 module.exports = class TachyliteReferenceDump extends Plugin {
   async onload() {
     this.addCommand({ id: "dump-reference-data", name: "Dump Tachylite reference data", callback: () => { void this.dump(); } });
@@ -45,11 +47,11 @@ module.exports = class TachyliteReferenceDump extends Plugin {
         generatedAt: new Date().toISOString(),
         apiVersion,
         platform: { isMacOS: !!Platform.isMacOS, isWin: !!Platform.isWin, isLinux: !!Platform.isLinux },
-        commands: this.commands(),
-        corePlugins: this.corePlugins(),
+        commands: this.dumpCommands(),
+        corePlugins: this.dumpCorePlugins(),
         config: JSON.parse(JSON.stringify(app.vault.config ?? {})),
-        menus: await this.menus(),
-        cache: await this.cache(),
+        menus: await this.dumpMenus(),
+        cache: await this.dumpCache(),
       };
       await app.vault.adapter.write(OUTPUT, JSON.stringify(out, null, 2));
       notice.hide();
@@ -61,20 +63,20 @@ module.exports = class TachyliteReferenceDump extends Plugin {
     }
   }
 
-  commands() {
+  dumpCommands() {
     const hk = this.app.hotkeyManager;
     return Object.values(this.app.commands.commands)
       .map((c) => ({ id: c.id, name: c.name, hotkeys: (hk.getDefaultHotkeys?.(c.id) ?? hk.defaultKeys?.[c.id] ?? []).map((h) => ({ modifiers: [...h.modifiers], key: h.key })) }))
       .sort((a, b) => (a.id < b.id ? -1 : 1));
   }
 
-  corePlugins() {
+  dumpCorePlugins() {
     return Object.entries(this.app.internalPlugins.plugins)
       .map(([id, p]) => ({ id, name: p.instance?.name ?? p.name ?? id, enabled: !!p.enabled, defaultOn: p.defaultOn ?? null }))
       .sort((a, b) => (a.id < b.id ? -1 : 1));
   }
 
-  async menus() {
+  async dumpMenus() {
     const app = this.app;
     const out = {};
     // Make sure there is a note open and the side views exist; menus are read from the real DOM.
@@ -95,7 +97,7 @@ module.exports = class TachyliteReferenceDump extends Plugin {
   }
 
   /** metadataCache output for the corpus notes (copy tools/obsidian-dump/corpus/ into the vault as `tachylite-corpus/`). */
-  async cache() {
+  async dumpCache() {
     const app = this.app;
     const out = {};
     const files = app.vault.getMarkdownFiles().filter((f) => f.path.startsWith(CORPUS_FOLDER + "/"));
