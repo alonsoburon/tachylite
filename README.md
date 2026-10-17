@@ -41,6 +41,10 @@ compatible with.
   [REA](https://github.com/morluto/rea). That was strictly for interoperability. This is **not** a
   certified clean-room implementation and I'm not going to pretend it is. Facts and names were
   taken; code, styling and assets were not, and everything is written from scratch.
+- **Reference data from running the app:** `compat/obsidian-reference.json` records what a stock Obsidian 1.14.4 reports
+  when run once on a throwaway vault: command ids and names, default hotkeys, context-menu entries, core plugin ids,
+  default setting values and the metadata it extracts from some test notes of mine. Those are facts about behavior, kept
+  so Tachylite can be compared with it (`scripts/compare-reference.sh`); they are not Obsidian's code or assets.
 - **Interop only.** No DRM or licensing circumvention, and nothing touches Obsidian's paid
   services (Sync, Publish). Those are out of scope.
 - Obsidian's terms may restrict how you use or analyze their software. This isn't legal advice,

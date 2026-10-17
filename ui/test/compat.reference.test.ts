@@ -11,6 +11,7 @@ import { startSession, type Session } from "../src/app/session";
 import { diffCommands, diffConfig, diffCorePlugins, diffMenus, formatReport, type Reference, type RefCommand } from "./helpers/reference";
 import { buildFileMenu } from "../src/app/files";
 import { prettyHotkey } from "../src/obsidian/events";
+import { DEFAULT_CONFIG } from "../src/obsidian/vault";
 
 const REF = path.join(__dirname, "../../compat/obsidian-reference.json");
 const REPORT = path.join(__dirname, "../../compat/reference-report.txt");
@@ -65,14 +66,14 @@ describe.skipIf(!present)("Tachylite against the Obsidian reference dump", () =>
       folderMenu: capture(() => buildFileMenu(app, app.vault.getFolderByPath("Folder"), "file-explorer").showAtPosition(pos)),
       tabHeaderMenu: capture(() => (session as any).shell.tabMenu(app.workspace.activeLeaf, new MouseEvent("contextmenu"))),
       moreOptionsMenu: capture(() => view.showMoreMenu(new MouseEvent("click"))),
-      editorMenu: capture(() => view.showEditorMenu(new MouseEvent("contextmenu"))),
+      editorMenu: capture(() => view.editor.cm.contentDOM.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }))),
       ribbonMenu: capture(() => app.workspace.leftRibbon.showMenu(new MouseEvent("contextmenu"))),
     };
 
     const report = formatReport([
       [`Commands and default hotkeys (Obsidian API ${ref.apiVersion ?? "?"})`, diffCommands(ref.commands ?? [], ours)],
       ["Core plugins", diffCorePlugins(ref.corePlugins ?? [], corePlugins)],
-      ["Config defaults", diffConfig(ref.config ?? {}, (k) => app.vault.getConfig(k))],
+      ["Config defaults", diffConfig(ref.config ?? {}, (k) => app.vault.getConfig(k), Object.keys(DEFAULT_CONFIG))],
       ["Menus", diffMenus(ref.menus ?? {}, menus)],
     ]);
     fs.writeFileSync(REPORT, report + "\n");

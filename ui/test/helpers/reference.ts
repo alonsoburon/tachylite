@@ -69,13 +69,15 @@ export function diffMenus(ref: NonNullable<Reference["menus"]>, ours: Record<str
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-export function diffConfig(ref: Record<string, unknown>, get: (key: string) => unknown): string[] {
+export function diffConfig(ref: Record<string, unknown>, get: (key: string) => unknown, ourKeys: string[] = []): string[] {
   const out: string[] = [];
   for (const [k, v] of Object.entries(ref)) {
     const mine = get(k);
     if (mine === undefined) out.push(`config ${k}: Obsidian ${JSON.stringify(v)}, Tachylite has no default`);
     else if (!same(mine, v)) out.push(`config ${k}: Obsidian ${JSON.stringify(v)}, Tachylite ${JSON.stringify(mine)}`);
   }
+  // Settings Tachylite defines that this Obsidian never reads (possibly invented, possibly newer or older than the dump).
+  for (const k of ourKeys) if (!(k in ref)) out.push(`config ${k}: only Tachylite has it (default ${JSON.stringify(get(k))})`);
   return out;
 }
 

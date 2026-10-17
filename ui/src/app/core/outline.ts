@@ -162,7 +162,7 @@ export const outline: CoreModule = {
     const stop = whileCoreEnabled(app, "outline", () => {
       const offs = [
         addCommand(app, { id: "outline:open", name: "Outline: Show outline", icon: "lucide-list", callback: () => { void activateView(app, OUTLINE_VIEW, "right"); } }),
-        addCommand(app, { id: "outline:open-for-current", name: "Outline: Open outline of the current note", icon: "lucide-list", callback: () => { void activateView(app, OUTLINE_VIEW, "right"); } }),
+        addCommand(app, { id: "outline:open-for-current", name: "Outline: Open outline of the current file", icon: "lucide-list", callback: () => { void activateView(app, OUTLINE_VIEW, "right"); } }),
       ];
       return () => { offs.forEach((o) => o()); app.workspace.detachLeavesOfType(OUTLINE_VIEW); };
     });

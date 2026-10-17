@@ -10,7 +10,7 @@
               "col": 0
             }
           },
-          "parent": 0,
+          "parent": -1,
           "task": " "
         },
         {
@@ -20,7 +20,7 @@
               "col": 0
             }
           },
-          "parent": 0,
+          "parent": -1,
           "task": "x"
         },
         {
@@ -30,7 +30,7 @@
               "col": 0
             }
           },
-          "parent": 0,
+          "parent": -1,
           "task": "X"
         },
         {
@@ -40,7 +40,7 @@
               "col": 0
             }
           },
-          "parent": 0,
+          "parent": -1,
           "task": "/"
         },
         {
@@ -50,7 +50,7 @@
               "col": 0
             }
           },
-          "parent": 0,
+          "parent": -1,
           "task": "-"
         },
         {
@@ -60,7 +60,7 @@
               "col": 0
             }
           },
-          "parent": 0,
+          "parent": -1,
           "task": null
         },
         {

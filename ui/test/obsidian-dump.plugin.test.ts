@@ -47,6 +47,7 @@ function fakeVault() {
     internalPlugins: { plugins: { graph: { enabled: true, instance: { name: "Graph view" }, defaultOn: true }, sync: { enabled: false, name: "Sync" } } },
     vault: {
       config: { tabSize: 4, readableLineLength: true },
+      getConfig(k: string) { return (this.config as any)[k]; },
       getMarkdownFiles: () => files.map((f) => ({ path: f.path })),
       read: async (f: any) => files.find((x) => x.path === f.path)!.text,
       adapter: { write: async (p: string, d: string) => { written[p] = d; } },

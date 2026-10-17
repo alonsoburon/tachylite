@@ -15,7 +15,7 @@ it("tab header menu has no duplicate entries", async () => {
   const el = [...document.querySelectorAll(".menu-item-title")].map((e) => e.textContent);
   expect(el.length).toBeGreaterThan(10);
   expect(el.filter((t, i) => el.indexOf(t) !== i)).toEqual([]);
-  expect(el).toEqual(expect.arrayContaining(["Close", "Pin", "Open in new window", "Reveal file in navigation", "Copy path from vault folder"]));
+  expect(el).toEqual(expect.arrayContaining(["Close", "Pin", "Open in new window", "Reveal file in navigation", "Copy path"]));
   await s.stop();
 });
 
@@ -28,7 +28,8 @@ it("the More options menu has Find, Replace and Add file property, and no duplic
   (s.app.workspace.activeLeaf!.view as any).showMoreMenu(new MouseEvent("click"));
   const el = [...document.querySelectorAll(".menu-item-title")].map((e) => e.textContent);
   expect(el.filter((t, i) => el.indexOf(t) !== i)).toEqual([]);
-  expect(el).toEqual(expect.arrayContaining(["Find...", "Replace...", "Add file property", "Split right", "Pin", "Open in new window", "Rename...", "Delete"]));
+  expect(el).toEqual(expect.arrayContaining(["Find...", "Replace...", "Add file property", "Split right", "Open in new window", "Rename...", "Delete file"]));
+  expect(el).not.toContain("Pin"); // Obsidian keeps Pin on the tab header menu only
   expect(el).not.toContain("Open in new tab");
   await s.stop();
 });

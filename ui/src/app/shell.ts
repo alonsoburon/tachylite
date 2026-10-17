@@ -2,7 +2,7 @@
 // tab chrome (close, pin, drag-reorder, drop-to-split), resize handles, sidebar toggles, layout persistence.
 import { ipc } from "../ipc";
 import {
-  FileView, Menu, Notice, Tasks, TextFileView, WorkspaceParent, WorkspaceSidedock, WorkspaceSplit, WorkspaceTabs, WorkspaceWindow,
+  FileView, MarkdownView, Menu, Notice, Tasks, TextFileView, WorkspaceParent, WorkspaceSidedock, WorkspaceSplit, WorkspaceTabs, WorkspaceWindow,
   type App, type LayoutHost, type View, type WorkspaceItem, type WorkspaceLeaf, type WorkspaceWindowInitData,
 } from "../obsidian";
 import { setIcon } from "../obsidian/icons";
@@ -214,7 +214,7 @@ export class Shell implements LayoutHost {
       el.addEventListener("click", cb);
       return el;
     };
-    add("lucide-vault", "Manage vaults", () => { this.app.commands.executeCommandById("app:open-vault-switcher"); });
+    add("lucide-vault", "Manage vaults", () => { this.app.commands.executeCommandById("app:switch-vault"); });
     add("lucide-settings", "Settings", () => { this.app.setting.open(); });
   }
 
@@ -330,16 +330,20 @@ export class Shell implements LayoutHost {
     menu.addItem((i) => i.setSection("close").setTitle("Close tabs to the right").onClick(() => { const idx = tabs.children.indexOf(leaf); for (const l of tabs.children.slice(idx + 1) as WorkspaceLeaf[]) if (!l.pinned) l.detach(); }));
     menu.addItem((i) => i.setSection("close").setTitle("Close all").onClick(() => { for (const l of [...tabs.children] as WorkspaceLeaf[]) if (!l.pinned) l.detach(); }));
     menu.addItem((i) => i.setSection("pin").setTitle(leaf.pinned ? "Unpin" : "Pin").setIcon("lucide-pin").onClick(() => leaf.togglePinned()));
-    if (mainArea) {
-      menu.addItem((i) => i.setSection("split").setTitle("Split right").setIcon("lucide-separator-vertical").onClick(() => { void ws.duplicateLeaf(leaf, "split", "vertical"); }));
-      menu.addItem((i) => i.setSection("split").setTitle("Split down").setIcon("lucide-separator-horizontal").onClick(() => { void ws.duplicateLeaf(leaf, "split", "horizontal"); }));
-      menu.addItem((i) => i.setSection("split").setTitle("Duplicate tab").setIcon("lucide-copy").onClick(() => { void ws.duplicateLeaf(leaf); }));
-    }
+    const view = leaf.view;
+    if (view instanceof MarkdownView) (view as unknown as { addModeItems(m: Menu): void }).addModeItems?.(menu);
+    // Entries and order follow Obsidian 1.14.4's menu (compat/obsidian-reference.json). Close others, Close tabs to the
+    // right, Close all and Duplicate tab are Tachylite's own extras.
     // Obsidian's wording; moving back to the main window is otherwise a tab drag (that works across windows here too).
     menu.addItem((i) => i.setSection("window").setTitle("Move to new window").setIcon("lucide-picture-in-picture-2").onClick(() => { try { ws.moveLeafToPopout(leaf); } catch (e) { console.error(e); new Notice("Unable to open a new window."); } }));
+    if (mainArea) {
+      menu.addItem((i) => i.setSection("window").setTitle("Split right").setIcon("lucide-separator-vertical").onClick(() => { void ws.duplicateLeaf(leaf, "split", "vertical"); }));
+      menu.addItem((i) => i.setSection("window").setTitle("Split down").setIcon("lucide-separator-horizontal").onClick(() => { void ws.duplicateLeaf(leaf, "split", "horizontal"); }));
+      menu.addItem((i) => i.setSection("window").setTitle("Duplicate tab").setIcon("lucide-copy").onClick(() => { void ws.duplicateLeaf(leaf); }));
+    }
     menu.addItem((i) => i.setSection("window").setTitle("Open in new window").setIcon("lucide-picture-in-picture-2").onClick(() => { void ws.duplicateLeaf(leaf, "window"); }));
     if (inPopout) menu.addItem((i) => i.setSection("window").setTitle("Move to main window").setIcon("lucide-app-window").onClick(() => { this.moveToMain(leaf); }));
-    const v = leaf.view;
+    const v = view;
     if (v instanceof FileView && v.file) {
       const f = v.file;
       buildFileMenu(this.app, f, "tab-header", menu);

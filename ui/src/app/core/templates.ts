@@ -113,9 +113,9 @@ export const templates: CoreModule = {
       const o = () => coreOptions(app, ID);
       const offs = [
         coreRibbon(app, ID, "lucide-files", "Insert template", () => openTemplatePicker(app)),
-        addCommand(app, { id: "templates:insert-template", name: "Templates: Insert template", icon: "lucide-copy", callback: () => openTemplatePicker(app) }),
-        addCommand(app, { id: "templates:insert-current-date", name: "Templates: Insert current date", icon: "lucide-calendar-days", editorCallback: (e) => insertAtHead(e, moment().format(o().dateFormat || DEFAULT_DATE_FORMAT)) }),
-        addCommand(app, { id: "templates:insert-current-time", name: "Templates: Insert current time", icon: "lucide-clock", editorCallback: (e) => insertAtHead(e, moment().format(o().timeFormat || DEFAULT_TIME_FORMAT)) }),
+        addCommand(app, { id: "insert-template", name: "Templates: Insert template", icon: "lucide-copy", callback: () => openTemplatePicker(app) }),
+        addCommand(app, { id: "insert-current-date", name: "Templates: Insert current date", icon: "lucide-calendar-days", editorCallback: (e) => insertAtHead(e, moment().format(o().dateFormat || DEFAULT_DATE_FORMAT)) }),
+        addCommand(app, { id: "insert-current-time", name: "Templates: Insert current time", icon: "lucide-clock", editorCallback: (e) => insertAtHead(e, moment().format(o().timeFormat || DEFAULT_TIME_FORMAT)) }),
       ];
       return () => offs.forEach((f) => f());
     });

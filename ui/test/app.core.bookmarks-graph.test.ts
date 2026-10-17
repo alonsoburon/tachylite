@@ -79,13 +79,13 @@ describe("bookmarks", () => {
     const A = c.app.vault.getFileByPath("A.md")!;
     const m = new Menu();
     c.app.workspace.trigger("file-menu", m, A, "file-explorer");
-    const entry = m.items.find((i: any) => i.titleEl?.textContent === "Bookmark") as any;
+    const entry = m.items.find((i: any) => i.titleEl?.textContent === "Bookmark...") as any;
     expect(entry).toBeTruthy();
     entry.dom.click();
     expect(getStore(c.app)!.isBookmarked(A)).toBe(true);
     await c.app.workspace.getLeaf("tab").openFile(A, { active: true });
     const cmd = c.app.commands.findCommand("bookmarks:bookmark-current-view")!;
-    expect(cmd.name).toBe("Bookmarks: Bookmark current file");
+    expect(cmd.name).toBe("Bookmarks: Bookmark...");
     c.app.commands.executeCommand(cmd);
     expect(getStore(c.app)!.isBookmarked(A)).toBe(false);
     c.app.commands.executeCommand(cmd);

@@ -20,7 +20,6 @@ const DESCRIPTIONS: Record<string, string> = {
   "slash-command": "Run commands by typing a slash in the editor.",
   "editor-status": "Show the editor state in the status bar.",
   bookmarks: "Bookmark notes, searches and headings for quick access.",
-  "markdown-importer": "Import Markdown files from other apps.",
   "zk-prefixer": "Create notes with a unique timestamp prefix.",
   "random-note": "Open a random note from the vault.",
   outline: "Show the headings of the current note as an outline.",
@@ -33,6 +32,7 @@ const DESCRIPTIONS: Record<string, string> = {
   sync: "Synchronize the vault across devices.",
   bases: "Create database-like views of notes using their properties.",
   webviewer: "Open web pages inside the app.",
+  footnotes: "Show the footnotes of the current note in a side panel.",
 };
 
 /** Core plugins Tachylite does not provide: Sync and Publish are paid services (out of scope), the others are not built yet. */
@@ -40,7 +40,7 @@ const UNAVAILABLE: Record<string, string> = {
   sync: "Not available in Tachylite (paid Obsidian service).",
   publish: "Not available in Tachylite (paid Obsidian service).",
   webviewer: "Not available in Tachylite yet.",
-  "markdown-importer": "Not available in Tachylite yet.",
+  footnotes: "Not available in Tachylite yet.",
 };
 
 export class CorePluginsSettingTab extends SettingTab {

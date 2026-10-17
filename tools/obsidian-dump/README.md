@@ -14,7 +14,18 @@ What ends up in the file:
 - for the notes in `corpus/`: the note text and the `metadataCache` output (links, embeds, tags, headings, blocks,
   list items, sections, with positions).
 
-## Steps (you need a desktop Obsidian)
+## Automatic route (Linux)
+
+`scripts/obsidian-reference.sh /path/to/squashfs-root/obsidian` does all of the steps below with no clicking: it starts
+the Obsidian binary on a private X server in a throwaway vault (own config and data directories, no Wayland socket, no
+session bus), enables the plugin through Obsidian's DevTools port, runs the command and copies the result to
+`compat/obsidian-reference.json`. Get the binary from the
+[Obsidian releases](https://github.com/obsidianmd/obsidian-releases/releases): download `Obsidian-x.y.z.AppImage`, run it
+with `--appimage-extract` once (do not start the extracted `obsidian` yourself from a script; a session that exports
+`GDK_BACKEND=wayland` would open it on your real desktop). `OBSIDIAN_EVAL=file.js scripts/obsidian-reference.sh ...`
+evaluates a JavaScript file inside the running Obsidian and prints the result, for exploring its API.
+
+## Manual steps (you need a desktop Obsidian)
 
 1. **Use a throwaway vault.** Make a new empty vault. Leave settings alone and install no community plugins, or the
    "defaults" in the dump are not defaults. Create a bookmark of any note first if you want the bookmark menu

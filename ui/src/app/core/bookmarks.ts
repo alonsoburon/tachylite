@@ -288,12 +288,12 @@ export const bookmarks: CoreModule = {
       const ref = app.workspace.on("file-menu", (menu: Menu, file: TAbstractFile) => {
         if (!(file instanceof TFile || file instanceof TFolder)) return;
         const on = store.isBookmarked(file);
-        menu.addItem((i) => i.setSection("action").setTitle(on ? "Remove bookmark" : "Bookmark").setIcon(on ? "lucide-bookmark-minus" : "lucide-bookmark").onClick(() => { store.toggleFile(file); }));
+        menu.addItem((i) => i.setSection("action").setTitle(on ? "Remove bookmark" : "Bookmark...").setIcon(on ? "lucide-bookmark-minus" : "lucide-bookmark").onClick(() => { store.toggleFile(file); }));
       });
       const offs = [
         addCommand(app, { id: "bookmarks:open", name: "Bookmarks: Show bookmarks", icon: "lucide-bookmark", callback: () => { void activateView(app, BOOKMARKS_VIEW, "left"); } }),
         addCommand(app, {
-          id: "bookmarks:bookmark-current-view", name: "Bookmarks: Bookmark current file", icon: "lucide-bookmark-plus",
+          id: "bookmarks:bookmark-current-view", name: "Bookmarks: Bookmark...", icon: "lucide-bookmark-plus",
           checkCallback: (checking) => {
             const f = app.workspace.getActiveFile();
             if (!f) return false;
@@ -302,7 +302,16 @@ export const bookmarks: CoreModule = {
           },
         }),
         addCommand(app, {
-          id: "bookmarks:bookmark-current-section", name: "Bookmarks: Bookmark current heading", icon: "lucide-bookmark-plus",
+          id: "bookmarks:unbookmark-current-view", name: "Bookmarks: Remove bookmark for the current file", icon: "lucide-bookmark-minus",
+          checkCallback: (checking) => {
+            const f = app.workspace.getActiveFile();
+            if (!f || !store.isBookmarked(f)) return false;
+            if (!checking) store.toggleFile(f);
+            return true;
+          },
+        }),
+        addCommand(app, {
+          id: "bookmarks:bookmark-current-heading", name: "Bookmarks: Bookmark heading under cursor...", icon: "lucide-bookmark-plus",
           editorCheckCallback: (checking, editor, ctx) => {
             const f = (ctx as any).file as TFile | null;
             if (!f || f.extension !== "md") return false;
@@ -315,7 +324,7 @@ export const bookmarks: CoreModule = {
           },
         }),
         addCommand(app, {
-          id: "bookmarks:bookmark-all-tabs", name: "Bookmarks: Bookmark all tabs", icon: "lucide-bookmarks",
+          id: "bookmarks:bookmark-all-tabs", name: "Bookmarks: Bookmark all tabs...", icon: "lucide-bookmarks",
           checkCallback: (checking) => {
             // The files open in the main area (and popouts), once each, in tab order.
             const files: TFile[] = [];
@@ -333,7 +342,7 @@ export const bookmarks: CoreModule = {
           },
         }),
         addCommand(app, {
-          id: "bookmarks:bookmark-current-search", name: "Bookmarks: Bookmark current search", icon: "lucide-bookmark-plus",
+          id: "bookmarks:bookmark-current-search", name: "Bookmarks: Bookmark current search...", icon: "lucide-bookmark-plus",
           checkCallback: (checking) => {
             const v = app.workspace.getActiveViewOfType(SearchView);
             const query = v?.query.trim();

@@ -1,0 +1,4628 @@
+{
+  "_note": "Produced by the Tachylite reference dump plugin. Use a fresh vault with no community plugins and default settings, or the defaults below are not defaults.",
+  "generatedAt": "2026-10-17T04:23:11.191Z",
+  "apiVersion": "1.14.4",
+  "platform": {
+    "isMacOS": false,
+    "isWin": false,
+    "isLinux": true
+  },
+  "commands": [
+    {
+      "id": "app:decrease-font-size",
+      "name": "Decrease font size",
+      "hotkeys": []
+    },
+    {
+      "id": "app:delete-file",
+      "name": "Delete current file",
+      "hotkeys": []
+    },
+    {
+      "id": "app:go-back",
+      "name": "Navigate back",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod",
+            "Alt"
+          ],
+          "key": "ArrowLeft"
+        }
+      ]
+    },
+    {
+      "id": "app:go-forward",
+      "name": "Navigate forward",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod",
+            "Alt"
+          ],
+          "key": "ArrowRight"
+        }
+      ]
+    },
+    {
+      "id": "app:increase-font-size",
+      "name": "Increase font size",
+      "hotkeys": []
+    },
+    {
+      "id": "app:migrate-frontmatter",
+      "name": "Format converter: Frontmatter migration",
+      "hotkeys": []
+    },
+    {
+      "id": "app:open-another-vault",
+      "name": "Open vault...",
+      "hotkeys": []
+    },
+    {
+      "id": "app:open-file",
+      "name": "Open file from outside the vault...",
+      "hotkeys": []
+    },
+    {
+      "id": "app:open-help",
+      "name": "Open help",
+      "hotkeys": [
+        {
+          "modifiers": [],
+          "key": "F1"
+        }
+      ]
+    },
+    {
+      "id": "app:open-sandbox-vault",
+      "name": "Open sandbox vault",
+      "hotkeys": []
+    },
+    {
+      "id": "app:open-settings",
+      "name": "Open settings",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": ","
+        }
+      ]
+    },
+    {
+      "id": "app:open-vault",
+      "name": "Manage vaults",
+      "hotkeys": []
+    },
+    {
+      "id": "app:reload",
+      "name": "Reload app without saving",
+      "hotkeys": []
+    },
+    {
+      "id": "app:show-debug-info",
+      "name": "Show debug info",
+      "hotkeys": []
+    },
+    {
+      "id": "app:show-release-notes",
+      "name": "Show release notes",
+      "hotkeys": []
+    },
+    {
+      "id": "app:switch-vault",
+      "name": "Change vault...",
+      "hotkeys": []
+    },
+    {
+      "id": "app:toggle-default-new-pane-mode",
+      "name": "Toggle default mode for new tabs",
+      "hotkeys": []
+    },
+    {
+      "id": "app:toggle-left-sidebar",
+      "name": "Toggle left sidebar",
+      "hotkeys": []
+    },
+    {
+      "id": "app:toggle-ribbon",
+      "name": "Toggle ribbon",
+      "hotkeys": []
+    },
+    {
+      "id": "app:toggle-right-sidebar",
+      "name": "Toggle right sidebar",
+      "hotkeys": []
+    },
+    {
+      "id": "backlink:open",
+      "name": "Backlinks: Show backlinks",
+      "hotkeys": []
+    },
+    {
+      "id": "backlink:open-backlinks",
+      "name": "Backlinks: Open backlinks for the current note",
+      "hotkeys": []
+    },
+    {
+      "id": "backlink:toggle-backlinks-in-document",
+      "name": "Backlinks: Toggle backlinks in document",
+      "hotkeys": []
+    },
+    {
+      "id": "bases:add-item",
+      "name": "Bases: Add item",
+      "hotkeys": []
+    },
+    {
+      "id": "bases:add-view",
+      "name": "Bases: Add view",
+      "hotkeys": []
+    },
+    {
+      "id": "bases:change-view",
+      "name": "Bases: Change view",
+      "hotkeys": []
+    },
+    {
+      "id": "bases:copy-table",
+      "name": "Bases: Copy table to clipboard",
+      "hotkeys": []
+    },
+    {
+      "id": "bases:insert",
+      "name": "Bases: Insert new base",
+      "hotkeys": []
+    },
+    {
+      "id": "bases:new-file",
+      "name": "Bases: Create new base",
+      "hotkeys": []
+    },
+    {
+      "id": "bookmarks:bookmark-all-tabs",
+      "name": "Bookmarks: Bookmark all tabs...",
+      "hotkeys": []
+    },
+    {
+      "id": "bookmarks:bookmark-current-heading",
+      "name": "Bookmarks: Bookmark heading under cursor...",
+      "hotkeys": []
+    },
+    {
+      "id": "bookmarks:bookmark-current-search",
+      "name": "Bookmarks: Bookmark current search...",
+      "hotkeys": []
+    },
+    {
+      "id": "bookmarks:bookmark-current-section",
+      "name": "Bookmarks: Bookmark block under cursor...",
+      "hotkeys": []
+    },
+    {
+      "id": "bookmarks:bookmark-current-view",
+      "name": "Bookmarks: Bookmark...",
+      "hotkeys": []
+    },
+    {
+      "id": "bookmarks:open",
+      "name": "Bookmarks: Show bookmarks",
+      "hotkeys": []
+    },
+    {
+      "id": "bookmarks:unbookmark-current-view",
+      "name": "Bookmarks: Remove bookmark for the current file",
+      "hotkeys": []
+    },
+    {
+      "id": "canvas:convert-to-file",
+      "name": "Canvas: Convert to file...",
+      "hotkeys": []
+    },
+    {
+      "id": "canvas:export-as-image",
+      "name": "Canvas: Export as image",
+      "hotkeys": []
+    },
+    {
+      "id": "canvas:jump-to-group",
+      "name": "Canvas: Jump to group",
+      "hotkeys": []
+    },
+    {
+      "id": "canvas:new-file",
+      "name": "Canvas: Create new canvas",
+      "hotkeys": []
+    },
+    {
+      "id": "command-palette:open",
+      "name": "Command palette: Open command palette",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "P"
+        }
+      ]
+    },
+    {
+      "id": "daily-notes",
+      "name": "Daily notes: Open today's daily note",
+      "hotkeys": []
+    },
+    {
+      "id": "daily-notes:goto-next",
+      "name": "Daily notes: Open next daily note",
+      "hotkeys": []
+    },
+    {
+      "id": "daily-notes:goto-prev",
+      "name": "Daily notes: Open previous daily note",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:add-cursor-above",
+      "name": "Add cursor above",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:add-cursor-below",
+      "name": "Add cursor below",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:attach-file",
+      "name": "Insert attachment",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:clear-formatting",
+      "name": "Clear formatting",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:context-menu",
+      "name": "Show context menu under cursor",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:cycle-list-checklist",
+      "name": "Cycle bullet/checkbox",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:delete-paragraph",
+      "name": "Delete paragraph",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "D"
+        }
+      ]
+    },
+    {
+      "id": "editor:download-attachments",
+      "name": "Download attachments for current file",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:focus",
+      "name": "Focus on last note",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:focus-bottom",
+      "name": "Focus on tab group below",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:focus-left",
+      "name": "Focus on tab group to the left",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:focus-right",
+      "name": "Focus on tab group to the right",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:focus-top",
+      "name": "Focus on tab group above",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:fold-all",
+      "name": "Fold all headings and lists",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:fold-less",
+      "name": "Fold less",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:fold-more",
+      "name": "Fold more",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:follow-link",
+      "name": "Follow link under cursor",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Alt"
+          ],
+          "key": "Enter"
+        }
+      ]
+    },
+    {
+      "id": "editor:indent-list",
+      "name": "Indent list item",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:insert-callout",
+      "name": "Insert callout",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:insert-codeblock",
+      "name": "Insert code block",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:insert-embed",
+      "name": "Add embed",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:insert-footnote",
+      "name": "Insert footnote",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:insert-horizontal-rule",
+      "name": "Insert horizontal rule",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:insert-link",
+      "name": "Insert Markdown link",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "K"
+        }
+      ]
+    },
+    {
+      "id": "editor:insert-mathblock",
+      "name": "Insert maths block",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:insert-table",
+      "name": "Insert table",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:insert-tag",
+      "name": "Add tag",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:insert-wikilink",
+      "name": "Add internal link",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:open-link-in-new-leaf",
+      "name": "Open link under cursor in new tab",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "Enter"
+        }
+      ]
+    },
+    {
+      "id": "editor:open-link-in-new-split",
+      "name": "Open link under cursor to the right",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod",
+            "Alt"
+          ],
+          "key": "Enter"
+        }
+      ]
+    },
+    {
+      "id": "editor:open-link-in-new-window",
+      "name": "Open link under cursor in new window",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod",
+            "Alt",
+            "Shift"
+          ],
+          "key": "Enter"
+        }
+      ]
+    },
+    {
+      "id": "editor:open-search",
+      "name": "Search current file",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "F"
+        }
+      ]
+    },
+    {
+      "id": "editor:open-search-replace",
+      "name": "Search & replace in current file",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "H"
+        }
+      ]
+    },
+    {
+      "id": "editor:rename-heading",
+      "name": "Rename this heading...",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:save-file",
+      "name": "Save current file",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "S"
+        }
+      ]
+    },
+    {
+      "id": "editor:set-heading",
+      "name": "Toggle heading",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:set-heading-0",
+      "name": "Remove heading",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:set-heading-1",
+      "name": "Set as heading 1",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:set-heading-2",
+      "name": "Set as heading 2",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:set-heading-3",
+      "name": "Set as heading 3",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:set-heading-4",
+      "name": "Set as heading 4",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:set-heading-5",
+      "name": "Set as heading 5",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:set-heading-6",
+      "name": "Set as heading 6",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:swap-line-down",
+      "name": "Move line down",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:swap-line-up",
+      "name": "Move line up",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-col-after",
+      "name": "Table: Add column after",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-col-align-center",
+      "name": "Table: Align centre",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-col-align-left",
+      "name": "Table: Align left",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-col-align-right",
+      "name": "Table: Align right",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-col-before",
+      "name": "Table: Add column before",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-col-copy",
+      "name": "Table: Duplicate column",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-col-delete",
+      "name": "Table: Delete column",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-col-left",
+      "name": "Table: Move column left",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-col-right",
+      "name": "Table: Move column right",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-row-after",
+      "name": "Table: Add row after",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-row-before",
+      "name": "Table: Add row before",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-row-copy",
+      "name": "Table: Duplicate row",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-row-delete",
+      "name": "Table: Delete row",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-row-down",
+      "name": "Table: Move row down",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:table-row-up",
+      "name": "Table: Move row up",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-blockquote",
+      "name": "Toggle blockquote",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-bold",
+      "name": "Toggle bold",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "B"
+        }
+      ]
+    },
+    {
+      "id": "editor:toggle-bullet-list",
+      "name": "Toggle bullet list",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-checklist-status",
+      "name": "Toggle checkbox status",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "l"
+        }
+      ]
+    },
+    {
+      "id": "editor:toggle-code",
+      "name": "Toggle code",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-comments",
+      "name": "Toggle comment",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "/"
+        }
+      ]
+    },
+    {
+      "id": "editor:toggle-fold",
+      "name": "Toggle fold on the current line",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-fold-properties",
+      "name": "Toggle fold properties in current file",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-highlight",
+      "name": "Toggle highlight",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-highlight-blue",
+      "name": "Toggle blue highlight",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-highlight-green",
+      "name": "Toggle green highlight",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-highlight-orange",
+      "name": "Toggle orange highlight",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-highlight-purple",
+      "name": "Toggle purple highlight",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-highlight-red",
+      "name": "Toggle red highlight",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-highlight-yellow",
+      "name": "Toggle yellow highlight",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-inline-math",
+      "name": "Toggle inline maths",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-italics",
+      "name": "Toggle italic",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "I"
+        }
+      ]
+    },
+    {
+      "id": "editor:toggle-line-numbers",
+      "name": "Toggle line numbers",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-numbered-list",
+      "name": "Toggle numbered list",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-readable-line-length",
+      "name": "Toggle readable line length",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-source",
+      "name": "Toggle Live Preview/Source mode",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-spellcheck",
+      "name": "Toggle spellcheck",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:toggle-strikethrough",
+      "name": "Toggle strikethrough",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:unfold-all",
+      "name": "Unfold all headings and lists",
+      "hotkeys": []
+    },
+    {
+      "id": "editor:unindent-list",
+      "name": "Unindent list item",
+      "hotkeys": []
+    },
+    {
+      "id": "file-explorer:duplicate-file",
+      "name": "Make a copy of the current file",
+      "hotkeys": []
+    },
+    {
+      "id": "file-explorer:move-file",
+      "name": "Move current file to another folder",
+      "hotkeys": []
+    },
+    {
+      "id": "file-explorer:new-file",
+      "name": "Create new note",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "N"
+        }
+      ]
+    },
+    {
+      "id": "file-explorer:new-file-in-current-tab",
+      "name": "Create new note in current tab",
+      "hotkeys": []
+    },
+    {
+      "id": "file-explorer:new-file-in-new-pane",
+      "name": "Create note to the right",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod",
+            "Shift"
+          ],
+          "key": "N"
+        }
+      ]
+    },
+    {
+      "id": "file-explorer:new-folder",
+      "name": "Files: Create new folder",
+      "hotkeys": []
+    },
+    {
+      "id": "file-explorer:open",
+      "name": "Files: Show file explorer",
+      "hotkeys": []
+    },
+    {
+      "id": "file-explorer:reveal-active-file",
+      "name": "Files: Reveal current file in navigation",
+      "hotkeys": []
+    },
+    {
+      "id": "file-recovery:open",
+      "name": "File recovery: Open local history",
+      "hotkeys": []
+    },
+    {
+      "id": "global-search:open",
+      "name": "Search: Search in all files",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod",
+            "Shift"
+          ],
+          "key": "F"
+        }
+      ]
+    },
+    {
+      "id": "graph:animate",
+      "name": "Graph view: Start graph time-lapse animation",
+      "hotkeys": []
+    },
+    {
+      "id": "graph:open",
+      "name": "Graph view: Open graph view",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "G"
+        }
+      ]
+    },
+    {
+      "id": "graph:open-local",
+      "name": "Graph view: Open local graph",
+      "hotkeys": []
+    },
+    {
+      "id": "insert-current-date",
+      "name": "Templates: Insert current date",
+      "hotkeys": []
+    },
+    {
+      "id": "insert-current-time",
+      "name": "Templates: Insert current time",
+      "hotkeys": []
+    },
+    {
+      "id": "insert-template",
+      "name": "Templates: Insert template",
+      "hotkeys": []
+    },
+    {
+      "id": "markdown:add-alias",
+      "name": "Add alias",
+      "hotkeys": []
+    },
+    {
+      "id": "markdown:add-metadata-property",
+      "name": "Add file property",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": ";"
+        }
+      ]
+    },
+    {
+      "id": "markdown:clear-metadata-properties",
+      "name": "Clear file properties",
+      "hotkeys": []
+    },
+    {
+      "id": "markdown:toggle-preview",
+      "name": "Toggle reading view",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "E"
+        }
+      ]
+    },
+    {
+      "id": "mobile:quick-action",
+      "name": "Configure mobile Quick Action",
+      "hotkeys": []
+    },
+    {
+      "id": "note-composer:extract-heading",
+      "name": "Note composer: Extract this heading...",
+      "hotkeys": []
+    },
+    {
+      "id": "note-composer:merge-file",
+      "name": "Note composer: Merge current file with another file...",
+      "hotkeys": []
+    },
+    {
+      "id": "note-composer:split-file",
+      "name": "Note composer: Extract current selection...",
+      "hotkeys": []
+    },
+    {
+      "id": "open-with-default-app:open",
+      "name": "Open in default app",
+      "hotkeys": []
+    },
+    {
+      "id": "open-with-default-app:show",
+      "name": "Show in system explorer",
+      "hotkeys": []
+    },
+    {
+      "id": "outgoing-links:open",
+      "name": "Outgoing links: Show outgoing links",
+      "hotkeys": []
+    },
+    {
+      "id": "outgoing-links:open-for-current",
+      "name": "Outgoing links: Open outgoing links for the current file",
+      "hotkeys": []
+    },
+    {
+      "id": "outline:open",
+      "name": "Outline: Show outline",
+      "hotkeys": []
+    },
+    {
+      "id": "outline:open-for-current",
+      "name": "Outline: Open outline of the current file",
+      "hotkeys": []
+    },
+    {
+      "id": "properties:open",
+      "name": "Properties view: Show all properties",
+      "hotkeys": []
+    },
+    {
+      "id": "properties:open-local",
+      "name": "Properties view: Show file properties",
+      "hotkeys": []
+    },
+    {
+      "id": "switcher:open",
+      "name": "Quick switcher: Open quick switcher",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "O"
+        }
+      ]
+    },
+    {
+      "id": "sync:open-sync-log",
+      "name": "Sync: Open activity log",
+      "hotkeys": []
+    },
+    {
+      "id": "sync:open-sync-view",
+      "name": "Sync: Show Sync history",
+      "hotkeys": []
+    },
+    {
+      "id": "sync:setup",
+      "name": "Sync: Set up Sync",
+      "hotkeys": []
+    },
+    {
+      "id": "sync:view-version-history",
+      "name": "Sync: Open version history for the current file",
+      "hotkeys": []
+    },
+    {
+      "id": "tag-pane:open",
+      "name": "Tags view: Show tags",
+      "hotkeys": []
+    },
+    {
+      "id": "theme:switch",
+      "name": "Change theme...",
+      "hotkeys": []
+    },
+    {
+      "id": "theme:toggle-light-dark",
+      "name": "Toggle light/dark mode",
+      "hotkeys": []
+    },
+    {
+      "id": "window:reset-zoom",
+      "name": "Reset zoom",
+      "hotkeys": []
+    },
+    {
+      "id": "window:toggle-always-on-top",
+      "name": "Toggle window always on top",
+      "hotkeys": []
+    },
+    {
+      "id": "window:zoom-in",
+      "name": "Zoom in",
+      "hotkeys": []
+    },
+    {
+      "id": "window:zoom-out",
+      "name": "Zoom out",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:close",
+      "name": "Close current tab",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "W"
+        }
+      ]
+    },
+    {
+      "id": "workspace:close-others",
+      "name": "Close all other tabs",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:close-others-tab-group",
+      "name": "Close others in tab group",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:close-tab-group",
+      "name": "Close this tab group",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:close-window",
+      "name": "Close window",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod",
+            "Shift"
+          ],
+          "key": "W"
+        }
+      ]
+    },
+    {
+      "id": "workspace:copy-full-path",
+      "name": "Copy current file path from system root",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:copy-path",
+      "name": "Copy current file path from vault folder",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:copy-url",
+      "name": "Copy Obsidian URL for current file",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:edit-file-title",
+      "name": "Rename file",
+      "hotkeys": [
+        {
+          "modifiers": [],
+          "key": "F2"
+        }
+      ]
+    },
+    {
+      "id": "workspace:export-pdf",
+      "name": "Export to PDF...",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:goto-last-tab",
+      "name": "Go to last tab",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "9"
+        }
+      ]
+    },
+    {
+      "id": "workspace:goto-tab-1",
+      "name": "Go to tab #1",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "1"
+        }
+      ]
+    },
+    {
+      "id": "workspace:goto-tab-2",
+      "name": "Go to tab #2",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "2"
+        }
+      ]
+    },
+    {
+      "id": "workspace:goto-tab-3",
+      "name": "Go to tab #3",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "3"
+        }
+      ]
+    },
+    {
+      "id": "workspace:goto-tab-4",
+      "name": "Go to tab #4",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "4"
+        }
+      ]
+    },
+    {
+      "id": "workspace:goto-tab-5",
+      "name": "Go to tab #5",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "5"
+        }
+      ]
+    },
+    {
+      "id": "workspace:goto-tab-6",
+      "name": "Go to tab #6",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "6"
+        }
+      ]
+    },
+    {
+      "id": "workspace:goto-tab-7",
+      "name": "Go to tab #7",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "7"
+        }
+      ]
+    },
+    {
+      "id": "workspace:goto-tab-8",
+      "name": "Go to tab #8",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "8"
+        }
+      ]
+    },
+    {
+      "id": "workspace:move-to-new-window",
+      "name": "Move current tab to new window",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:new-tab",
+      "name": "New tab",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod"
+          ],
+          "key": "T"
+        }
+      ]
+    },
+    {
+      "id": "workspace:new-window",
+      "name": "New window",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:next-tab",
+      "name": "Go to next tab",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Ctrl"
+          ],
+          "key": "Tab"
+        },
+        {
+          "modifiers": [
+            "Ctrl"
+          ],
+          "key": "PageDown"
+        }
+      ]
+    },
+    {
+      "id": "workspace:open-in-new-window",
+      "name": "Open current tab in new window",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:previous-tab",
+      "name": "Go to previous tab",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Ctrl",
+            "Shift"
+          ],
+          "key": "Tab"
+        },
+        {
+          "modifiers": [
+            "Ctrl"
+          ],
+          "key": "PageUp"
+        }
+      ]
+    },
+    {
+      "id": "workspace:show-trash",
+      "name": "Show deleted files",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:split-horizontal",
+      "name": "Split down",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:split-vertical",
+      "name": "Split right",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:toggle-pin",
+      "name": "Toggle pin",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:toggle-stacked-tabs",
+      "name": "Toggle stacked tabs",
+      "hotkeys": []
+    },
+    {
+      "id": "workspace:undo-close-pane",
+      "name": "Undo close tab",
+      "hotkeys": [
+        {
+          "modifiers": [
+            "Mod",
+            "Shift"
+          ],
+          "key": "T"
+        }
+      ]
+    }
+  ],
+  "corePlugins": [
+    {
+      "id": "audio-recorder",
+      "name": "Audio recorder",
+      "enabled": false,
+      "defaultOn": null
+    },
+    {
+      "id": "backlink",
+      "name": "Backlinks",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "bases",
+      "name": "Bases",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "bookmarks",
+      "name": "Bookmarks",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "canvas",
+      "name": "Canvas",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "command-palette",
+      "name": "Command palette",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "daily-notes",
+      "name": "Daily notes",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "editor-status",
+      "name": "Show editing mode in status bar",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "file-explorer",
+      "name": "Files",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "file-recovery",
+      "name": "File recovery",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "footnotes",
+      "name": "Footnotes view",
+      "enabled": false,
+      "defaultOn": null
+    },
+    {
+      "id": "global-search",
+      "name": "Search",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "graph",
+      "name": "Graph view",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "note-composer",
+      "name": "Note composer",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "outgoing-link",
+      "name": "Outgoing links",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "outline",
+      "name": "Outline",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "page-preview",
+      "name": "Page preview",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "properties",
+      "name": "Properties view",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "publish",
+      "name": "Publish",
+      "enabled": false,
+      "defaultOn": null
+    },
+    {
+      "id": "random-note",
+      "name": "Random note",
+      "enabled": false,
+      "defaultOn": null
+    },
+    {
+      "id": "slash-command",
+      "name": "Slash commands",
+      "enabled": false,
+      "defaultOn": null
+    },
+    {
+      "id": "slides",
+      "name": "Slides",
+      "enabled": false,
+      "defaultOn": null
+    },
+    {
+      "id": "switcher",
+      "name": "Quick switcher",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "sync",
+      "name": "Sync",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "tag-pane",
+      "name": "Tags view",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "templates",
+      "name": "Templates",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "webviewer",
+      "name": "Web viewer",
+      "enabled": false,
+      "defaultOn": null
+    },
+    {
+      "id": "word-count",
+      "name": "Word count",
+      "enabled": true,
+      "defaultOn": null
+    },
+    {
+      "id": "workspaces",
+      "name": "Workspaces",
+      "enabled": false,
+      "defaultOn": null
+    },
+    {
+      "id": "zk-prefixer",
+      "name": "Unique note creator",
+      "enabled": false,
+      "defaultOn": null
+    }
+  ],
+  "config": {
+    "accentColor": "",
+    "alwaysUpdateLinks": false,
+    "attachmentFolderPath": "/",
+    "autoConvertHtml": true,
+    "autoFullScreen": true,
+    "autoPairBrackets": true,
+    "autoPairMarkdown": true,
+    "baseFontSizeAction": false,
+    "cssTheme": "",
+    "defaultViewMode": "source",
+    "deleteUnlinkedAttachments": "ask",
+    "enabledCssSnippets": [],
+    "floatingNavigation": true,
+    "focusNewTab": true,
+    "foldHeading": true,
+    "foldIndent": true,
+    "interfaceFontFamily": "",
+    "livePreview": true,
+    "mobilePullAction": "command-palette:open",
+    "mobileQuickRibbonItem": "",
+    "mobileToolbarCommands": [
+      "editor:undo",
+      "editor:redo",
+      "editor:insert-wikilink",
+      "editor:insert-embed",
+      "editor:insert-tag",
+      "editor:attach-file",
+      "editor:set-heading",
+      "editor:toggle-bold",
+      "editor:toggle-italics",
+      "editor:toggle-strikethrough",
+      "editor:toggle-highlight",
+      "editor:toggle-code",
+      "editor:toggle-blockquote",
+      "editor:toggle-comment",
+      "editor:insert-link",
+      "editor:toggle-bullet-list",
+      "editor:toggle-numbered-list",
+      "editor:toggle-checklist-status",
+      "editor:indent-list",
+      "editor:unindent-list",
+      "editor:configure-toolbar"
+    ],
+    "monospaceFontFamily": "",
+    "nativeMenus": null,
+    "newFileFolderPath": "/",
+    "newFileLocation": "root",
+    "newLinkFormat": "shortest",
+    "openBehavior": "",
+    "pdfExportSettings": {
+      "pageSize": "Letter",
+      "landscape": false,
+      "margin": "0",
+      "downscalePercent": 100
+    },
+    "promptDelete": true,
+    "propertiesInDocument": "visible",
+    "readableLineLength": true,
+    "rightToLeft": false,
+    "settingsPopoutWindow": true,
+    "showIndentGuide": true,
+    "showInlineTitle": true,
+    "showLineNumber": false,
+    "showRibbon": true,
+    "showUnsupportedFiles": false,
+    "showViewHeader": true,
+    "slidingSidebar": true,
+    "smartIndentList": true,
+    "spellcheck": true,
+    "strictLineBreaks": false,
+    "tabSize": 4,
+    "textFontFamily": "",
+    "theme": "system",
+    "translucency": false,
+    "trashOption": "system",
+    "uriCallbacks": false,
+    "useMarkdownLinks": false,
+    "useTab": true,
+    "userIgnoreFilters": null,
+    "vimMode": false
+  },
+  "menus": {
+    "fileMenu": [
+      "Open in new tab",
+      "Open to the right",
+      "Open in new window",
+      "---",
+      "Make a copy",
+      "Move file to...",
+      "Bookmark...",
+      "Merge entire file with...",
+      "---",
+      "Copy path",
+      "---",
+      "Open version history",
+      "---",
+      "Open in default app",
+      "Show in system explorer",
+      "---",
+      "---",
+      "Rename...",
+      "Delete"
+    ],
+    "folderMenu": [
+      "New note",
+      "New folder",
+      "New canvas",
+      "New base",
+      "---",
+      "Make a copy",
+      "Move folder to...",
+      "Search in folder",
+      "Bookmark...",
+      "---",
+      "Copy path",
+      "---",
+      "Show in system explorer",
+      "---",
+      "---",
+      "Rename...",
+      "Delete"
+    ],
+    "tabHeaderMenu": [
+      "Close",
+      "---",
+      "Pin",
+      "Link with tab...",
+      "Backlinks in document",
+      "Reading view",
+      "Source mode",
+      "---",
+      "Move to new window",
+      "Split right",
+      "Split down",
+      "Open in new window",
+      "---",
+      "Rename...",
+      "Move file to...",
+      "Bookmark...",
+      "Merge entire file with...",
+      "Add file property",
+      "Export to PDF...",
+      "---",
+      "Find...",
+      "Replace...",
+      "---",
+      "Copy path",
+      "---",
+      "Open version history",
+      "Open linked view",
+      "---",
+      "Open in default app",
+      "Show in system explorer",
+      "Reveal file in navigation",
+      "---",
+      "---",
+      "Delete file"
+    ],
+    "editorMenu": [
+      "Add link",
+      "Add external link",
+      "---",
+      "Format",
+      "Paragraph",
+      "Insert",
+      "---",
+      "Cut",
+      "Copy",
+      "Paste",
+      "Paste as plain text",
+      "Select all"
+    ],
+    "moreOptionsMenu": [
+      "Backlinks in document",
+      "Reading view",
+      "Source mode",
+      "---",
+      "Split right",
+      "Split down",
+      "Open in new window",
+      "---",
+      "Rename...",
+      "Move file to...",
+      "Bookmark...",
+      "Merge entire file with...",
+      "Add file property",
+      "Export to PDF...",
+      "---",
+      "Find...",
+      "Replace...",
+      "---",
+      "Copy path",
+      "---",
+      "Open version history",
+      "Open linked view",
+      "---",
+      "Open in default app",
+      "Show in system explorer",
+      "Reveal file in navigation",
+      "---",
+      "---",
+      "Delete file"
+    ],
+    "tagMenu": null,
+    "bookmarkMenu": null,
+    "ribbonMenu": null
+  },
+  "cache": {
+    "unicode.md": {
+      "text": "Café [[Café]] and decomposed [[Café]], emoji 😀 [[Emoji 😀]] #tag😀 and wide 日本語 [[日本語]].\n\nFootnote ref[^1] and inline^[note text].\n\n[^1]: The footnote.\n\n---\nkey: value\n---\nFrontmatter-looking block not at the top.\n",
+      "cache": {
+        "links": [
+          {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 5,
+                "offset": 5
+              },
+              "end": {
+                "line": 0,
+                "col": 13,
+                "offset": 13
+              }
+            },
+            "link": "Café",
+            "original": "[[Café]]",
+            "displayText": "Café"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 29,
+                "offset": 29
+              },
+              "end": {
+                "line": 0,
+                "col": 38,
+                "offset": 38
+              }
+            },
+            "link": "Café",
+            "original": "[[Café]]",
+            "displayText": "Café"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 49,
+                "offset": 49
+              },
+              "end": {
+                "line": 0,
+                "col": 61,
+                "offset": 61
+              }
+            },
+            "link": "Emoji 😀",
+            "original": "[[Emoji 😀]]",
+            "displayText": "Emoji 😀"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 82,
+                "offset": 82
+              },
+              "end": {
+                "line": 0,
+                "col": 89,
+                "offset": 89
+              }
+            },
+            "link": "日本語",
+            "original": "[[日本語]]",
+            "displayText": "日本語"
+          }
+        ],
+        "tags": [
+          {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 62,
+                "offset": 62
+              },
+              "end": {
+                "line": 0,
+                "col": 68,
+                "offset": 68
+              }
+            },
+            "tag": "#tag😀"
+          }
+        ],
+        "headings": [
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 0,
+                "offset": 159
+              },
+              "end": {
+                "line": 8,
+                "col": 3,
+                "offset": 173
+              }
+            },
+            "heading": "key: value",
+            "level": 2
+          }
+        ],
+        "footnotes": [
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 29,
+                "offset": 121
+              },
+              "end": {
+                "line": 2,
+                "col": 38,
+                "offset": 130
+              }
+            },
+            "id": "[inline1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 0,
+                "offset": 134
+              },
+              "end": {
+                "line": 4,
+                "col": 19,
+                "offset": 153
+              }
+            },
+            "id": "1"
+          }
+        ],
+        "footnoteRefs": [
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 12,
+                "offset": 104
+              },
+              "end": {
+                "line": 2,
+                "col": 16,
+                "offset": 108
+              }
+            },
+            "id": "1"
+          }
+        ],
+        "sections": [
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 90,
+                "offset": 90
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 0,
+                "offset": 92
+              },
+              "end": {
+                "line": 2,
+                "col": 40,
+                "offset": 132
+              }
+            }
+          },
+          {
+            "type": "footnoteDefinition",
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 0,
+                "offset": 134
+              },
+              "end": {
+                "line": 4,
+                "col": 19,
+                "offset": 153
+              }
+            }
+          },
+          {
+            "type": "thematicBreak",
+            "position": {
+              "start": {
+                "line": 6,
+                "col": 0,
+                "offset": 155
+              },
+              "end": {
+                "line": 6,
+                "col": 3,
+                "offset": 158
+              }
+            }
+          },
+          {
+            "type": "heading",
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 0,
+                "offset": 159
+              },
+              "end": {
+                "line": 8,
+                "col": 3,
+                "offset": 173
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 9,
+                "col": 0,
+                "offset": 174
+              },
+              "end": {
+                "line": 9,
+                "col": 41,
+                "offset": 215
+              }
+            }
+          },
+          {
+            "type": "text",
+            "position": {
+              "start": {
+                "line": 10,
+                "col": 0,
+                "offset": 215
+              },
+              "end": {
+                "line": 10,
+                "col": 0,
+                "offset": 215
+              }
+            }
+          },
+          {
+            "type": "element",
+            "position": {
+              "start": {
+                "line": 10,
+                "col": 0,
+                "offset": 215
+              },
+              "end": {
+                "line": 10,
+                "col": 0,
+                "offset": 215
+              }
+            }
+          }
+        ]
+      }
+    },
+    "tags.md": {
+      "text": "---\ntags: [alpha, \"#beta\", gamma/delta]\ntag: solo\naliases: [One, Two]\n---\n# Tags\n\n#plain #Nested/Tag #nested/tag #123 #1a #a_b #a-b #é #日本 #a.b #a,b (#paren) [#bracket] \"#quoted\" a#b #\nIn code `#code` and %%#comment%% and $#math$ and a link [x](http://x.dev/#frag).\n```\n#fence\n```\n",
+      "cache": {
+        "tags": [
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 0,
+                "offset": 82
+              },
+              "end": {
+                "line": 7,
+                "col": 6,
+                "offset": 88
+              }
+            },
+            "tag": "#plain"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 7,
+                "offset": 89
+              },
+              "end": {
+                "line": 7,
+                "col": 18,
+                "offset": 100
+              }
+            },
+            "tag": "#Nested/Tag"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 19,
+                "offset": 101
+              },
+              "end": {
+                "line": 7,
+                "col": 30,
+                "offset": 112
+              }
+            },
+            "tag": "#nested/tag"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 36,
+                "offset": 118
+              },
+              "end": {
+                "line": 7,
+                "col": 39,
+                "offset": 121
+              }
+            },
+            "tag": "#1a"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 40,
+                "offset": 122
+              },
+              "end": {
+                "line": 7,
+                "col": 44,
+                "offset": 126
+              }
+            },
+            "tag": "#a_b"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 45,
+                "offset": 127
+              },
+              "end": {
+                "line": 7,
+                "col": 49,
+                "offset": 131
+              }
+            },
+            "tag": "#a-b"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 50,
+                "offset": 132
+              },
+              "end": {
+                "line": 7,
+                "col": 52,
+                "offset": 134
+              }
+            },
+            "tag": "#é"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 53,
+                "offset": 135
+              },
+              "end": {
+                "line": 7,
+                "col": 56,
+                "offset": 138
+              }
+            },
+            "tag": "#日本"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 57,
+                "offset": 139
+              },
+              "end": {
+                "line": 7,
+                "col": 59,
+                "offset": 141
+              }
+            },
+            "tag": "#a"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 62,
+                "offset": 144
+              },
+              "end": {
+                "line": 7,
+                "col": 64,
+                "offset": 146
+              }
+            },
+            "tag": "#a"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 77,
+                "offset": 159
+              },
+              "end": {
+                "line": 7,
+                "col": 85,
+                "offset": 167
+              }
+            },
+            "tag": "#bracket"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 8,
+                "col": 22,
+                "offset": 207
+              },
+              "end": {
+                "line": 8,
+                "col": 30,
+                "offset": 215
+              }
+            },
+            "tag": "#comment"
+          }
+        ],
+        "headings": [
+          {
+            "position": {
+              "start": {
+                "line": 5,
+                "col": 0,
+                "offset": 74
+              },
+              "end": {
+                "line": 5,
+                "col": 6,
+                "offset": 80
+              }
+            },
+            "heading": "Tags",
+            "level": 1
+          }
+        ],
+        "sections": [
+          {
+            "type": "yaml",
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 4,
+                "col": 3,
+                "offset": 73
+              }
+            }
+          },
+          {
+            "type": "heading",
+            "position": {
+              "start": {
+                "line": 5,
+                "col": 0,
+                "offset": 74
+              },
+              "end": {
+                "line": 5,
+                "col": 6,
+                "offset": 80
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 0,
+                "offset": 82
+              },
+              "end": {
+                "line": 8,
+                "col": 80,
+                "offset": 265
+              }
+            }
+          },
+          {
+            "type": "code",
+            "position": {
+              "start": {
+                "line": 9,
+                "col": 0,
+                "offset": 266
+              },
+              "end": {
+                "line": 11,
+                "col": 3,
+                "offset": 280
+              }
+            }
+          }
+        ],
+        "frontmatter": {
+          "tags": [
+            "alpha",
+            "#beta",
+            "gamma/delta"
+          ],
+          "tag": "solo",
+          "aliases": [
+            "One",
+            "Two"
+          ]
+        },
+        "frontmatterPosition": {
+          "start": {
+            "line": 0,
+            "col": 0,
+            "offset": 0
+          },
+          "end": {
+            "line": 4,
+            "col": 3,
+            "offset": 73
+          }
+        },
+        "frontmatterLinks": []
+      }
+    },
+    "tags-prefix.md": {
+      "text": "# Characters before a hash\n\nx*#p0\nx_#p1\nx~#p2\nx=#p3\nx'#p4\nx\"#p5\nx(#p6\nx[#p7\nx{#p8\nx<#p9\nx>#p10\nx/#p11\nx\\#p12\nx,#p13\nx.#p14\nx;#p15\nx:#p16\nx!#p17\nx?#p18\nx-#p19\nx+#p20\nx|#p21\nx`#p22\nx@#p23\nx$#p24\nx%#p25\nx^#p26\nx&#p27\nx‘#p28\nx“#p29\nx«#p30\nx—#p31\nx·#p32\nx\t#p33\n\nEmoji and symbols: #a😀 #😀b #🙂 #a‍b #tést #áb #ａ #a·b #a–b #a—b #a/b/c/ #a//b #-a #_a #1_ #1/2 #12/a\n\n",
+      "cache": {
+        "tags": [
+          {
+            "position": {
+              "start": {
+                "line": 35,
+                "col": 2,
+                "offset": 251
+              },
+              "end": {
+                "line": 35,
+                "col": 6,
+                "offset": 255
+              }
+            },
+            "tag": "#p33"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 19,
+                "offset": 276
+              },
+              "end": {
+                "line": 37,
+                "col": 23,
+                "offset": 280
+              }
+            },
+            "tag": "#a😀"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 24,
+                "offset": 281
+              },
+              "end": {
+                "line": 37,
+                "col": 28,
+                "offset": 285
+              }
+            },
+            "tag": "#😀b"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 29,
+                "offset": 286
+              },
+              "end": {
+                "line": 37,
+                "col": 32,
+                "offset": 289
+              }
+            },
+            "tag": "#🙂"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 33,
+                "offset": 290
+              },
+              "end": {
+                "line": 37,
+                "col": 35,
+                "offset": 292
+              }
+            },
+            "tag": "#a"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 38,
+                "offset": 295
+              },
+              "end": {
+                "line": 37,
+                "col": 43,
+                "offset": 300
+              }
+            },
+            "tag": "#tést"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 44,
+                "offset": 301
+              },
+              "end": {
+                "line": 37,
+                "col": 48,
+                "offset": 305
+              }
+            },
+            "tag": "#áb"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 49,
+                "offset": 306
+              },
+              "end": {
+                "line": 37,
+                "col": 51,
+                "offset": 308
+              }
+            },
+            "tag": "#ａ"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 52,
+                "offset": 309
+              },
+              "end": {
+                "line": 37,
+                "col": 56,
+                "offset": 313
+              }
+            },
+            "tag": "#a·b"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 57,
+                "offset": 314
+              },
+              "end": {
+                "line": 37,
+                "col": 59,
+                "offset": 316
+              }
+            },
+            "tag": "#a"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 62,
+                "offset": 319
+              },
+              "end": {
+                "line": 37,
+                "col": 64,
+                "offset": 321
+              }
+            },
+            "tag": "#a"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 67,
+                "offset": 324
+              },
+              "end": {
+                "line": 37,
+                "col": 74,
+                "offset": 331
+              }
+            },
+            "tag": "#a/b/c/"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 75,
+                "offset": 332
+              },
+              "end": {
+                "line": 37,
+                "col": 80,
+                "offset": 337
+              }
+            },
+            "tag": "#a//b"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 81,
+                "offset": 338
+              },
+              "end": {
+                "line": 37,
+                "col": 84,
+                "offset": 341
+              }
+            },
+            "tag": "#-a"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 85,
+                "offset": 342
+              },
+              "end": {
+                "line": 37,
+                "col": 88,
+                "offset": 345
+              }
+            },
+            "tag": "#_a"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 89,
+                "offset": 346
+              },
+              "end": {
+                "line": 37,
+                "col": 92,
+                "offset": 349
+              }
+            },
+            "tag": "#1_"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 93,
+                "offset": 350
+              },
+              "end": {
+                "line": 37,
+                "col": 97,
+                "offset": 354
+              }
+            },
+            "tag": "#1/2"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 98,
+                "offset": 355
+              },
+              "end": {
+                "line": 37,
+                "col": 103,
+                "offset": 360
+              }
+            },
+            "tag": "#12/a"
+          }
+        ],
+        "headings": [
+          {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 26,
+                "offset": 26
+              }
+            },
+            "heading": "Characters before a hash",
+            "level": 1
+          }
+        ],
+        "sections": [
+          {
+            "type": "heading",
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 26,
+                "offset": 26
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 0,
+                "offset": 28
+              },
+              "end": {
+                "line": 35,
+                "col": 6,
+                "offset": 255
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 37,
+                "col": 0,
+                "offset": 257
+              },
+              "end": {
+                "line": 37,
+                "col": 103,
+                "offset": 360
+              }
+            }
+          }
+        ]
+      }
+    },
+    "tags-openers.md": {
+      "text": "# Delimiters before a hash\n\n**#bold1** and *#ital1* and _#under1_ and __#dunder1__ and ~~#strike1~~ and ==#high1== and %%#comm1%%\n**x#bold2** and *x#ital2* and ==x#high2== and %%x#comm2%%\n[#link1](url) and [text #link2](url) and ![#img1](x.png) and [[#wiki1]] and [[A|#alias1]]\n`#code1` and ``#code2`` and $#math1$ and <b>#html1</b> and <#angle1> and {#brace1} and a/#slash1 and a-#dash1\n> #quote1\n- #list1\n1. #num1\n- [ ] #task1\n    #indented1\n\t#tabbed1\n#start1 #adjacent1#adjacent2 ##double1 ###triple1 # #spaced1\nword#glued1 word #free1 (word #inparen1) \"word #inquote1\" 'word #insingle1'\n",
+      "cache": {
+        "links": [
+          {
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 0,
+                "offset": 188
+              },
+              "end": {
+                "line": 4,
+                "col": 13,
+                "offset": 201
+              }
+            },
+            "link": "url",
+            "original": "[#link1](url)",
+            "displayText": "#link1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 18,
+                "offset": 206
+              },
+              "end": {
+                "line": 4,
+                "col": 36,
+                "offset": 224
+              }
+            },
+            "link": "url",
+            "original": "[text #link2](url)",
+            "displayText": "text #link2"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 61,
+                "offset": 249
+              },
+              "end": {
+                "line": 4,
+                "col": 71,
+                "offset": 259
+              }
+            },
+            "link": "#wiki1",
+            "original": "[[#wiki1]]",
+            "displayText": "wiki1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 76,
+                "offset": 264
+              },
+              "end": {
+                "line": 4,
+                "col": 89,
+                "offset": 277
+              }
+            },
+            "link": "A",
+            "original": "[[A|#alias1]]",
+            "displayText": "#alias1"
+          }
+        ],
+        "embeds": [
+          {
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 41,
+                "offset": 229
+              },
+              "end": {
+                "line": 4,
+                "col": 56,
+                "offset": 244
+              }
+            },
+            "link": "x.png",
+            "original": "![#img1](x.png)",
+            "displayText": "#img1"
+          }
+        ],
+        "tags": [
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 2,
+                "offset": 30
+              },
+              "end": {
+                "line": 2,
+                "col": 8,
+                "offset": 36
+              }
+            },
+            "tag": "#bold1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 16,
+                "offset": 44
+              },
+              "end": {
+                "line": 2,
+                "col": 22,
+                "offset": 50
+              }
+            },
+            "tag": "#ital1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 29,
+                "offset": 57
+              },
+              "end": {
+                "line": 2,
+                "col": 36,
+                "offset": 64
+              }
+            },
+            "tag": "#under1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 44,
+                "offset": 72
+              },
+              "end": {
+                "line": 2,
+                "col": 52,
+                "offset": 80
+              }
+            },
+            "tag": "#dunder1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 61,
+                "offset": 89
+              },
+              "end": {
+                "line": 2,
+                "col": 69,
+                "offset": 97
+              }
+            },
+            "tag": "#strike1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 78,
+                "offset": 106
+              },
+              "end": {
+                "line": 2,
+                "col": 84,
+                "offset": 112
+              }
+            },
+            "tag": "#high1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 93,
+                "offset": 121
+              },
+              "end": {
+                "line": 2,
+                "col": 99,
+                "offset": 127
+              }
+            },
+            "tag": "#comm1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 1,
+                "offset": 189
+              },
+              "end": {
+                "line": 4,
+                "col": 7,
+                "offset": 195
+              }
+            },
+            "tag": "#link1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 24,
+                "offset": 212
+              },
+              "end": {
+                "line": 4,
+                "col": 30,
+                "offset": 218
+              }
+            },
+            "tag": "#link2"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 5,
+                "col": 44,
+                "offset": 322
+              },
+              "end": {
+                "line": 5,
+                "col": 50,
+                "offset": 328
+              }
+            },
+            "tag": "#html1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 6,
+                "col": 2,
+                "offset": 390
+              },
+              "end": {
+                "line": 6,
+                "col": 9,
+                "offset": 397
+              }
+            },
+            "tag": "#quote1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 2,
+                "offset": 400
+              },
+              "end": {
+                "line": 7,
+                "col": 8,
+                "offset": 406
+              }
+            },
+            "tag": "#list1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 8,
+                "col": 3,
+                "offset": 410
+              },
+              "end": {
+                "line": 8,
+                "col": 8,
+                "offset": 415
+              }
+            },
+            "tag": "#num1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 9,
+                "col": 6,
+                "offset": 422
+              },
+              "end": {
+                "line": 9,
+                "col": 12,
+                "offset": 428
+              }
+            },
+            "tag": "#task1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 10,
+                "col": 4,
+                "offset": 433
+              },
+              "end": {
+                "line": 10,
+                "col": 14,
+                "offset": 443
+              }
+            },
+            "tag": "#indented1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 11,
+                "col": 1,
+                "offset": 445
+              },
+              "end": {
+                "line": 11,
+                "col": 9,
+                "offset": 453
+              }
+            },
+            "tag": "#tabbed1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 12,
+                "col": 0,
+                "offset": 454
+              },
+              "end": {
+                "line": 12,
+                "col": 7,
+                "offset": 461
+              }
+            },
+            "tag": "#start1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 12,
+                "col": 8,
+                "offset": 462
+              },
+              "end": {
+                "line": 12,
+                "col": 18,
+                "offset": 472
+              }
+            },
+            "tag": "#adjacent1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 12,
+                "col": 18,
+                "offset": 472
+              },
+              "end": {
+                "line": 12,
+                "col": 28,
+                "offset": 482
+              }
+            },
+            "tag": "#adjacent2"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 12,
+                "col": 52,
+                "offset": 506
+              },
+              "end": {
+                "line": 12,
+                "col": 60,
+                "offset": 514
+              }
+            },
+            "tag": "#spaced1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 13,
+                "col": 17,
+                "offset": 532
+              },
+              "end": {
+                "line": 13,
+                "col": 23,
+                "offset": 538
+              }
+            },
+            "tag": "#free1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 13,
+                "col": 30,
+                "offset": 545
+              },
+              "end": {
+                "line": 13,
+                "col": 39,
+                "offset": 554
+              }
+            },
+            "tag": "#inparen1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 13,
+                "col": 47,
+                "offset": 562
+              },
+              "end": {
+                "line": 13,
+                "col": 56,
+                "offset": 571
+              }
+            },
+            "tag": "#inquote1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 13,
+                "col": 64,
+                "offset": 579
+              },
+              "end": {
+                "line": 13,
+                "col": 74,
+                "offset": 589
+              }
+            },
+            "tag": "#insingle1"
+          }
+        ],
+        "headings": [
+          {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 26,
+                "offset": 26
+              }
+            },
+            "heading": "Delimiters before a hash",
+            "level": 1
+          }
+        ],
+        "sections": [
+          {
+            "type": "heading",
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 26,
+                "offset": 26
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 0,
+                "offset": 28
+              },
+              "end": {
+                "line": 5,
+                "col": 109,
+                "offset": 387
+              }
+            }
+          },
+          {
+            "type": "blockquote",
+            "position": {
+              "start": {
+                "line": 6,
+                "col": 0,
+                "offset": 388
+              },
+              "end": {
+                "line": 6,
+                "col": 9,
+                "offset": 397
+              }
+            }
+          },
+          {
+            "type": "list",
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 0,
+                "offset": 398
+              },
+              "end": {
+                "line": 7,
+                "col": 8,
+                "offset": 406
+              }
+            }
+          },
+          {
+            "type": "list",
+            "position": {
+              "start": {
+                "line": 8,
+                "col": 0,
+                "offset": 407
+              },
+              "end": {
+                "line": 8,
+                "col": 8,
+                "offset": 415
+              }
+            }
+          },
+          {
+            "type": "list",
+            "position": {
+              "start": {
+                "line": 9,
+                "col": 0,
+                "offset": 416
+              },
+              "end": {
+                "line": 13,
+                "col": 75,
+                "offset": 590
+              }
+            }
+          }
+        ],
+        "listItems": [
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 0,
+                "offset": 398
+              },
+              "end": {
+                "line": 7,
+                "col": 8,
+                "offset": 406
+              }
+            },
+            "parent": -7
+          },
+          {
+            "position": {
+              "start": {
+                "line": 8,
+                "col": 0,
+                "offset": 407
+              },
+              "end": {
+                "line": 8,
+                "col": 8,
+                "offset": 415
+              }
+            },
+            "parent": -8
+          },
+          {
+            "position": {
+              "start": {
+                "line": 9,
+                "col": 0,
+                "offset": 416
+              },
+              "end": {
+                "line": 13,
+                "col": 75,
+                "offset": 590
+              }
+            },
+            "parent": -9,
+            "task": " "
+          }
+        ]
+      }
+    },
+    "lists.md": {
+      "text": "- plain\n- [ ] open task\n- [x] done task\n- [/] other status\n  - nested [ ] not a task\n  - [ ] nested task\n1. numbered\n2. [ ] numbered task\n\t- tab indented\n* star\n+ plus\n\n- loose\n\n- list\n",
+      "cache": {
+        "sections": [
+          {
+            "type": "list",
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 5,
+                "col": 19,
+                "offset": 104
+              }
+            }
+          },
+          {
+            "type": "list",
+            "position": {
+              "start": {
+                "line": 6,
+                "col": 0,
+                "offset": 105
+              },
+              "end": {
+                "line": 8,
+                "col": 15,
+                "offset": 153
+              }
+            }
+          },
+          {
+            "type": "list",
+            "position": {
+              "start": {
+                "line": 9,
+                "col": 0,
+                "offset": 154
+              },
+              "end": {
+                "line": 9,
+                "col": 6,
+                "offset": 160
+              }
+            }
+          },
+          {
+            "type": "list",
+            "position": {
+              "start": {
+                "line": 10,
+                "col": 0,
+                "offset": 161
+              },
+              "end": {
+                "line": 10,
+                "col": 6,
+                "offset": 167
+              }
+            }
+          },
+          {
+            "type": "list",
+            "position": {
+              "start": {
+                "line": 12,
+                "col": 0,
+                "offset": 169
+              },
+              "end": {
+                "line": 14,
+                "col": 6,
+                "offset": 184
+              }
+            }
+          }
+        ],
+        "listItems": [
+          {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 7,
+                "offset": 7
+              }
+            },
+            "parent": -1
+          },
+          {
+            "position": {
+              "start": {
+                "line": 1,
+                "col": 0,
+                "offset": 8
+              },
+              "end": {
+                "line": 1,
+                "col": 15,
+                "offset": 23
+              }
+            },
+            "parent": -1,
+            "task": " "
+          },
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 0,
+                "offset": 24
+              },
+              "end": {
+                "line": 2,
+                "col": 15,
+                "offset": 39
+              }
+            },
+            "parent": -1,
+            "task": "x"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 3,
+                "col": 0,
+                "offset": 40
+              },
+              "end": {
+                "line": 3,
+                "col": 18,
+                "offset": 58
+              }
+            },
+            "parent": -1,
+            "task": "/"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 2,
+                "offset": 61
+              },
+              "end": {
+                "line": 4,
+                "col": 25,
+                "offset": 84
+              }
+            },
+            "parent": 3
+          },
+          {
+            "position": {
+              "start": {
+                "line": 5,
+                "col": 2,
+                "offset": 87
+              },
+              "end": {
+                "line": 5,
+                "col": 19,
+                "offset": 104
+              }
+            },
+            "parent": 3,
+            "task": " "
+          },
+          {
+            "position": {
+              "start": {
+                "line": 6,
+                "col": 0,
+                "offset": 105
+              },
+              "end": {
+                "line": 6,
+                "col": 11,
+                "offset": 116
+              }
+            },
+            "parent": -6
+          },
+          {
+            "position": {
+              "start": {
+                "line": 7,
+                "col": 0,
+                "offset": 117
+              },
+              "end": {
+                "line": 7,
+                "col": 20,
+                "offset": 137
+              }
+            },
+            "parent": -6,
+            "task": " "
+          },
+          {
+            "position": {
+              "start": {
+                "line": 8,
+                "col": 1,
+                "offset": 139
+              },
+              "end": {
+                "line": 8,
+                "col": 15,
+                "offset": 153
+              }
+            },
+            "parent": 7
+          },
+          {
+            "position": {
+              "start": {
+                "line": 9,
+                "col": 0,
+                "offset": 154
+              },
+              "end": {
+                "line": 9,
+                "col": 6,
+                "offset": 160
+              }
+            },
+            "parent": -9
+          },
+          {
+            "position": {
+              "start": {
+                "line": 10,
+                "col": 0,
+                "offset": 161
+              },
+              "end": {
+                "line": 10,
+                "col": 6,
+                "offset": 167
+              }
+            },
+            "parent": -10
+          },
+          {
+            "position": {
+              "start": {
+                "line": 12,
+                "col": 0,
+                "offset": 169
+              },
+              "end": {
+                "line": 13,
+                "col": 0,
+                "offset": 177
+              }
+            },
+            "parent": -12
+          },
+          {
+            "position": {
+              "start": {
+                "line": 14,
+                "col": 0,
+                "offset": 178
+              },
+              "end": {
+                "line": 14,
+                "col": 6,
+                "offset": 184
+              }
+            },
+            "parent": -12
+          }
+        ]
+      }
+    },
+    "links.md": {
+      "text": "# Links\n\nPlain [[Target]] and aliased [[Target|the alias]] and [[Target#Heading]] and [[Target#^block1]].\nHeading chain [[Target#A#B]] and local [[#Links]] and an escaped \\[[not a link]].\nMarkdown [text](Target.md) and [with space](<Target note.md>) and [encoded](Target%20note.md#H) and [web](https://example.com).\nEmbeds ![[Target]] ![[image.png|100]] ![[Target#Heading]] ![alt](image.png).\nTrailing text [[Target]]s, empty alias [[Target|]], odd [[ spaced ]] and [[a|b|c]].\n",
+      "cache": {
+        "links": [
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 6,
+                "offset": 15
+              },
+              "end": {
+                "line": 2,
+                "col": 16,
+                "offset": 25
+              }
+            },
+            "link": "Target",
+            "original": "[[Target]]",
+            "displayText": "Target"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 29,
+                "offset": 38
+              },
+              "end": {
+                "line": 2,
+                "col": 49,
+                "offset": 58
+              }
+            },
+            "link": "Target",
+            "original": "[[Target|the alias]]",
+            "displayText": "the alias"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 54,
+                "offset": 63
+              },
+              "end": {
+                "line": 2,
+                "col": 72,
+                "offset": 81
+              }
+            },
+            "link": "Target#Heading",
+            "original": "[[Target#Heading]]",
+            "displayText": "Target > Heading"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 77,
+                "offset": 86
+              },
+              "end": {
+                "line": 2,
+                "col": 95,
+                "offset": 104
+              }
+            },
+            "link": "Target#^block1",
+            "original": "[[Target#^block1]]",
+            "displayText": "Target > ^block1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 3,
+                "col": 14,
+                "offset": 120
+              },
+              "end": {
+                "line": 3,
+                "col": 28,
+                "offset": 134
+              }
+            },
+            "link": "Target#A#B",
+            "original": "[[Target#A#B]]",
+            "displayText": "Target > A > B"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 3,
+                "col": 39,
+                "offset": 145
+              },
+              "end": {
+                "line": 3,
+                "col": 49,
+                "offset": 155
+              }
+            },
+            "link": "#Links",
+            "original": "[[#Links]]",
+            "displayText": "Links"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 9,
+                "offset": 197
+              },
+              "end": {
+                "line": 4,
+                "col": 26,
+                "offset": 214
+              }
+            },
+            "link": "Target.md",
+            "original": "[text](Target.md)",
+            "displayText": "text"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 31,
+                "offset": 219
+              },
+              "end": {
+                "line": 4,
+                "col": 61,
+                "offset": 249
+              }
+            },
+            "link": "Target note.md",
+            "original": "[with space](<Target note.md>)",
+            "displayText": "with space"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 4,
+                "col": 66,
+                "offset": 254
+              },
+              "end": {
+                "line": 4,
+                "col": 95,
+                "offset": 283
+              }
+            },
+            "link": "Target note.md#H",
+            "original": "[encoded](Target%20note.md#H)",
+            "displayText": "encoded"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 6,
+                "col": 14,
+                "offset": 407
+              },
+              "end": {
+                "line": 6,
+                "col": 24,
+                "offset": 417
+              }
+            },
+            "link": "Target",
+            "original": "[[Target]]",
+            "displayText": "Target"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 6,
+                "col": 39,
+                "offset": 432
+              },
+              "end": {
+                "line": 6,
+                "col": 50,
+                "offset": 443
+              }
+            },
+            "link": "Target",
+            "original": "[[Target|]]",
+            "displayText": ""
+          },
+          {
+            "position": {
+              "start": {
+                "line": 6,
+                "col": 56,
+                "offset": 449
+              },
+              "end": {
+                "line": 6,
+                "col": 68,
+                "offset": 461
+              }
+            },
+            "link": "spaced",
+            "original": "[[ spaced ]]",
+            "displayText": "spaced"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 6,
+                "col": 73,
+                "offset": 466
+              },
+              "end": {
+                "line": 6,
+                "col": 82,
+                "offset": 475
+              }
+            },
+            "link": "a",
+            "original": "[[a|b|c]]",
+            "displayText": "b|c"
+          }
+        ],
+        "embeds": [
+          {
+            "position": {
+              "start": {
+                "line": 5,
+                "col": 7,
+                "offset": 323
+              },
+              "end": {
+                "line": 5,
+                "col": 18,
+                "offset": 334
+              }
+            },
+            "link": "Target",
+            "original": "![[Target]]",
+            "displayText": "Target"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 5,
+                "col": 19,
+                "offset": 335
+              },
+              "end": {
+                "line": 5,
+                "col": 37,
+                "offset": 353
+              }
+            },
+            "link": "image.png",
+            "original": "![[image.png|100]]",
+            "displayText": "100"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 5,
+                "col": 38,
+                "offset": 354
+              },
+              "end": {
+                "line": 5,
+                "col": 57,
+                "offset": 373
+              }
+            },
+            "link": "Target#Heading",
+            "original": "![[Target#Heading]]",
+            "displayText": "Target > Heading"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 5,
+                "col": 58,
+                "offset": 374
+              },
+              "end": {
+                "line": 5,
+                "col": 75,
+                "offset": 391
+              }
+            },
+            "link": "image.png",
+            "original": "![alt](image.png)",
+            "displayText": "alt"
+          }
+        ],
+        "headings": [
+          {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 7,
+                "offset": 7
+              }
+            },
+            "heading": "Links",
+            "level": 1
+          }
+        ],
+        "sections": [
+          {
+            "type": "heading",
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 7,
+                "offset": 7
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 0,
+                "offset": 9
+              },
+              "end": {
+                "line": 6,
+                "col": 83,
+                "offset": 476
+              }
+            }
+          }
+        ]
+      }
+    },
+    "headings.md": {
+      "text": "# Heading one ##\n\nSetext one\n===\n\nSetext two\n---\n\n## Heading with **bold** and [[link]] and `code`\n\n####### seven hashes\n\n#nospace\n\n### Trailing hashes ###\n\n# \n",
+      "cache": {
+        "links": [
+          {
+            "position": {
+              "start": {
+                "line": 8,
+                "col": 29,
+                "offset": 79
+              },
+              "end": {
+                "line": 8,
+                "col": 37,
+                "offset": 87
+              }
+            },
+            "link": "link",
+            "original": "[[link]]",
+            "displayText": "link"
+          }
+        ],
+        "tags": [
+          {
+            "position": {
+              "start": {
+                "line": 12,
+                "col": 0,
+                "offset": 122
+              },
+              "end": {
+                "line": 12,
+                "col": 8,
+                "offset": 130
+              }
+            },
+            "tag": "#nospace"
+          }
+        ],
+        "headings": [
+          {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 16,
+                "offset": 16
+              }
+            },
+            "heading": "Heading one",
+            "level": 1
+          },
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 0,
+                "offset": 18
+              },
+              "end": {
+                "line": 3,
+                "col": 3,
+                "offset": 32
+              }
+            },
+            "heading": "Setext one",
+            "level": 1
+          },
+          {
+            "position": {
+              "start": {
+                "line": 5,
+                "col": 0,
+                "offset": 34
+              },
+              "end": {
+                "line": 6,
+                "col": 3,
+                "offset": 48
+              }
+            },
+            "heading": "Setext two",
+            "level": 2
+          },
+          {
+            "position": {
+              "start": {
+                "line": 8,
+                "col": 0,
+                "offset": 50
+              },
+              "end": {
+                "line": 8,
+                "col": 48,
+                "offset": 98
+              }
+            },
+            "heading": "Heading with **bold** and [[link]] and `code`",
+            "level": 2
+          },
+          {
+            "position": {
+              "start": {
+                "line": 14,
+                "col": 0,
+                "offset": 132
+              },
+              "end": {
+                "line": 14,
+                "col": 23,
+                "offset": 155
+              }
+            },
+            "heading": "Trailing hashes",
+            "level": 3
+          },
+          {
+            "position": {
+              "start": {
+                "line": 16,
+                "col": 0,
+                "offset": 157
+              },
+              "end": {
+                "line": 16,
+                "col": 2,
+                "offset": 159
+              }
+            },
+            "heading": "",
+            "level": 1
+          }
+        ],
+        "sections": [
+          {
+            "type": "heading",
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 16,
+                "offset": 16
+              }
+            }
+          },
+          {
+            "type": "heading",
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 0,
+                "offset": 18
+              },
+              "end": {
+                "line": 3,
+                "col": 3,
+                "offset": 32
+              }
+            }
+          },
+          {
+            "type": "heading",
+            "position": {
+              "start": {
+                "line": 5,
+                "col": 0,
+                "offset": 34
+              },
+              "end": {
+                "line": 6,
+                "col": 3,
+                "offset": 48
+              }
+            }
+          },
+          {
+            "type": "heading",
+            "position": {
+              "start": {
+                "line": 8,
+                "col": 0,
+                "offset": 50
+              },
+              "end": {
+                "line": 8,
+                "col": 48,
+                "offset": 98
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 10,
+                "col": 0,
+                "offset": 100
+              },
+              "end": {
+                "line": 10,
+                "col": 20,
+                "offset": 120
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 12,
+                "col": 0,
+                "offset": 122
+              },
+              "end": {
+                "line": 12,
+                "col": 8,
+                "offset": 130
+              }
+            }
+          },
+          {
+            "type": "heading",
+            "position": {
+              "start": {
+                "line": 14,
+                "col": 0,
+                "offset": 132
+              },
+              "end": {
+                "line": 14,
+                "col": 23,
+                "offset": 155
+              }
+            }
+          },
+          {
+            "type": "heading",
+            "position": {
+              "start": {
+                "line": 16,
+                "col": 0,
+                "offset": 157
+              },
+              "end": {
+                "line": 16,
+                "col": 2,
+                "offset": 159
+              }
+            }
+          }
+        ]
+      }
+    },
+    "frontmatter.md": {
+      "text": "---\ntitle: Frontmatter links\nrelated: \"[[Target]]\"\nlist:\n  - \"[[Other|alias]]\"\n  - plain\nnested:\n  deep: \"[[Deep]]\"\ntags: []\n---\nBody [[Body link]].\n",
+      "cache": {
+        "links": [
+          {
+            "position": {
+              "start": {
+                "line": 10,
+                "col": 5,
+                "offset": 134
+              },
+              "end": {
+                "line": 10,
+                "col": 18,
+                "offset": 147
+              }
+            },
+            "link": "Body link",
+            "original": "[[Body link]]",
+            "displayText": "Body link"
+          }
+        ],
+        "sections": [
+          {
+            "type": "yaml",
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 9,
+                "col": 3,
+                "offset": 128
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 10,
+                "col": 0,
+                "offset": 129
+              },
+              "end": {
+                "line": 10,
+                "col": 19,
+                "offset": 148
+              }
+            }
+          }
+        ],
+        "frontmatter": {
+          "title": "Frontmatter links",
+          "related": "[[Target]]",
+          "list": [
+            "[[Other|alias]]",
+            "plain"
+          ],
+          "nested": {
+            "deep": "[[Deep]]"
+          },
+          "tags": []
+        },
+        "frontmatterPosition": {
+          "start": {
+            "line": 0,
+            "col": 0,
+            "offset": 0
+          },
+          "end": {
+            "line": 9,
+            "col": 3,
+            "offset": 128
+          }
+        },
+        "frontmatterLinks": [
+          {
+            "key": "related",
+            "link": "Target",
+            "original": "[[Target]]",
+            "displayText": "Target"
+          },
+          {
+            "key": "list.0",
+            "link": "Other",
+            "original": "[[Other|alias]]",
+            "displayText": "alias"
+          },
+          {
+            "key": "nested.deep",
+            "link": "Deep",
+            "original": "[[Deep]]",
+            "displayText": "Deep"
+          }
+        ]
+      }
+    },
+    "comments-and-code.md": {
+      "text": "Inline %%hidden [[LinkInComment]] #tagincomment%% text.\n\n%%\nBlock comment [[BlockCommentLink]]\n%%\n\nCode `[[CodeLink]]` and\n\n```md\n[[FenceLink]] #fencetag\n```\n\n    [[IndentedLink]]\n\nMath $x [[MathLink]]$ and $$\n[[DisplayMathLink]]\n$$\n\n<a href=\"#htmlanchor\">html</a> <span title=\"[[HtmlAttrLink]]\">x</span>\n",
+      "cache": {
+        "links": [
+          {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 16,
+                "offset": 16
+              },
+              "end": {
+                "line": 0,
+                "col": 33,
+                "offset": 33
+              }
+            },
+            "link": "LinkInComment",
+            "original": "[[LinkInComment]]",
+            "displayText": "LinkInComment"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 3,
+                "col": 14,
+                "offset": 74
+              },
+              "end": {
+                "line": 3,
+                "col": 34,
+                "offset": 94
+              }
+            },
+            "link": "BlockCommentLink",
+            "original": "[[BlockCommentLink]]",
+            "displayText": "BlockCommentLink"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 15,
+                "col": 0,
+                "offset": 210
+              },
+              "end": {
+                "line": 15,
+                "col": 19,
+                "offset": 229
+              }
+            },
+            "link": "DisplayMathLink",
+            "original": "[[DisplayMathLink]]",
+            "displayText": "DisplayMathLink"
+          }
+        ],
+        "tags": [
+          {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 34,
+                "offset": 34
+              },
+              "end": {
+                "line": 0,
+                "col": 47,
+                "offset": 47
+              }
+            },
+            "tag": "#tagincomment"
+          }
+        ],
+        "sections": [
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 55,
+                "offset": 55
+              }
+            }
+          },
+          {
+            "type": "comment",
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 0,
+                "offset": 57
+              },
+              "end": {
+                "line": 4,
+                "col": 2,
+                "offset": 97
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 6,
+                "col": 0,
+                "offset": 99
+              },
+              "end": {
+                "line": 6,
+                "col": 23,
+                "offset": 122
+              }
+            }
+          },
+          {
+            "type": "code",
+            "position": {
+              "start": {
+                "line": 8,
+                "col": 0,
+                "offset": 124
+              },
+              "end": {
+                "line": 10,
+                "col": 3,
+                "offset": 157
+              }
+            }
+          },
+          {
+            "type": "code",
+            "position": {
+              "start": {
+                "line": 12,
+                "col": 0,
+                "offset": 159
+              },
+              "end": {
+                "line": 12,
+                "col": 20,
+                "offset": 179
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 14,
+                "col": 0,
+                "offset": 181
+              },
+              "end": {
+                "line": 15,
+                "col": 19,
+                "offset": 229
+              }
+            }
+          },
+          {
+            "type": "math",
+            "position": {
+              "start": {
+                "line": 16,
+                "col": 0,
+                "offset": 230
+              },
+              "end": {
+                "line": 19,
+                "col": 0,
+                "offset": 305
+              }
+            }
+          }
+        ]
+      }
+    },
+    "blocks.md": {
+      "text": "A paragraph with a block id ^para1\n\n- list item ^item1\n- other item\n\n> quote line\n> more quote ^quote1\n\n| a | b |\n|---|---|\n| c | d |\n^table1\n\n^alone\n\n```\ncode ^notanid\n```\n\nNot an id because^this\n",
+      "cache": {
+        "sections": [
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 34,
+                "offset": 34
+              }
+            },
+            "id": "para1"
+          },
+          {
+            "type": "list",
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 0,
+                "offset": 36
+              },
+              "end": {
+                "line": 3,
+                "col": 12,
+                "offset": 67
+              }
+            }
+          },
+          {
+            "type": "blockquote",
+            "position": {
+              "start": {
+                "line": 5,
+                "col": 0,
+                "offset": 69
+              },
+              "end": {
+                "line": 6,
+                "col": 20,
+                "offset": 102
+              }
+            },
+            "id": "quote1"
+          },
+          {
+            "type": "table",
+            "position": {
+              "start": {
+                "line": 8,
+                "col": 0,
+                "offset": 104
+              },
+              "end": {
+                "line": 10,
+                "col": 9,
+                "offset": 133
+              }
+            },
+            "id": "alone"
+          },
+          {
+            "type": "code",
+            "position": {
+              "start": {
+                "line": 15,
+                "col": 0,
+                "offset": 151
+              },
+              "end": {
+                "line": 17,
+                "col": 3,
+                "offset": 172
+              }
+            }
+          },
+          {
+            "type": "paragraph",
+            "position": {
+              "start": {
+                "line": 19,
+                "col": 0,
+                "offset": 174
+              },
+              "end": {
+                "line": 19,
+                "col": 22,
+                "offset": 196
+              }
+            }
+          }
+        ],
+        "listItems": [
+          {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 0,
+                "offset": 36
+              },
+              "end": {
+                "line": 2,
+                "col": 18,
+                "offset": 54
+              }
+            },
+            "parent": -2,
+            "id": "item1"
+          },
+          {
+            "position": {
+              "start": {
+                "line": 3,
+                "col": 0,
+                "offset": 55
+              },
+              "end": {
+                "line": 3,
+                "col": 12,
+                "offset": 67
+              }
+            },
+            "parent": -2
+          }
+        ],
+        "blocks": {
+          "para1": {
+            "position": {
+              "start": {
+                "line": 0,
+                "col": 0,
+                "offset": 0
+              },
+              "end": {
+                "line": 0,
+                "col": 34,
+                "offset": 34
+              }
+            },
+            "id": "para1"
+          },
+          "quote1": {
+            "position": {
+              "start": {
+                "line": 5,
+                "col": 0,
+                "offset": 69
+              },
+              "end": {
+                "line": 6,
+                "col": 20,
+                "offset": 102
+              }
+            },
+            "id": "quote1"
+          },
+          "alone": {
+            "position": {
+              "start": {
+                "line": 8,
+                "col": 0,
+                "offset": 104
+              },
+              "end": {
+                "line": 10,
+                "col": 9,
+                "offset": 133
+              }
+            },
+            "id": "alone"
+          },
+          "item1": {
+            "position": {
+              "start": {
+                "line": 2,
+                "col": 0,
+                "offset": 36
+              },
+              "end": {
+                "line": 2,
+                "col": 18,
+                "offset": 54
+              }
+            },
+            "id": "item1"
+          }
+        }
+      }
+    }
+  }
+}

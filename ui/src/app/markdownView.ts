@@ -125,13 +125,9 @@ export class TachyMarkdownView extends MarkdownView {
       menu.addSeparator();
     }
     const hasSel = ed.somethingSelected();
+    // Entries and their order are those of Obsidian 1.14.4 (compat/obsidian-reference.json).
     menu.addItem((i) => i.setSection("link").setTitle("Add link").setIcon("lucide-link").onClick(run("editor:insert-wikilink")));
-    menu.addItem((i) => i.setSection("clipboard").setTitle("Cut").setIcon("lucide-scissors").setDisabled(!hasSel).onClick(() => { ed.focus(); document.execCommand("cut"); }));
-    menu.addItem((i) => i.setSection("clipboard").setTitle("Copy").setIcon("lucide-copy").setDisabled(!hasSel).onClick(() => { ed.focus(); document.execCommand("copy"); }));
-    menu.addItem((i) => i.setSection("clipboard").setTitle("Paste").setIcon("lucide-clipboard-paste").onClick(() => {
-      navigator.clipboard?.readText().then((t) => { if (t) { ed.focus(); ed.replaceSelection(t); } }).catch(() => new Notice("Paste is not available here; use the keyboard shortcut."));
-    }));
-    menu.addItem((i) => i.setSection("clipboard").setTitle("Select all").setIcon("lucide-text-select").onClick(() => { ed.focus(); ed.setSelection({ line: 0, ch: 0 }, { line: ed.lastLine(), ch: ed.getLine(ed.lastLine()).length }); }));
+    menu.addItem((i) => i.setSection("link").setTitle("Add external link").setIcon("lucide-link-2").onClick(run("editor:insert-link")));
     const sub = (title: string, icon: string, items: [string, string][]) => menu.addItem((i) => {
       i.setSection("format").setTitle(title).setIcon(icon);
       const m = i.setSubmenu();
@@ -139,10 +135,18 @@ export class TachyMarkdownView extends MarkdownView {
     });
     sub("Format", "lucide-bold", [["Bold", "editor:toggle-bold"], ["Italic", "editor:toggle-italics"], ["Strikethrough", "editor:toggle-strikethrough"], ["Highlight", "editor:toggle-highlight"], ["Code", "editor:toggle-code"]]);
     sub("Paragraph", "lucide-pilcrow", [
-      ["Bullet list", "editor:toggle-bullet-list"], ["Numbered list", "editor:toggle-numbered-list"], ["Task list", "editor:toggle-checklist"], ["Quote", "editor:toggle-blockquote"],
+      ["Bullet list", "editor:toggle-bullet-list"], ["Numbered list", "editor:toggle-numbered-list"], ["Task list", "editor:toggle-checklist-status"], ["Quote", "editor:toggle-blockquote"],
       ...[1, 2, 3, 4, 5, 6].map((n): [string, string] => [`Heading ${n}`, `editor:set-heading-${n}`]), ["Remove heading", "editor:set-heading-0"],
     ]);
     sub("Insert", "lucide-plus", [["Callout", "editor:insert-callout"], ["Code block", "editor:insert-codeblock"], ["Horizontal rule", "editor:insert-horizontal-rule"], ["Table", "editor:insert-table"], ["Math block", "editor:insert-mathblock"], ["Embed", "editor:insert-embed"], ["Tag", "editor:insert-tag"]]);
+    menu.addItem((i) => i.setSection("clipboard").setTitle("Cut").setIcon("lucide-scissors").setDisabled(!hasSel).onClick(() => { ed.focus(); document.execCommand("cut"); }));
+    menu.addItem((i) => i.setSection("clipboard").setTitle("Copy").setIcon("lucide-copy").setDisabled(!hasSel).onClick(() => { ed.focus(); document.execCommand("copy"); }));
+    const pastePlain = () => {
+      navigator.clipboard?.readText().then((t) => { if (t) { ed.focus(); ed.replaceSelection(t); } }).catch(() => new Notice("Paste is not available here; use the keyboard shortcut."));
+    };
+    menu.addItem((i) => i.setSection("clipboard").setTitle("Paste").setIcon("lucide-clipboard-paste").onClick(pastePlain));
+    menu.addItem((i) => i.setSection("clipboard").setTitle("Paste as plain text").setIcon("lucide-clipboard-type").onClick(pastePlain));
+    menu.addItem((i) => i.setSection("clipboard").setTitle("Select all").setIcon("lucide-text-select").onClick(() => { ed.focus(); ed.setSelection({ line: 0, ch: 0 }, { line: ed.lastLine(), ch: ed.getLine(ed.lastLine()).length }); }));
     app.workspace.trigger("editor-menu", menu, ed, this);
     menu.showAtMouseEvent(e);
   }
@@ -211,20 +215,22 @@ export class TachyMarkdownView extends MarkdownView {
   private showMoreMenu(evt: MouseEvent): void {
     const menu = new Menu();
     const reading = this.getMode() === "preview";
-    menu.addItem((i) => i.setSection("view").setTitle(reading ? "Editing view" : "Reading view").setIcon(reading ? "lucide-edit-3" : "lucide-book-open").onClick(() => this.toggleReading()));
-    if (!reading) menu.addItem((i) => i.setSection("view").setTitle("Source mode").setIcon("lucide-code-2").setChecked(this.editMode.sourceMode).onClick(() => this.toggleSource()));
-    const run = (id: string) => () => { this.app.commands.executeCommandById(id); };
-    if (!reading) {
-      menu.addItem((i) => i.setSection("find").setTitle("Find...").setIcon("lucide-search").onClick(run("editor:open-search")));
-      menu.addItem((i) => i.setSection("find").setTitle("Replace...").setIcon("lucide-replace").onClick(run("editor:open-search-replace")));
-    }
-    menu.addItem((i) => i.setSection("properties").setTitle("Add file property").setIcon("lucide-archive").onClick(run("markdown:add-metadata-property")));
+    // Entries and order follow Obsidian 1.14.4's menu (compat/obsidian-reference.json); the file entries come from buildFileMenu.
+    this.addModeItems(menu);
     menu.addItem((i) => i.setSection("pane").setTitle("Split right").setIcon("lucide-separator-vertical").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "vertical"); }));
     menu.addItem((i) => i.setSection("pane").setTitle("Split down").setIcon("lucide-separator-horizontal").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "horizontal"); }));
-    menu.addItem((i) => i.setSection("pane").setTitle(this.leaf.pinned ? "Unpin" : "Pin").setIcon("lucide-pin").onClick(() => this.leaf.togglePinned()));
+    menu.addItem((i) => i.setSection("pane").setTitle("Open in new window").setIcon("lucide-app-window").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "window"); }));
+    void reading;
     if (this.file) buildFileMenu(this.app, this.file, "more-options", menu);
     this.onPaneMenu(menu, "more-options");
     menu.showAtMouseEvent(evt);
+  }
+
+  /** "Reading view" (or "Editing view") and "Source mode" entries, shared by the tab header and More options menus. */
+  addModeItems(menu: Menu): void {
+    const reading = this.getMode() === "preview";
+    menu.addItem((i) => i.setSection("view").setTitle(reading ? "Editing view" : "Reading view").setIcon(reading ? "lucide-edit-3" : "lucide-book-open").onClick(() => this.toggleReading()));
+    if (!reading) menu.addItem((i) => i.setSection("view").setTitle("Source mode").setIcon("lucide-code-2").setChecked(this.editMode.sourceMode).onClick(() => this.toggleSource()));
   }
 }
 

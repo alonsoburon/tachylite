@@ -314,7 +314,7 @@ export const fileRecovery: CoreModule = {
       Object.assign(inst, { plugin: fr, openModal: (p?: string) => fr.openModal(p), forceAdd: (f: TFile) => fr.snapshot(f), getHistory: (p: string) => fr.store.versions(p) });
       fr.start();
       const offs = [
-        addCommand(app, { id: "file-recovery:open", name: "File recovery: Open local file history", icon: "lucide-rotate-ccw", callback: () => fr.openModal(app.workspace.getActiveFile()?.path) }),
+        addCommand(app, { id: "file-recovery:open", name: "File recovery: Open local history", icon: "lucide-rotate-ccw", callback: () => fr.openModal(app.workspace.getActiveFile()?.path) }),
         showCoreSettingTab(app, new FileRecoverySettingTab(app, fr)),
       ];
       return () => { offs.forEach((o) => o()); fr.stop(); delete inst.plugin; };

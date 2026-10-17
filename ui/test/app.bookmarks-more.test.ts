@@ -70,14 +70,14 @@ describe("Bookmark current heading", () => {
     const view = app.workspace.activeLeaf!.view as any;
     await vi.waitFor(() => expect(app.metadataCache.getFileCache(app.vault.getFileByPath("Doc.md")!)?.headings?.length).toBe(2));
     view.editor.setCursor({ line: 0, ch: 0 }); // before any heading
-    expect(app.commands.executeCommandById("bookmarks:bookmark-current-section")).toBe(false);
+    expect(app.commands.executeCommandById("bookmarks:bookmark-current-heading")).toBe(false);
     view.editor.setCursor({ line: 6, ch: 2 }); // under "Second part"
-    expect(app.commands.executeCommandById("bookmarks:bookmark-current-section")).toBe(true);
+    expect(app.commands.executeCommandById("bookmarks:bookmark-current-heading")).toBe(true);
     await vi.waitFor(() => expect(saved()).toEqual([expect.objectContaining({ type: "file", path: "Doc.md", subpath: "#Second part" })]));
     view.editor.setCursor({ line: 3, ch: 0 }); // under "First"
-    app.commands.executeCommandById("bookmarks:bookmark-current-section");
+    app.commands.executeCommandById("bookmarks:bookmark-current-heading");
     await vi.waitFor(() => expect(saved().map((i: any) => i.subpath)).toEqual(["#Second part", "#First"]));
-    app.commands.executeCommandById("bookmarks:bookmark-current-section"); // same heading again removes it
+    app.commands.executeCommandById("bookmarks:bookmark-current-heading"); // same heading again removes it
     await vi.waitFor(() => expect(saved().map((i: any) => i.subpath)).toEqual(["#Second part"]));
   });
 });

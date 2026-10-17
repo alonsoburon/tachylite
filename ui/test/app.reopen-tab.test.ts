@@ -96,20 +96,20 @@ describe("focus on a neighbouring tab group", () => {
     left.containerEl.getBoundingClientRect = () => rect(0, 0, 400, 600);
     right.containerEl.getBoundingClientRect = () => rect(400, 0, 400, 600);
     app.workspace.setActiveLeaf(left.children[0], { focus: true });
-    expect(app.commands.executeCommandById("workspace:focus-left")).toBe(false);   // nothing further left in the main area
-    expect(app.commands.executeCommandById("workspace:focus-top")).toBe(false);
-    expect(app.commands.executeCommandById("workspace:focus-right")).toBe(true);
+    expect(app.commands.executeCommandById("editor:focus-left")).toBe(false);   // nothing further left in the main area
+    expect(app.commands.executeCommandById("editor:focus-top")).toBe(false);
+    expect(app.commands.executeCommandById("editor:focus-right")).toBe(true);
     expect(app.workspace.activeLeaf!.parent).toBe(right);
-    expect(app.commands.executeCommandById("workspace:focus-left")).toBe(true);
+    expect(app.commands.executeCommandById("editor:focus-left")).toBe(true);
     expect(app.workspace.activeLeaf!.parent).toBe(left);
-    expect(app.commands.findCommand("workspace:focus-top")?.name).toBe("Focus on tab group above");
-    expect(app.commands.findCommand("workspace:focus-bottom")?.name).toBe("Focus on tab group below");
+    expect(app.commands.findCommand("editor:focus-top")?.name).toBe("Focus on tab group above");
+    expect(app.commands.findCommand("editor:focus-bottom")?.name).toBe("Focus on tab group below");
     // Stack them instead: the same groups, now one above the other.
     left.containerEl.getBoundingClientRect = () => rect(0, 0, 800, 300);
     right.containerEl.getBoundingClientRect = () => rect(0, 300, 800, 300);
-    expect(app.commands.executeCommandById("workspace:focus-bottom")).toBe(true);
+    expect(app.commands.executeCommandById("editor:focus-bottom")).toBe(true);
     expect(app.workspace.activeLeaf!.parent).toBe(right);
-    expect(app.commands.executeCommandById("workspace:focus-top")).toBe(true);
+    expect(app.commands.executeCommandById("editor:focus-top")).toBe(true);
     expect(app.workspace.activeLeaf!.parent).toBe(left);
   });
 });

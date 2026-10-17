@@ -122,19 +122,23 @@ describe("editor command defaults", () => {
     expect(keys("editor:toggle-bold")).toEqual(["Mod+b"]);
     expect(keys("editor:toggle-italics")).toEqual(["Mod+i"]);
     expect(keys("editor:insert-link")).toEqual(["Mod+k"]);
-    expect(keys("editor:toggle-checklist-status")).toEqual(["Mod+Enter"]);
-    expect(keys("editor:indent-list")).toEqual(["Mod+]"]);
-    expect(keys("app:go-back")).toContain("Mod+Alt+ArrowLeft");
+    expect(keys("editor:toggle-checklist-status")).toEqual(["Mod+l"]);
+    expect(keys("editor:indent-list")).toEqual([]);
+    expect(keys("app:go-back")).toEqual(["Mod+Alt+ArrowLeft"]);
+    expect(keys("editor:open-link-in-new-leaf")).toEqual(["Mod+Enter"]);
+    expect(keys("editor:delete-paragraph")).toEqual(["Mod+d"]);
+    expect(keys("workspace:next-tab")).toEqual(["Ctrl+Tab", "Ctrl+PageDown"]);
   });
-  it("Toggle checkbox status ticks a task and turns a plain line into one", async () => {
+  it("Toggle checkbox status turns plain and list lines into tasks and a task back into a plain item", async () => {
     const app = await boot();
     const ed = (app.workspace.activeLeaf!.view as any).editor;
     ed.setValue("- [ ] a\nplain");
     ed.setCursor({ line: 0, ch: 0 });
     app.commands.executeCommandById("editor:toggle-checklist-status");
-    expect(ed.getLine(0)).toBe("- [x] a");
+    expect(ed.getLine(0)).toBe("- a");
     ed.setCursor({ line: 1, ch: 0 });
     app.commands.executeCommandById("editor:toggle-checklist-status");
     expect(ed.getLine(1)).toBe("- [ ] plain");
   });
+
 });

@@ -28,6 +28,9 @@ These are the working conventions for this repo. [CONTRIBUTING.md](CONTRIBUTING.
 - Say which kind of evidence you have: "tested in happy-dom" is not "checked in the real window", and neither is
   "matches Obsidian". Command ids, hotkeys and menu entries written from memory are guesses until compared with
   `compat/obsidian-reference.json` (see `tools/obsidian-dump/README.md`, `scripts/compare-reference.sh`).
+- `compat/obsidian-reference.json` is real data from Obsidian 1.14.4. Refresh it with `scripts/obsidian-reference.sh
+  <obsidian binary>` and look at `scripts/compare-reference.sh` before changing a command id, hotkey, menu entry, config
+  default or parser rule. Where the reference and an older hand-written expectation disagree, the reference wins.
 - Do not claim 1:1 compatibility. It is the goal, not a claim.
 - The README is casual in tone but its legal and factual statements stay accurate (not affiliated with Obsidian,
   no Obsidian code or assets, the static-analysis disclosure).

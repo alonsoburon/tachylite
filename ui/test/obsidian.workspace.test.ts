@@ -174,7 +174,7 @@ describe("commands & hotkeys", () => {
     expect(app.commands.findCommand("switcher:open")).toBeDefined(); expect(app.commands.executeCommandById("switcher:open")).toBe(true);
     await vi.waitFor(() => expect(document.querySelectorAll(".prompt .suggestion-item").length).toBeGreaterThan(0)); expect(document.querySelector(".prompt-input")).not.toBeNull();
     app.keymap.handleEvent(new KeyboardEvent("keydown", { key: "Escape", cancelable: true }));
-    expect(app.internalPlugins.getPluginById("file-explorer")!.enabled).toBe(true); expect(app.internalPlugins.getEnabledPluginById("daily-notes")).toBeNull(); expect(app.internalPlugins.getPluginById("nope")).toBeUndefined();
+    expect(app.internalPlugins.getPluginById("file-explorer")!.enabled).toBe(true); expect(app.internalPlugins.getEnabledPluginById("random-note")).toBeNull(); expect(app.internalPlugins.getPluginById("nope")).toBeUndefined();
   });
   it("app.getAccentColor: configured colour, else the theme's accent as hex", () => {
     expect(app.getAccentColor()).toMatch(/^#[0-9a-f]{6}$/);

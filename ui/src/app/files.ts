@@ -1,6 +1,6 @@
 // File-level operations shared by the explorer, commands and views (create / rename / delete / move / menus).
 import { ipc } from "../ipc";
-import { FuzzySuggestModal, Menu, Notice, Platform, TFile, TFolder, type App, type TAbstractFile } from "../obsidian";
+import { FuzzySuggestModal, MarkdownView, Menu, Notice, Platform, TFile, TFolder, type App, type TAbstractFile } from "../obsidian";
 import { confirmDialog, promptText } from "./dialogs";
 
 const ILLEGAL = /[\\/:*?"<>|]/;
@@ -120,8 +120,42 @@ export function revealInExplorer(app: App, file: TAbstractFile): void {
 }
 
 /** Standard file/folder context menu; plugins extend it through the `file-menu` workspace event. */
+/** The file entries of the tab header and "More options" menus, in the order Obsidian 1.14.4 lists them (compat/obsidian-reference.json). */
+function buildViewFileMenu(app: App, file: TFile, source: string, menu: Menu): Menu {
+  const run = (id: string) => () => { app.commands.executeCommandById(id); };
+  menu.addItem((i) => i.setSection("action").setTitle("Rename...").setIcon("lucide-pencil").onClick(() => { void promptRename(app, file); }));
+  menu.addItem((i) => i.setSection("action").setTitle("Move file to...").setIcon("lucide-folder-tree").onClick(() => new FolderPicker(app, file).open()));
+  // Plugins (Bookmarks, Note composer) add their entries here, between Move and Add file property.
+  app.workspace.trigger("file-menu", menu, file, source, app.workspace.activeLeaf);
+  menu.addItem((i) => i.setSection("action").setTitle("Add file property").setIcon("lucide-archive").onClick(run("markdown:add-metadata-property")));
+  const editing = app.workspace.getActiveViewOfType(MarkdownView)?.getMode() === "source";
+  if (editing) {
+    menu.addItem((i) => i.setSection("find").setTitle("Find...").setIcon("lucide-search").onClick(run("editor:open-search")));
+    menu.addItem((i) => i.setSection("find").setTitle("Replace...").setIcon("lucide-replace").onClick(run("editor:open-search-replace")));
+  }
+  copyPathItem(app, file, menu);
+  const sys = (reveal: boolean) => () => { void ipc.openInSystem(file.path, reveal).catch((e) => new Notice(String(e?.message ?? e))); };
+  menu.addItem((i) => i.setSection("system").setTitle("Open in default app").setIcon("lucide-external-link").onClick(sys(false)));
+  menu.addItem((i) => i.setSection("system").setTitle(Platform.isMacOS ? "Reveal in Finder" : "Show in system explorer").setIcon("lucide-folder-open").onClick(sys(true)));
+  menu.addItem((i) => i.setSection("system").setTitle("Reveal file in navigation").setIcon("lucide-folder-search").onClick(() => revealInExplorer(app, file)));
+  menu.addItem((i) => i.setSection("danger").setTitle("Delete file").setIcon("lucide-trash-2").setWarning(true).onClick(() => { void deleteWithPrompt(app, file).catch((e) => new Notice(String(e.message ?? e))); }));
+  return menu;
+}
+
+/** "Copy path" with its submenu: from the vault folder, from the system root, and the Obsidian URL. */
+function copyPathItem(app: App, file: TAbstractFile, menu: Menu): void {
+  menu.addItem((i) => {
+    i.setSection("copy").setTitle("Copy path").setIcon("lucide-clipboard");
+    const sub = i.setSubmenu();
+    sub.addItem((j) => j.setTitle("Copy path from vault folder").onClick(() => copyText(file.path)));
+    sub.addItem((j) => j.setTitle("Copy path from system root").onClick(() => copyText(app.vault.adapter.getFullPath(file.path))));
+    sub.addItem((j) => j.setTitle("Copy Obsidian URL").onClick(() => copyText(`obsidian://open?vault=${encodeURIComponent(app.vault.getName())}&file=${encodeURIComponent(file instanceof TFile && file.extension === "md" ? file.path.replace(/\.md$/, "") : file.path)}`)));
+  });
+}
+
 export function buildFileMenu(app: App, file: TAbstractFile, source: string, menu = new Menu()): Menu {
   const isFile = file instanceof TFile;
+  if (isFile && (source === "tab-header" || source === "more-options")) return buildViewFileMenu(app, file, source, menu);
   if (isFile && source !== "more-options") {
     menu.addItem((i) => i.setSection("open").setTitle("Open in new tab").setIcon("lucide-file-plus").onClick(() => { void app.workspace.getLeaf("tab").openFile(file, { active: true }); }));
     menu.addItem((i) => i.setSection("open").setTitle("Open to the right").setIcon("lucide-separator-vertical").onClick(() => { void app.workspace.getLeaf("split").openFile(file, { active: true }); }));
@@ -132,14 +166,19 @@ export function buildFileMenu(app: App, file: TAbstractFile, source: string, men
   if (isFile && source !== "tab-header") menu.addItem((i) => i.setSection("open").setTitle("Open in new window").setIcon("lucide-app-window").onClick(() => { void app.workspace.openPopoutLeaf().openFile(file, { active: true }); }));
   if (isFile) menu.addItem((i) => i.setSection("action").setTitle("Make a copy").setIcon("lucide-copy").onClick(() => { void duplicateFile(app, file).catch((e) => new Notice(String(e.message ?? e))); }));
   menu.addItem((i) => i.setSection("action").setTitle(isFile ? "Move file to..." : "Move folder to...").setIcon("lucide-folder-tree").onClick(() => new FolderPicker(app, file).open()));
+  if (!isFile) {
+    menu.addItem((i) => i.setSection("action").setTitle("Search in folder").setIcon("lucide-search").onClick(() => {
+      void app.workspace.ensureSideLeaf("search", "left", { active: true, reveal: true }).then((leaf) => (leaf.view as any).setQuery?.(`path:"${file.path}"`));
+    }));
+  }
+  copyPathItem(app, file, menu);
   const sys = (reveal: boolean) => () => { void ipc.openInSystem(file.path, reveal).catch((e) => new Notice(String(e?.message ?? e))); };
   if (isFile) menu.addItem((i) => i.setSection("system").setTitle("Open in default app").setIcon("lucide-external-link").onClick(sys(false)));
-  menu.addItem((i) => i.setSection("system").setTitle(Platform.isMacOS ? "Reveal in Finder" : Platform.isWin ? "Show in system explorer" : "Show in system file manager").setIcon("lucide-folder-open").onClick(sys(true)));
-  menu.addItem((i) => i.setSection("system").setTitle("Copy Obsidian URL").setIcon("lucide-link").onClick(() => copyText(`obsidian://open?vault=${encodeURIComponent(app.vault.getName())}&file=${encodeURIComponent(isFile && file.extension === "md" ? file.path.replace(/\.md$/, "") : file.path)}`)));
-  menu.addItem((i) => i.setSection("system").setTitle("Copy path from vault folder").setIcon("lucide-clipboard").onClick(() => copyText(file.path)));
+  menu.addItem((i) => i.setSection("system").setTitle(Platform.isMacOS ? "Reveal in Finder" : "Show in system explorer").setIcon("lucide-folder-open").onClick(sys(true)));
   if (source !== "file-explorer") menu.addItem((i) => i.setSection("system").setTitle("Reveal file in navigation").setIcon("lucide-folder-search").onClick(() => revealInExplorer(app, file)));
   menu.addItem((i) => i.setSection("danger").setTitle("Rename...").setIcon("lucide-pencil").onClick(() => { void promptRename(app, file); }));
-  menu.addItem((i) => i.setSection("danger").setTitle("Delete").setIcon("lucide-trash-2").setWarning(true).onClick(() => { void deleteWithPrompt(app, file).catch((e) => new Notice(String(e.message ?? e))); }));
+  const inView = source === "tab-header" || source === "more-options";
+  menu.addItem((i) => i.setSection("danger").setTitle(isFile && inView ? "Delete file" : "Delete").setIcon("lucide-trash-2").setWarning(true).onClick(() => { void deleteWithPrompt(app, file).catch((e) => new Notice(String(e.message ?? e))); }));
   app.workspace.trigger("file-menu", menu, file, source, app.workspace.activeLeaf);
   return menu;
 }

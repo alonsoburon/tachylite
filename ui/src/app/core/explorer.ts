@@ -403,7 +403,7 @@ export const explorer: CoreModule = {
       const offs = [
         addCommand(app, { id: "file-explorer:open", name: "Files: Show file explorer", icon: "lucide-folder-closed", callback: () => { void app.workspace.ensureSideLeaf(EXPLORER_VIEW, "left", { active: true, reveal: true }); } }),
         addCommand(app, { id: "file-explorer:new-file", name: "Create new note", icon: "lucide-edit", hotkeys: [{ modifiers: ["Mod"], key: "n" }], callback: () => { void newNote(app).catch((e) => new Notice(String(e.message ?? e))); } }),
-        addCommand(app, { id: "file-explorer:new-folder", name: "Create new folder", icon: "lucide-folder-plus", callback: () => { void newFolder(app).catch((e) => new Notice(String(e.message ?? e))); } }),
+        addCommand(app, { id: "file-explorer:new-folder", name: "Files: Create new folder", icon: "lucide-folder-plus", callback: () => { void newFolder(app).catch((e) => new Notice(String(e.message ?? e))); } }),
         addCommand(app, {
           id: "file-explorer:reveal-active-file", name: "Files: Reveal current file in navigation", icon: "lucide-folder-search",
           checkCallback: (checking) => {

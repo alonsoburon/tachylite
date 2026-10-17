@@ -111,10 +111,10 @@ const CORE_NAMES: Record<string, string> = {
   "file-explorer": "Files", "global-search": "Search", switcher: "Quick switcher", graph: "Graph view", backlink: "Backlinks",
   canvas: "Canvas", "outgoing-link": "Outgoing links", "tag-pane": "Tags view", properties: "Properties view", "page-preview": "Page preview",
   "daily-notes": "Daily notes", templates: "Templates", "note-composer": "Note composer", "command-palette": "Command palette",
-  "slash-command": "Slash commands", "editor-status": "Editor status", bookmarks: "Bookmarks", "markdown-importer": "Format converter",
+  "slash-command": "Slash commands", "editor-status": "Show editing mode in status bar", bookmarks: "Bookmarks",
   "zk-prefixer": "Unique note creator", "random-note": "Random note", outline: "Outline", "word-count": "Word count", slides: "Slides",
   "audio-recorder": "Audio recorder", workspaces: "Workspaces", "file-recovery": "File recovery", publish: "Publish", sync: "Sync",
-  bases: "Bases", webviewer: "Web viewer",
+  bases: "Bases", webviewer: "Web viewer", footnotes: "Footnotes view",
 };
 
 export interface InternalPluginInstance { id: string; name: string; options: Record<string, any>; [k: string]: unknown }

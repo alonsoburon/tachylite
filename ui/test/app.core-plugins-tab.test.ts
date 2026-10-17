@@ -27,7 +27,7 @@ describe("core plugins tab", () => {
   it("marks Sync, Publish, Web viewer and Format converter as unavailable and keeps their switches off and disabled", async () => {
     session = await startSession((await v.backend("vault_info")) as any, document.body.appendChild(document.createElement("div")));
     const el = (await show(session.app, "core-plugins")).containerEl;
-    for (const id of ["sync", "publish", "webviewer", "markdown-importer"]) {
+    for (const id of ["sync", "publish", "webviewer", "footnotes"]) {
       const item = el.querySelector<HTMLElement>(`.core-plugin-item[data-plugin-id="${id}"]`);
       if (!item) continue; // not listed for this vault
       expect(item.classList.contains("is-unavailable"), id).toBe(true);

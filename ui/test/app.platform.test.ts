@@ -160,6 +160,7 @@ describe("tachylite:// URI actions (fake backend)", () => {
     expect(noticeText()).toContain('Unknown Tachylite URI action "nope"');
     // a bare open just focuses the app
     expect(await dispatchUri(s.app, { action: "open" })).toBe(true);
+    await s.app.internalPlugins.getPluginById("daily-notes")!.disable(); // on by default, as in Obsidian
     await handleUri(s.app, "tachylite://daily");
     expect(noticeText()).toContain("Daily notes is turned off");
   });

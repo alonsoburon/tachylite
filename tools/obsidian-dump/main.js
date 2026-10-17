@@ -49,7 +49,7 @@ module.exports = class TachyliteReferenceDump extends Plugin {
         platform: { isMacOS: !!Platform.isMacOS, isWin: !!Platform.isWin, isLinux: !!Platform.isLinux },
         commands: this.dumpCommands(),
         corePlugins: this.dumpCorePlugins(),
-        config: JSON.parse(JSON.stringify(app.vault.config ?? {})),
+        config: await this.dumpConfig(),
         menus: await this.dumpMenus(),
         cache: await this.dumpCache(),
       };
@@ -66,8 +66,32 @@ module.exports = class TachyliteReferenceDump extends Plugin {
   dumpCommands() {
     const hk = this.app.hotkeyManager;
     return Object.values(this.app.commands.commands)
+      .filter((c) => !c.id.startsWith("tachylite-reference-dump:")) // this plugin's own command is not part of the app
       .map((c) => ({ id: c.id, name: c.name, hotkeys: (hk.getDefaultHotkeys?.(c.id) ?? hk.defaultKeys?.[c.id] ?? []).map((h) => ({ modifiers: [...h.modifiers], key: h.key })) }))
       .sort((a, b) => (a.id < b.id ? -1 : 1));
+  }
+
+  /**
+   * Every setting the app reads with its current (default, in a fresh vault) value. The vault's own config object only holds
+   * what the user changed, so the key names come from the `getConfig("name")` calls in the app's scripts (names only).
+   */
+  async dumpConfig() {
+    const app = this.app;
+    const names = new Set(Object.keys(app.vault.config ?? {}));
+    for (const script of document.querySelectorAll("script[src]")) {
+      try {
+        const text = await (await fetch(script.src)).text();
+        for (const m of text.matchAll(/(?:getConfig|setConfig)\("([A-Za-z][A-Za-z0-9]*)"/g)) names.add(m[1]);
+      } catch (e) { /* a script that cannot be read adds no names */ }
+    }
+    const out = {};
+    for (const name of [...names].sort()) {
+      let value;
+      try { value = app.vault.getConfig(name); } catch (e) { continue; }
+      if (value === undefined) continue;
+      try { out[name] = JSON.parse(JSON.stringify(value)); } catch (e) { /* not plain data */ }
+    }
+    return out;
   }
 
   dumpCorePlugins() {

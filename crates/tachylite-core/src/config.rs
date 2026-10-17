@@ -16,7 +16,7 @@ pub const CORE_PLUGINS: &[(&str, bool)] = &[
     ("canvas", true),
     ("outgoing-link", true),
     ("tag-pane", true),
-    ("properties", false),
+    ("properties", true),
     ("page-preview", true),
     ("daily-notes", true),
     ("templates", true),
@@ -25,7 +25,6 @@ pub const CORE_PLUGINS: &[(&str, bool)] = &[
     ("slash-command", false),
     ("editor-status", true),
     ("bookmarks", true),
-    ("markdown-importer", false),
     ("zk-prefixer", false),
     ("random-note", false),
     ("outline", true),
@@ -38,6 +37,7 @@ pub const CORE_PLUGINS: &[(&str, bool)] = &[
     ("sync", false),
     ("bases", true),
     ("webviewer", false),
+    ("footnotes", false),
 ];
 
 fn read_json(path: &Path) -> Option<Value> {

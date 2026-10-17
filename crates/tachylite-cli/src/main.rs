@@ -14,6 +14,7 @@ commands:
   tags                          all tags with counts
   search <query>                search the vault
   rename <from> <to>            move a note, updating links
+  core-plugins-json             core plugin ids and their enabled state, as JSON
   plugins                       installed community plugins
   plugin-search <query>         search the community catalog
   plugin-install <id>           download a community plugin
@@ -51,6 +52,8 @@ fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let root = PathBuf::from(vault);
     let arg = |i: usize| rest.get(i).map(String::as_str).ok_or("missing argument");
     match cmd.as_str() {
+        // The same list the desktop app's `core_plugins` command returns: every core plugin id with whether it is enabled.
+        "core-plugins-json" => println!("{}", serde_json::to_string(&tachylite_core::config::core_plugin_state(&root))?),
         "plugins" => {
             for (m, on) in installed(&root) {
                 println!("{}\t{}\t{}", if on { "on " } else { "off" }, m.id, m.version);

@@ -462,6 +462,6 @@ export const backlinks: CoreModule = paneModule("backlink", BACKLINK_VIEW, (l) =
   ["backlink:open-backlinks", "Backlinks: Open backlinks for the current note", "lucide-links-coming-in"],
 ], backlinkStatus);
 export const outgoingLinks: CoreModule = paneModule("outgoing-link", OUTGOING_VIEW, (l) => new OutgoingLinksView(l), [
-  ["outgoing-link:open", "Outgoing links: Show outgoing links", "lucide-links-going-out"],
-  ["outgoing-link:open-for-current", "Outgoing links: Open outgoing links for the current note", "lucide-links-going-out"],
+  ["outgoing-links:open", "Outgoing links: Show outgoing links", "lucide-links-going-out"],
+  ["outgoing-links:open-for-current", "Outgoing links: Open outgoing links for the current file", "lucide-links-going-out"],
 ]);

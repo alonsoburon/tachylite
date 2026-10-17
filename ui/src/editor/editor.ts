@@ -1,3 +1,4 @@
+import { linkAt } from "./linkAt";
 import { htmlToMarkdown } from "./htmlPaste";
 import {
   Annotation, Compartment, EditorState, Prec, type Extension,
@@ -59,6 +60,12 @@ export const codeHighlightStyle = HighlightStyle.define([
 /** Enter continues lists/quotes/tasks; an empty item exits the list (no loose-list quirk). */
 export const continueMarkup = insertNewlineContinueMarkupCommand({ nonTightLists: false });
 
+function cursorOnLink(view: EditorView): boolean {
+  const head = view.state.selection.main.head;
+  const line = view.state.doc.lineAt(head);
+  return linkAt(line.text, head - line.from) !== null;
+}
+
 function markdownKeymap() {
   return [
     { key: "Enter", run: continueMarkup },
@@ -75,7 +82,8 @@ export function editorKeymap() {
     { key: "Mod-Shift-x", run: toggleStrikethrough, preventDefault: true },
     { key: "Mod-Shift-h", run: toggleHighlight, preventDefault: true },
     { key: "Mod-l", run: toggleChecklist, preventDefault: true },
-    { key: "Mod-Enter", run: toggleTask, preventDefault: true },
+    // Ctrl/Cmd+Enter opens the link under the cursor in a new tab (an app hotkey, as in Obsidian); elsewhere it ticks a task.
+    { key: "Mod-Enter", run: (view) => (cursorOnLink(view) ? false : toggleTask(view)) },
     { key: "Tab", run: indentListMore },
     { key: "Shift-Tab", run: indentListLess },
     ...markdownKeymap(),

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
+use unicode_normalization::{char::is_combining_mark, UnicodeNormalization};
 
 mod footnotes;
 pub use footnotes::{FootnoteCache, FootnoteRefCache};
@@ -302,7 +303,8 @@ impl ListState {
         while self.stack.last().is_some_and(|(i, _)| *i >= indent) {
             self.stack.pop();
         }
-        let parent = self.stack.last().map_or(-(self.first_line as i64), |(_, l)| *l as i64);
+        // A top-level item's parent is minus the line its list starts on, and -1 for a list on the first line (recorded from Obsidian).
+        let parent = self.stack.last().map_or(-(self.first_line.max(1) as i64), |(_, l)| *l as i64);
         self.stack.push((indent, line_no));
         if root {
             let after = &t[c.get(2).unwrap().end()..];
@@ -579,6 +581,12 @@ pub fn parse(text: &str) -> CachedMetadata {
         };
         if continues {
             cur.as_mut().unwrap().end = end;
+            // A line that lazily continues a list item belongs to that item (Obsidian extends the item's range over it).
+            if cur_kind == Some("list") && !quote {
+                if let Some(last) = meta.list_items.last_mut() {
+                    last.position.end = idx.pos(ln.start, end).end;
+                }
+            }
         } else {
             flush(&mut cur, &mut sections);
             doc_list = ListState::default();
@@ -616,7 +624,19 @@ pub fn parse(text: &str) -> CachedMetadata {
     }
     flush(&mut cur, &mut sections);
 
-    for s in sections {
+    for mut s in sections {
+        // A block of `%%` ... `%%` on its own is a "comment" section.
+        if s.kind == "paragraph" {
+            let body = &text[s.start..s.end];
+            let first = body.lines().next().unwrap_or("");
+            if first.trim_start().starts_with("%%")
+                && first.matches("%%").count() == 1
+                && body.trim_end().ends_with("%%")
+                && body.matches("%%").count().is_multiple_of(2)
+            {
+                s.kind = "comment";
+            }
+        }
         let position = idx.pos(s.start, s.end);
         if let Some(id) = &s.id {
             meta.blocks.insert(id.to_lowercase(), BlockCache { id: id.clone(), position });
@@ -793,8 +813,38 @@ fn has_scheme(s: &str) -> bool {
     re(&R, r"^[A-Za-z][A-Za-z0-9+.\-]*:").is_match(s)
 }
 
+/// Whether a `#` after `before` can start a tag: after whitespace, after word-opening formatting marks (`*`, `_`, `~`, `=`,
+/// `%`, `[`) that themselves start a word, or after the `>` that closes an HTML tag.
+fn tag_may_start_after(before: &str) -> bool {
+    let Some(last) = before.chars().next_back() else { return true };
+    if last.is_whitespace() {
+        return true;
+    }
+    if last == '>' {
+        // `<b>#tag`: a `<` followed by a letter or `/` earlier in the line.
+        return before.rfind('<').is_some_and(|p| before[p + 1..].starts_with(|c: char| c.is_ascii_alphabetic() || c == '/'));
+    }
+    if matches!(last, '*' | '_' | '~' | '=' | '%' | '[') {
+        let rest = before.trim_end_matches(['*', '_', '~', '=', '%', '[']);
+        return rest.chars().next_back().is_none_or(char::is_whitespace);
+    }
+    false
+}
+
+/// Characters a tag can contain, as recorded from Obsidian: letters, digits, combining marks, `_`, `-`, `/`, the middle
+/// dot and emoji (but not dashes such as en/em dash, joiners, or other punctuation).
 fn is_tag_char(c: char) -> bool {
-    c.is_alphanumeric() || matches!(c, '_' | '-' | '/')
+    c.is_alphanumeric() || matches!(c, '_' | '-' | '/' | '\u{b7}') || is_combining_mark(c) || is_emoji(c)
+}
+
+/// Emoji and pictographs (an approximation of Extended_Pictographic, which std does not expose).
+fn is_emoji(c: char) -> bool {
+    matches!(c, '\u{1F000}'..='\u{1FAFF}' | '\u{2190}'..='\u{21FF}' | '\u{2300}'..='\u{23FF}' | '\u{2460}'..='\u{24FF}' | '\u{25A0}'..='\u{27BF}' | '\u{2900}'..='\u{297F}' | '\u{2B00}'..='\u{2BFF}' | '\u{3030}' | '\u{303D}' | '\u{3297}' | '\u{3299}' | '\u{00A9}' | '\u{00AE}' | '\u{203C}' | '\u{2049}' | '\u{2122}' | '\u{2139}')
+}
+
+/// How a link without an alias is shown: `Note#Heading#Sub` as "Note > Heading > Sub", `#Heading` as "Heading".
+fn default_display(link: &str) -> String {
+    link.split('#').filter(|p| !p.is_empty()).collect::<Vec<_>>().join(" > ")
 }
 
 /// Byte index of the character after the one at `i` (or the end of the line), so scanning never lands inside a multibyte character.
@@ -812,7 +862,14 @@ fn scan_inline(idx: &Index, line: &str, line_start: usize, meta: &mut CachedMeta
     let in_code = |i: usize| spans.iter().any(|(s, e)| i >= *s && i < *e);
     let b = line.as_bytes();
     let mut i = 0;
+    let mut last_tag_end = usize::MAX;
+    // The `](destination)` part of a Markdown link: its text is scanned for tags, the destination is not.
+    let mut skip = (0usize, 0usize);
     while i < b.len() {
+        if i >= skip.0 && i < skip.1 {
+            i = skip.1;
+            continue;
+        }
         if in_code(i) {
             i = next_char(line, i);
             continue;
@@ -838,10 +895,13 @@ fn scan_inline(idx: &Index, line: &str, line_start: usize, meta: &mut CachedMeta
                         };
                         let target = target.trim();
                         let target = target.trim_end_matches('\\');
+                        // Obsidian's `link` is NFC-normalized (`original` stays as typed), and a link without an alias is
+                        // shown as "Note > Heading > Subheading" rather than with the `#` separators.
+                        let link_text: String = target.nfc().collect();
                         let link = LinkCache {
-                            link: target.to_string(),
+                            display_text: Some(alias.map_or_else(|| default_display(target), |a| a.trim().to_string())),
+                            link: link_text,
                             original: line[i..end].to_string(),
-                            display_text: Some(alias.map_or(target, str::trim).to_string()),
                             position: idx.pos(line_start + i, line_start + end),
                         };
                         if embed {
@@ -872,26 +932,35 @@ fn scan_inline(idx: &Index, line: &str, line_start: usize, meta: &mut CachedMeta
                                 meta.links.push(link)
                             }
                         }
-                        i = end;
+                        if embed {
+                            i = end;
+                        } else {
+                            // Obsidian finds tags inside link text (`[#tag](url)`), but not in an image's alt text.
+                            skip = (close, end);
+                            i = open + 1;
+                        }
                         continue;
                     }
                 }
             }
         }
         if b[i] == b'#' {
-            let prev_ok = i == 0 || {
-                let p = line[..i].chars().next_back().unwrap();
-                !is_tag_char(p) && p != '#' && p != '&'
-            };
+            // Recorded from Obsidian (see compat/README.md): a tag starts a word, follows another tag directly (`#a#b`),
+            // follows formatting that opens a word (`**#a**`, `==#a==`, `%%#a%%`, `[#a](url)`) or an HTML tag (`<b>#a`).
+            // A letter, `(`, `{`, `<`, `/` or `-` right before the `#` means no tag.
+            let prev_ok = i == 0 || i == last_tag_end || tag_may_start_after(&line[..i]);
             if prev_ok {
                 let rest = &line[i + 1..];
                 let len: usize = rest.chars().take_while(|c| is_tag_char(*c)).map(char::len_utf8).sum();
                 let name = &rest[..len];
                 if !name.is_empty() && name.chars().any(|c| !c.is_ascii_digit()) {
-                    let name = name.trim_end_matches('/');
-                    if !name.is_empty() && !name.contains("//") {
+                    // `_#tag_` and `__#tag__`: the underscores that close the emphasis are not part of the tag.
+                    let name = if line[..i].ends_with('_') { name.trim_end_matches('_') } else { name };
+                    // Obsidian keeps a trailing or doubled slash (`#a/b/`, `#a//b`) as part of the tag.
+                    if !name.is_empty() {
                         let end = i + 1 + name.len();
                         meta.tags.push(TagCache { tag: format!("#{name}"), position: idx.pos(line_start + i, line_start + end) });
+                        last_tag_end = end;
                         i = end;
                         continue;
                     }
@@ -1029,8 +1098,8 @@ mod tests {
         let m = parse("- [ ] a\n  - [x] b ^blk\n- c\n\npara ^p1\n");
         assert_eq!(m.list_items.len(), 3);
         assert_eq!(m.list_items[0].task.as_deref(), Some(" "));
-        assert_eq!(m.list_items[1].parent, 0);
-        assert_eq!(m.list_items[2].parent, 0);
+        assert_eq!(m.list_items[1].parent, 0); // child of the item on line 0
+        assert_eq!(m.list_items[2].parent, -1); // top level of a list starting on line 0: -1, as Obsidian reports
         assert!(m.blocks.contains_key("blk") && m.blocks.contains_key("p1"));
     }
 

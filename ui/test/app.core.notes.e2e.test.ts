@@ -68,7 +68,7 @@ afterEach(async () => { await session?.stop(); session = null; v.cleanup(); docu
 describe("Templates", () => {
   it("options tab persists templates.json keys; the picker inserts at the cursor and merges properties; off removes the surface", async () => {
     const { app } = await boot();
-    expect(cmd(app, "templates:insert-template")).toBeTruthy();
+    expect(cmd(app, "insert-template")).toBeTruthy();
     expect(ribbon("Insert template")).toBeTruthy();
     app.setting.open();
     expect(coreNav()?.textContent).toContain("Templates");
@@ -84,7 +84,7 @@ describe("Templates", () => {
     editor.focus = () => {}; // happy-dom re-enters CodeMirror's update on DOM selection changes of a focused editor
     const end = cm.state.doc.length;
     cm.dispatch({ selection: { anchor: end } });
-    app.commands.executeCommandById("templates:insert-template");
+    app.commands.executeCommandById("insert-template");
     const modal = await vi.waitFor(() => { const m = q(".modal.mod-template-picker"); if (!m) throw new Error("no picker"); return m; });
     expect(qa(".suggestion-item", modal).map((e) => e.textContent)).toEqual(["Daily", "Meeting", "sub/Other"]);
     const input = q<HTMLInputElement>(".prompt-input", modal)!;
@@ -97,7 +97,7 @@ describe("Templates", () => {
 
     cm.dispatch({ selection: { anchor: 0 } });
     // at the very start the template text goes in verbatim
-    app.commands.executeCommandById("templates:insert-template");
+    app.commands.executeCommandById("insert-template");
     const m2 = await vi.waitFor(() => { const m = q(".modal.mod-template-picker"); if (!m) throw new Error("no picker"); return m; });
     typeIn(q<HTMLInputElement>(".prompt-input", m2)!, "other");
     await tick();
@@ -105,24 +105,24 @@ describe("Templates", () => {
     await vi.waitFor(() => expect(editor.getValue().startsWith("other---")).toBe(true));
 
     cm.dispatch({ selection: { anchor: cm.state.doc.length } });
-    app.commands.executeCommandById("templates:insert-current-date");
-    app.commands.executeCommandById("templates:insert-current-time");
+    app.commands.executeCommandById("insert-current-date");
+    app.commands.executeCommandById("insert-current-time");
     expect(editor.getValue()).toMatch(new RegExp(`\\n${moment().format("DD\\.MM\\.YYYY")}\\d\\d:\\d\\d:\\d\\d$`)); // date then time with seconds
     expect(editor.getCursor().ch).toBe(editor.getLine(editor.lastLine()).length);
 
     await plugin(app, "templates").disable();
-    expect(cmd(app, "templates:insert-template")).toBeUndefined();
-    expect(cmd(app, "templates:insert-current-date")).toBeUndefined();
+    expect(cmd(app, "insert-template")).toBeUndefined();
+    expect(cmd(app, "insert-current-date")).toBeUndefined();
     expect(ribbon("Insert template")).toBeNull();
     expect(app.setting.settingTabs.some((t) => t.id === "templates")).toBe(false);
     await plugin(app, "templates").enable();
-    expect(cmd(app, "templates:insert-template")).toBeTruthy();
+    expect(cmd(app, "insert-template")).toBeTruthy();
   });
 
   it("explains a missing template folder", async () => {
     const { app } = await boot();
     await open(app, "Note");
-    app.commands.executeCommandById("templates:insert-template");
+    app.commands.executeCommandById("insert-template");
     expect(q(".modal.mod-template-picker")).toBeNull();
     expect(q(".notice")?.textContent).toMatch(/Template folder is not set/);
   });
@@ -134,7 +134,8 @@ describe("Daily notes", () => {
     v = makeVault({ ...FILES, "Daily/2020-01-01.md": "old", "Daily/2030-01-01.md": "future", "Daily/not a date.md": "x" });
     backend();
     const { app } = await boot();
-    expect(cmd(app, "daily-notes")).toBeUndefined(); // off by default in the fake backend
+    await plugin(app, "daily-notes").disable(); // on by default, as in Obsidian
+    expect(cmd(app, "daily-notes")).toBeUndefined();
     expect(ribbon("Open today's daily note")).toBeNull();
     await plugin(app, "daily-notes").enable();
     expect(ribbon("Open today's daily note")).toBeTruthy();
@@ -346,6 +347,7 @@ describe("Core plugins settings list", () => {
     expect(q(".extra-setting-button, .clickable-icon", tpl)).toBeTruthy();
     q<HTMLElement>(".extra-setting-button, .clickable-icon", tpl)!.click();
     expect(app.setting.activeTab?.id).toBe("templates");
+    await plugin(app, "daily-notes").disable();
     expect(q(`.core-plugin-item[data-plugin-id="daily-notes"] .clickable-icon`, (app.setting.openTabById("core-plugins"), app.setting.activeTab!.containerEl))).toBeNull();
   });
 });

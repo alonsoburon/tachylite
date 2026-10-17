@@ -222,8 +222,8 @@ export const properties: CoreModule = {
     ];
     const stop = whileCoreEnabled(app, "properties", () => {
       const offs = [
-        addCommand(app, { id: "properties:open", name: "Properties: Show all properties", icon: "lucide-archive", callback: () => { void app.workspace.ensureSideLeaf(ALL_PROPERTIES_VIEW, "right", { active: true, reveal: true }); } }),
-        addCommand(app, { id: "properties:open-local", name: "Properties: Show file properties", icon: "lucide-info", callback: () => { void openFileProperties(app); } }),
+        addCommand(app, { id: "properties:open", name: "Properties view: Show all properties", icon: "lucide-archive", callback: () => { void app.workspace.ensureSideLeaf(ALL_PROPERTIES_VIEW, "right", { active: true, reveal: true }); } }),
+        addCommand(app, { id: "properties:open-local", name: "Properties view: Show file properties", icon: "lucide-info", callback: () => { void openFileProperties(app); } }),
       ];
       // Status bar: number of properties of the active note.
       const status = app.statusBarEl.createDiv({ cls: "status-bar-item plugin-properties" });

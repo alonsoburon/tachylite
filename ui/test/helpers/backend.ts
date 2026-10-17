@@ -180,7 +180,14 @@ export function makeVault(files: Record<string, string> = {}, opts: { plugins?: 
       case "meta_links": return links();
       case "config_read": { const p = abs(`.obsidian/${a.name}`); return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : null; }
       case "config_write": write(`.obsidian/${a.name}`, JSON.stringify(a.value, null, 2)); return null;
-      case "core_plugins": { const saved = readJson(".obsidian/core-plugins.json") ?? {}; return ["file-explorer", "global-search", "switcher", "graph", "backlink", "canvas", "outgoing-link", "tag-pane", "properties", "page-preview", "daily-notes", "templates", "note-composer", "command-palette", "slash-command", "editor-status", "bookmarks", "markdown-importer", "zk-prefixer", "random-note", "outline", "word-count", "slides", "audio-recorder", "workspaces", "file-recovery", "publish", "sync", "bases", "webviewer"].map((id) => [id, !["properties", "slash-command", "markdown-importer", "zk-prefixer", "random-note", "slides", "audio-recorder", "workspaces", "publish", "sync", "webviewer", "daily-notes"].includes(id)]).map(([id, on]: any) => [id, typeof saved[id] === "boolean" ? saved[id] : on]); }
+      case "core_plugins": {
+        // The real core's list and defaults (`tachy <vault> core-plugins-json`), as the desktop app returns them.
+        const bin = process.env.TACHYLITE_PARSE_BIN;
+        if (!bin) throw new Error("TACHYLITE_PARSE_BIN is not set: the vitest globalSetup did not build tachy");
+        const r = cproc.spawnSync(bin, [root, "core-plugins-json"], { encoding: "utf8" });
+        if (r.error || r.status !== 0) throw new Error(`tachy core-plugins-json failed: ${r.error ?? r.stderr}`);
+        return JSON.parse(r.stdout);
+      }
       case "plugins_installed": {
         const dir = abs(".obsidian/plugins");
         if (!fs.existsSync(dir)) return [];

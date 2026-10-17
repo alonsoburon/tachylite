@@ -1,5 +1,5 @@
 // Core commands (ids follow Obsidian's public command ids) and their default hotkeys.
-import { FileView, FuzzySuggestModal, MarkdownView, Notice, TFile, TFolder, WorkspaceTabs, WorkspaceWindow, type App, type Command, type Hotkey, type WorkspaceLeaf } from "../obsidian";
+import { FileView, FuzzySuggestModal, MarkdownView, Notice, Platform, TFile, TFolder, WorkspaceTabs, WorkspaceWindow, type App, type Command, type Hotkey, type WorkspaceLeaf } from "../obsidian";
 import {
   indentListLess, indentListMore, insertLink, toggleBold, toggleChecklist, toggleTask, toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough,
 } from "../editor";
@@ -13,7 +13,9 @@ import { foldAll, toggleFold, unfoldAll } from "@codemirror/language";
 import { addCursorAbove, addCursorBelow, moveLineDown, moveLineUp } from "@codemirror/commands";
 import { openSearchPanel } from "@codemirror/search";
 import type { EditorView } from "@codemirror/view";
-import { copyText, deleteWithPrompt, FolderPicker, newNote, promptRename, revealInExplorer } from "./files";
+import { copyText, deleteWithPrompt, duplicateFile, FolderPicker, newNote, promptRename, revealInExplorer } from "./files";
+import { commitConfig } from "./settings/util";
+import { adjustFontSize } from "./settings/appearanceApply";
 import type { History } from "./history";
 import { coreEnabled, whileCoreEnabled } from "./core/util";
 import { TachyMarkdownView } from "./markdownView";
@@ -59,49 +61,53 @@ export function installCommands(app: App, history: History): () => void {
   // ---- app
   const zoom = (delta: number | null) => () => { applyZoom(app, delta === null ? 1 : (app.loadLocalStorage(ZOOM_KEY) ?? 1) + delta); };
   // Both "=" and "+" zoom in (Ctrl+= and Ctrl+Shift+=), as do the numpad keys.
-  add({ id: "app:zoom-in", name: "Zoom in", hotkeys: [{ modifiers: ["Mod"], key: "=" }, { modifiers: ["Mod", "Shift"], key: "+" }, { modifiers: ["Mod"], key: "+" }], callback: zoom(ZOOM_STEP) });
-  add({ id: "app:zoom-out", name: "Zoom out", hotkeys: mod("-"), callback: zoom(-ZOOM_STEP) });
-  add({ id: "app:zoom-reset", name: "Reset zoom", hotkeys: mod("0"), callback: zoom(null) });
+  add({ id: "window:zoom-in", name: "Zoom in", hotkeys: [{ modifiers: ["Mod"], key: "=" }, { modifiers: ["Mod", "Shift"], key: "+" }, { modifiers: ["Mod"], key: "+" }], callback: zoom(ZOOM_STEP) });
+  add({ id: "window:zoom-out", name: "Zoom out", hotkeys: mod("-"), callback: zoom(-ZOOM_STEP) });
+  add({ id: "window:reset-zoom", name: "Reset zoom", hotkeys: mod("0"), callback: zoom(null) });
   add({ id: "app:open-settings", name: "Open settings", hotkeys: mod(","), callback: () => app.setting.open() });
-  add({ id: "app:go-back", name: "Navigate back", hotkeys: [{ modifiers: ["Alt"], key: "ArrowLeft" }, { modifiers: ["Mod", "Alt"], key: "ArrowLeft" }], checkCallback: (c) => { if (!history.canGo(-1)) return false; if (!c) void history.go(-1); return true; } });
-  add({ id: "app:go-forward", name: "Navigate forward", hotkeys: [{ modifiers: ["Alt"], key: "ArrowRight" }, { modifiers: ["Mod", "Alt"], key: "ArrowRight" }], checkCallback: (c) => { if (!history.canGo(1)) return false; if (!c) void history.go(1); return true; } });
+  add({ id: "app:go-back", name: "Navigate back", hotkeys: [{ modifiers: ["Mod", "Alt"], key: "ArrowLeft" }], checkCallback: (c) => { if (!history.canGo(-1)) return false; if (!c) void history.go(-1); return true; } });
+  add({ id: "app:go-forward", name: "Navigate forward", hotkeys: [{ modifiers: ["Mod", "Alt"], key: "ArrowRight" }], checkCallback: (c) => { if (!history.canGo(1)) return false; if (!c) void history.go(1); return true; } });
   add({ id: "app:toggle-ribbon", name: "Toggle ribbon", callback: () => { app.vault.setConfig("showRibbon", app.vault.getConfig("showRibbon") === false); app.workspace.trigger("config-changed"); } });
   add({ id: "app:toggle-left-sidebar", name: "Toggle left sidebar", callback: () => ws.leftSplit.toggle() });
   add({ id: "app:toggle-right-sidebar", name: "Toggle right sidebar", callback: () => ws.rightSplit.toggle() });
-  add({ id: "app:open-vault-switcher", name: "Open another vault", callback: openVaultSwitcher });
+  add({ id: "app:switch-vault", name: "Change vault...", callback: openVaultSwitcher });
   add({ id: "app:reload", name: "Reload app without saving", callback: () => location.reload() });
-  add({ id: "app:open-help", name: "Open help", callback: () => { void ipc.openUrl(HELP_URL).catch((e) => new Notice(String(e.message ?? e))); } });
-  add({ id: "workspace:copy-url", name: "Copy Tachylite URL", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) { copyText(uriForFile(app, f)); new Notice("URL copied to clipboard"); } return true; } });
+  add({ id: "app:open-help", name: "Open help", hotkeys: [{ modifiers: [], key: "F1" }], callback: () => { void ipc.openUrl(HELP_URL).catch((e) => new Notice(String(e.message ?? e))); } });
+  add({ id: "workspace:copy-url", name: "Copy Obsidian URL for current file", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) { copyText(uriForFile(app, f)); new Notice("URL copied to clipboard"); } return true; } });
 
   // ---- files
   add({ id: "file-explorer:new-file", name: "Create new note", hotkeys: mod("n"), callback: () => { void newNote(app, { open: ws.activeLeaf?.view.getViewType() === "empty" && ws.activeLeaf.getRoot() === ws.rootSplit ? true : "tab" }); } });
-  add({ id: "file-explorer:new-file-in-new-tab", name: "Create note in new tab", callback: () => { void newNote(app, { open: "tab" }); } });
-  add({ id: "file-explorer:new-file-in-new-pane", name: "Create note in new pane", callback: () => { void newNote(app, { open: "split" }); } });
-  add({ id: "file-explorer:new-file-in-current-tab", name: "Create note in current tab", callback: () => { void newNote(app, { open: true }); } });
-  add({ id: "file-explorer:reveal-active-file", name: "Reveal current file in navigation", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) revealInExplorer(app, f); return true; } });
-  add({ id: "workspace:rename-file", name: "Rename current file", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) void promptRename(app, f); return true; } });
+  add({ id: "file-explorer:new-file-in-new-pane", name: "Create note to the right", hotkeys: mod("n", "Shift"), callback: () => { void newNote(app, { open: "split" }); } });
+  add({ id: "file-explorer:new-file-in-current-tab", name: "Create new note in current tab", callback: () => { void newNote(app, { open: true }); } });
+  add({ id: "file-explorer:reveal-active-file", name: "Files: Reveal current file in navigation", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) revealInExplorer(app, f); return true; } });
+  add({ id: "workspace:edit-file-title", name: "Rename file", hotkeys: [{ modifiers: [], key: "F2" }], checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) void promptRename(app, f); return true; } });
   add({ id: "app:delete-file", name: "Delete current file", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) void deleteWithPrompt(app, f); return true; } });
-  add({ id: "workspace:copy-path", name: "Copy file path", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) { copyText(f.path); new Notice("Path copied to clipboard"); } return true; } });
+  add({ id: "workspace:copy-path", name: "Copy current file path from vault folder", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) { copyText(f.path); new Notice("Path copied to clipboard"); } return true; } });
+
+  add({ id: "workspace:copy-full-path", name: "Copy current file path from system root", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) { copyText(app.vault.adapter.getFullPath(f.path)); new Notice("Path copied to clipboard"); } return true; } });
+  add({ id: "file-explorer:duplicate-file", name: "Make a copy of the current file", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) void duplicateFile(app, f).catch((e) => new Notice(String(e?.message ?? e))); return true; } });
+  add({ id: "open-with-default-app:open", name: "Open in default app", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) void ipc.openInSystem(f.path, false).catch((e) => new Notice(String(e?.message ?? e))); return true; } });
+  add({ id: "open-with-default-app:show", name: Platform.isMacOS ? "Reveal in Finder" : "Show in system explorer", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) void ipc.openInSystem(f.path, true).catch((e) => new Notice(String(e?.message ?? e))); return true; } });
 
   // ---- workspace / tabs
   add({ id: "workspace:new-tab", name: "New tab", hotkeys: mod("t"), callback: () => { const l = ws.getLeaf("tab"); ws.setActiveLeaf(l, { focus: true }); } });
   add({ id: "workspace:close", name: "Close current tab", hotkeys: mod("w"), checkCallback: (c) => { const l = rootLeaf(); if (!l) return false; if (!c) l.detach(); return true; } });
-  add({ id: "workspace:next-tab", name: "Go to next tab", hotkeys: [{ modifiers: ["Ctrl"], key: "Tab" }], checkCallback: (c) => { const t = mainTabs(); if (!t || t.tabs.children.length < 2) return false; if (!c) ws.setActiveLeaf(t.tabs.children[(t.tabs.children.indexOf(t.leaf) + 1) % t.tabs.children.length] as WorkspaceLeaf, { focus: true }); return true; } });
-  add({ id: "workspace:previous-tab", name: "Go to previous tab", hotkeys: [{ modifiers: ["Ctrl", "Shift"], key: "Tab" }], checkCallback: (c) => { const t = mainTabs(); if (!t || t.tabs.children.length < 2) return false; if (!c) { const n = t.tabs.children.length; ws.setActiveLeaf(t.tabs.children[(t.tabs.children.indexOf(t.leaf) + n - 1) % n] as WorkspaceLeaf, { focus: true }); } return true; } });
+  add({ id: "workspace:next-tab", name: "Go to next tab", hotkeys: [{ modifiers: ["Ctrl"], key: "Tab" }, { modifiers: ["Ctrl"], key: "PageDown" }], checkCallback: (c) => { const t = mainTabs(); if (!t || t.tabs.children.length < 2) return false; if (!c) ws.setActiveLeaf(t.tabs.children[(t.tabs.children.indexOf(t.leaf) + 1) % t.tabs.children.length] as WorkspaceLeaf, { focus: true }); return true; } });
+  add({ id: "workspace:previous-tab", name: "Go to previous tab", hotkeys: [{ modifiers: ["Ctrl", "Shift"], key: "Tab" }, { modifiers: ["Ctrl"], key: "PageUp" }], checkCallback: (c) => { const t = mainTabs(); if (!t || t.tabs.children.length < 2) return false; if (!c) { const n = t.tabs.children.length; ws.setActiveLeaf(t.tabs.children[(t.tabs.children.indexOf(t.leaf) + n - 1) % n] as WorkspaceLeaf, { focus: true }); } return true; } });
   add({ id: "workspace:split-vertical", name: "Split right", checkCallback: (c) => { const l = rootLeaf(); if (!l) return false; if (!c) void ws.duplicateLeaf(l, "split", "vertical"); return true; } });
   add({ id: "workspace:split-horizontal", name: "Split down", checkCallback: (c) => { const l = rootLeaf(); if (!l) return false; if (!c) void ws.duplicateLeaf(l, "split", "horizontal"); return true; } });
   // ---- popout windows (ids and names as in Obsidian)
   add({ id: "workspace:new-window", name: "New window", callback: () => { ws.openPopoutLeaf(); } });
   add({ id: "workspace:open-in-new-window", name: "Open current tab in new window", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) void ws.duplicateLeaf(l, "window"); return true; } });
   add({ id: "workspace:move-to-new-window", name: "Move current tab to new window", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) { try { ws.moveLeafToPopout(l); } catch (e) { console.error(e); new Notice("Unable to open a new window."); } } return true; } });
-  add({ id: "workspace:close-window", name: "Close window", checkCallback: (c) => { const w = ws.activeLeaf?.getContainer(); if (!(w instanceof WorkspaceWindow)) return false; if (!c) w.close(); return true; } });
-  add({ id: "workspace:toggle-pin", name: "Pin/unpin tab", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) l.togglePinned(); return true; } });
+  add({ id: "workspace:close-window", name: "Close window", hotkeys: mod("w", "Shift"), checkCallback: (c) => { const w = ws.activeLeaf?.getContainer(); if (!(w instanceof WorkspaceWindow)) return false; if (!c) w.close(); return true; } });
+  add({ id: "workspace:toggle-pin", name: "Toggle pin", checkCallback: (c) => { const l = ws.activeLeaf; if (!l) return false; if (!c) l.togglePinned(); return true; } });
   add({ id: "workspace:undo-close-pane", name: "Undo close tab", hotkeys: [{ modifiers: ["Mod", "Shift"], key: "t" }], checkCallback: (c) => {
     if (!ws.closedLeaves.length) return false;
     if (!c) void ws.undoCloseLeaf();
     return true;
   } });
-  add({ id: "workspace:close-tab-group", name: "Close tab group", checkCallback: (c) => {
+  add({ id: "workspace:close-tab-group", name: "Close this tab group", checkCallback: (c) => {
     const t = mainTabs();
     if (!t) return false;
     if (!c) for (const l of [...t.tabs.children] as WorkspaceLeaf[]) if (!l.pinned) l.detach();
@@ -143,9 +149,10 @@ export function installCommands(app: App, history: History): () => void {
   };
   const FOCUS_NAMES: Record<Dir, string> = { left: "to the left", right: "to the right", top: "above", bottom: "below" };
   for (const dir of ["left", "right", "top", "bottom"] as Dir[]) {
-    add({ id: `workspace:focus-${dir}`, name: `Focus on tab group ${FOCUS_NAMES[dir]}`, checkCallback: focusGroup(dir) });
+    add({ id: `editor:focus-${dir}`, name: `Focus on tab group ${FOCUS_NAMES[dir]}`, checkCallback: focusGroup(dir) });
   }
-  add({ id: "workspace:close-others", name: "Close other tabs", checkCallback: (c) => { const t = mainTabs(); if (!t) return false; if (!c) for (const l of [...t.tabs.children] as WorkspaceLeaf[]) if (l !== t.leaf && !l.pinned) l.detach(); return true; } });
+  add({ id: "workspace:close-others-tab-group", name: "Close others in tab group", checkCallback: (c) => { const t = mainTabs(); if (!t) return false; if (!c) for (const l of [...t.tabs.children] as WorkspaceLeaf[]) if (l !== t.leaf && !l.pinned) l.detach(); return true; } });
+  add({ id: "workspace:close-others", name: "Close all other tabs", checkCallback: (c) => { const keep = rootLeaf(); if (!keep) return false; if (!c) for (const l of ws.rootSplit.leaves()) if (l !== keep && !l.pinned) l.detach(); return true; } });
 
   // ---- markdown view modes
   add({ id: "markdown:toggle-preview", name: "Toggle reading view", hotkeys: mod("e"), checkCallback: (c) => { const v = active(); if (!v) return false; if (!c) v.toggleReading(); return true; } });
@@ -155,16 +162,14 @@ export function installCommands(app: App, history: History): () => void {
   // ---- editor formatting (hotkeys come from the editor's own keymap)
   const ed = (id: string, name: string, run: (v: EditorView) => boolean, hotkeys?: Hotkey[]) => add({ id, name, hotkeys, editorCallback: (e) => { run(cm(e as any)); } });
   ed("editor:toggle-bold", "Toggle bold", toggleBold, mod("b"));
-  ed("editor:toggle-italics", "Toggle italics", toggleItalic, mod("i"));
+  ed("editor:toggle-italics", "Toggle italic", toggleItalic, mod("i"));
   ed("editor:toggle-strikethrough", "Toggle strikethrough", toggleStrikethrough);
   ed("editor:toggle-highlight", "Toggle highlight", toggleHighlight);
   ed("editor:toggle-code", "Toggle code", toggleInlineCode);
   ed("editor:insert-link", "Insert Markdown link", insertLink, mod("k"));
-  // Ctrl+Enter ticks a task and turns a plain or list line into one; the list conversion is Tachylite's own command.
-  ed("editor:toggle-checklist-status", "Toggle checkbox status", toggleTask, mod("Enter"));
-  ed("editor:toggle-checklist", "Toggle checklist", toggleChecklist, mod("l"));
-  ed("editor:indent-list", "Indent list item", indentListMore, mod("]"));
-  ed("editor:unindent-list", "Unindent list item", indentListLess, mod("["));
+  ed("editor:toggle-checklist-status", "Toggle checkbox status", toggleChecklist, mod("l"));
+  ed("editor:indent-list", "Indent list item", indentListMore);
+  ed("editor:unindent-list", "Unindent list item", indentListLess);
   ed("editor:fold-all", "Fold all headings and lists", foldAll);
   ed("editor:unfold-all", "Unfold all headings and lists", unfoldAll);
   ed("editor:toggle-fold", "Toggle fold on the current line", toggleFold);
@@ -172,7 +177,7 @@ export function installCommands(app: App, history: History): () => void {
   ed("editor:toggle-numbered-list", "Toggle numbered list", toggleNumberedList);
   ed("editor:toggle-blockquote", "Toggle blockquote", toggleBlockquote);
   ed("editor:set-heading-0", "Remove heading", setHeading(0));
-  for (let n = 1; n <= 6; n++) ed(`editor:set-heading-${n}`, `Toggle heading ${n}`, setHeading(n));
+  for (let n = 1; n <= 6; n++) ed(`editor:set-heading-${n}`, `Set as heading ${n}`, setHeading(n));
   ed("editor:insert-wikilink", "Add internal link", insertWikilink);
   ed("editor:insert-embed", "Add embed", insertEmbed);
   ed("editor:insert-tag", "Add tag", insertTag);
@@ -180,12 +185,13 @@ export function installCommands(app: App, history: History): () => void {
   ed("editor:insert-codeblock", "Insert code block", insertCodeBlock);
   ed("editor:insert-horizontal-rule", "Insert horizontal rule", insertHorizontalRule);
   ed("editor:insert-table", "Insert table", insertTable);
-  ed("editor:insert-mathblock", "Insert math block", insertMathBlock);
-  ed("editor:delete-paragraph", "Delete paragraph", deleteParagraph);
+  ed("editor:insert-mathblock", "Insert maths block", insertMathBlock);
+  ed("editor:toggle-inline-math", "Toggle inline maths", toggleWrap("$"));
+  ed("editor:delete-paragraph", "Delete paragraph", deleteParagraph, mod("d"));
   ed("editor:clear-formatting", "Clear formatting", clearFormatting);
   ed("editor:insert-footnote", "Insert footnote", insertFootnote);
   ed("editor:cycle-list-checklist", "Cycle bullet/checkbox", cycleListChecklist);
-  ed("editor:toggle-comments", "Toggle comment", toggleWrap("%%"));
+  ed("editor:toggle-comments", "Toggle comment", toggleWrap("%%"), mod("/"));
   ed("editor:add-cursor-above", "Add cursor above", addCursorAbove);
   ed("editor:add-cursor-below", "Add cursor below", addCursorBelow);
   ed("editor:swap-line-up", "Move line up", moveLineUp);
@@ -204,8 +210,8 @@ export function installCommands(app: App, history: History): () => void {
     },
   });
   // The link under the cursor, opened somewhere other than this tab.
-  const openLinkIn = (id: string, name: string, where: "tab" | "split" | "window") => add({
-    id, name, editorCheckCallback: (checking, editor, ctx) => {
+  const openLinkIn = (id: string, name: string, where: "tab" | "split" | "window", hotkeys: Hotkey[]) => add({
+    id, name, hotkeys, editorCheckCallback: (checking, editor, ctx) => {
       const cur = editor.getCursor();
       const link = linkAt(editor.getLine(cur.line), cur.ch);
       if (!link) return false;
@@ -216,11 +222,18 @@ export function installCommands(app: App, history: History): () => void {
       return true;
     },
   });
-  openLinkIn("editor:open-link-in-new-leaf", "Open link under cursor in new tab", "tab");
-  openLinkIn("editor:open-link-in-new-split", "Open link under cursor to the right", "split");
-  openLinkIn("editor:open-link-in-new-window", "Open link under cursor in new window", "window");
+  openLinkIn("editor:open-link-in-new-leaf", "Open link under cursor in new tab", "tab", mod("Enter"));
+  openLinkIn("editor:open-link-in-new-split", "Open link under cursor to the right", "split", mod("Enter", "Alt"));
+  openLinkIn("editor:open-link-in-new-window", "Open link under cursor in new window", "window", mod("Enter", "Alt", "Shift"));
+  ed("editor:save-file", "Save current file", () => { const v = active(); if (v?.file) void v.save(); return true; }, mod("s"));
+  const toggleConfig = (id: string, name: string, key: string) => add({ id, name, callback: () => { commitConfig(app, key, !app.vault.getConfig(key)); } });
+  toggleConfig("editor:toggle-line-numbers", "Toggle line numbers", "showLineNumber");
+  toggleConfig("editor:toggle-readable-line-length", "Toggle readable line length", "readableLineLength");
+  toggleConfig("editor:toggle-spellcheck", "Toggle spellcheck", "spellcheck");
+  add({ id: "app:increase-font-size", name: "Increase font size", callback: () => { void adjustFontSize(app, 1); } });
+  add({ id: "app:decrease-font-size", name: "Decrease font size", callback: () => { void adjustFontSize(app, -1); } });
   ed("editor:open-search", "Search current file", openSearchPanel, mod("f"));
-  ed("editor:open-search-replace", "Search and replace in current file", openSearchPanel, mod("h"));
+  ed("editor:open-search-replace", "Search & replace in current file", openSearchPanel, mod("h"));
 
   // Jump to the Nth tab of the current tab group (Ctrl/Cmd+1..8) or the last one (Ctrl/Cmd+9).
   const tabsHere = () => { const l = ws.activeLeaf; return l && l.parent instanceof WorkspaceTabs ? l.parent : null; };

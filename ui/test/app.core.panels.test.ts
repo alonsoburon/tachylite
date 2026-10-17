@@ -163,7 +163,7 @@ describe("backlinks and outgoing links", () => {
     await vi.waitFor(() => expect(c.app.vault.getFileByPath("Missing Note.md")).not.toBeNull());
     resolved.click();
     await vi.waitFor(() => expect(c.app.workspace.getActiveFile()?.path).toBe("Home.md"));
-    expect(c.app.commands.findCommand("outgoing-link:open")).toBeTruthy(); expect(c.app.commands.findCommand("backlink:open")).toBeTruthy();
+    expect(c.app.commands.findCommand("outgoing-links:open")).toBeTruthy(); expect(c.app.commands.findCommand("backlink:open")).toBeTruthy();
   });
 });
 

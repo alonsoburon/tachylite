@@ -149,7 +149,7 @@ export const tags: CoreModule = {
   install(app: App) {
     app.viewRegistry.registerView(TAG_VIEW, (leaf) => new TagView(leaf));
     const stop = whileCoreEnabled(app, "tag-pane", () => {
-      const off = addCommand(app, { id: "tag-pane:open", name: "Tags view: Show tags view", icon: "lucide-tags", callback: () => { void activateView(app, TAG_VIEW, "right"); } });
+      const off = addCommand(app, { id: "tag-pane:open", name: "Tags view: Show tags", icon: "lucide-tags", callback: () => { void activateView(app, TAG_VIEW, "right"); } });
       return () => { off(); app.workspace.detachLeavesOfType(TAG_VIEW); };
     });
     return () => { stop(); app.viewRegistry.unregisterView(TAG_VIEW); };

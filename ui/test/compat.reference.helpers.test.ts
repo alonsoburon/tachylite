@@ -39,6 +39,7 @@ describe("reference comparison", () => {
       'config theme: Obsidian "obsidian", Tachylite "moonstone"',
       "config brandNew: Obsidian true, Tachylite has no default",
     ]);
+    expect(diffConfig({ tabSize: 4 }, (k) => ours[k], ["tabSize", "list"])).toEqual(["config list: only Tachylite has it (default [1,2])"]);
   });
 
   it("formats a readable report with a total", () => {
