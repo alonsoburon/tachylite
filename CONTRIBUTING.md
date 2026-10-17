@@ -22,6 +22,15 @@ cargo test --workspace && cargo clippy --workspace --all-targets
 cd ui && bun run typecheck && bun run test && bun run build
 ```
 
+### Working through iterations
+
+Whether by hand or with an agent loop, take the top unblocked item in [ROADMAP.md](ROADMAP.md), finish it with tests,
+ship it (`scripts/ship.sh`), and update the roadmap. Say what kind of evidence you have: "tested in happy-dom", "checked
+in the real window" (`scripts/smoke.sh`, `scripts/screenshot.sh`) and "matches Obsidian" (`scripts/compare-reference.sh`
+against a dump from a real Obsidian) are three different claims. Stop rule: if nothing unblocked is left, or the next
+step needs data only a real Obsidian can give, stop and say so instead of guessing. Agent-specific instructions live in
+[AGENTS.md](AGENTS.md).
+
 ### The gate and shipping
 
 `scripts/gate.sh` runs everything the CI lint/test job checks and stops at the first failure.
