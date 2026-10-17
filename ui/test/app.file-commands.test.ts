@@ -142,3 +142,17 @@ describe("editor command defaults", () => {
   });
 
 });
+
+describe("table commands in the app", () => {
+  it("are available only while the cursor is in a table, and edit it", async () => {
+    const app = await boot();
+    const ed = (app.workspace.activeLeaf!.view as any).editor;
+    ed.setValue("text\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n");
+    ed.setCursor({ line: 0, ch: 1 });
+    expect(app.commands.executeCommandById("editor:table-row-after")).toBe(false);
+    expect(app.commands.commands["editor:table-col-align-center"].name).toBe("Table: Align centre");
+    ed.setCursor({ line: 4, ch: 3 });
+    expect(app.commands.executeCommandById("editor:table-row-after")).toBe(true);
+    expect(ed.getValue()).toBe("text\n\n| a   | b   |\n| --- | --- |\n| 1   | 2   |\n|     |     |\n");
+  });
+});

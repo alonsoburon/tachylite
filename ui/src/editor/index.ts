@@ -19,3 +19,5 @@ export { calloutFoldField, setCalloutFold } from "./calloutFold";
 export { vimAdapter, vimExtension, vimSaveFacet, Vim, getCM } from "./vim";
 export * from "./blockCommands";
 export { linkAt, type LinkAt } from "./linkAt";
+
+export { TABLE_COMMANDS, tableAt, tableTransaction, type TableOp } from "./tableCommands";

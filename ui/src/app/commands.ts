@@ -3,7 +3,7 @@ import { FileView, FuzzySuggestModal, MarkdownView, Notice, Platform, TFile, TFo
 import {
   indentListLess, indentListMore, insertLink, toggleBold, toggleChecklist, toggleTask, toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough,
 } from "../editor";
-import { linkAt } from "../editor";
+import { linkAt, TABLE_COMMANDS, tableTransaction } from "../editor";
 import { openExternal } from "./bridge";
 import {
   deleteParagraph, insertCallout, insertCodeBlock, insertEmbed, insertHorizontalRule, insertMathBlock, insertTable, insertTag, insertWikilink,
@@ -194,6 +194,16 @@ export function installCommands(app: App, history: History): () => void {
   ed("editor:toggle-comments", "Toggle comment", toggleWrap("%%"), mod("/"));
   ed("editor:add-cursor-above", "Add cursor above", addCursorAbove);
   ed("editor:add-cursor-below", "Add cursor below", addCursorBelow);
+  // Table commands are offered only while the cursor is in a Markdown table.
+  for (const t of TABLE_COMMANDS) {
+    add({ id: t.id, name: t.name, editorCheckCallback: (checking, editor) => {
+      const view = cm(editor as any);
+      const spec = tableTransaction(view.state, t.op);
+      if (!spec) return false;
+      if (!checking) view.dispatch(spec);
+      return true;
+    } });
+  }
   ed("editor:swap-line-up", "Move line up", moveLineUp);
   ed("editor:swap-line-down", "Move line down", moveLineDown);
   add({

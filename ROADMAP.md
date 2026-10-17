@@ -48,7 +48,7 @@ The reference exists now (made with `scripts/obsidian-reference.sh`), and a firs
 rules, link text, list-item parents, core plugin defaults, config defaults, several command ids/names/hotkeys and the
 file, tab, More options and editor menus. What the report still lists (re-run it for the current list):
 
-- **Commands Obsidian has that Tachylite lacks (about 57):** the Table commands (`editor:table-*`), coloured highlights
+- **Commands Obsidian has that Tachylite lacks (about 42; the 15 `editor:table-*` ones are done):** coloured highlights
   (`editor:toggle-highlight-*`), `editor:attach-file`, `editor:set-heading`, `editor:rename-heading`,
   `editor:context-menu`, `editor:fold-more/less`, `editor:toggle-fold-properties`, `app:toggle-default-new-pane-mode`,
   `theme:toggle-light-dark`, `theme:switch`, `workspace:export-pdf`, `workspace:toggle-stacked-tabs`,
