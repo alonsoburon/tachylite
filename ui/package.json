@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:debug": "vitest run --silent=false",
     "test:real-plugins": "TACHYLITE_REAL_PLUGINS=1 vitest run test/obsidian.real-plugins.test.ts"
   },
   "devDependencies": {

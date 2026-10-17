@@ -22,5 +22,34 @@ cargo test --workspace && cargo clippy --workspace --all-targets
 cd ui && bun run typecheck && bun run test && bun run build
 ```
 
+### The gate and shipping
+
+`scripts/gate.sh` runs everything the CI lint/test job checks and stops at the first failure.
+`scripts/ship.sh "message"` runs the gate, commits (the message as given, no trailers), pushes, waits for the
+CI run of that commit and exits non-zero unless every job is green. `--no-push` stops after the commit.
+Pick work from [ROADMAP.md](ROADMAP.md).
+
+### Seeing console output in tests
+
+Vitest hides console output from passing tests in some environments (it does so when it detects an automated
+agent). `bun run test:debug test/some.test.ts` runs with `--silent=false`, so `console.log` probes show up
+without writing to files.
+
+### Flaky tests we already know about
+
+- **CodeMirror's 20 ms parse budget.** A state built without a view can end up with a partial syntax tree on a
+  busy machine, so tests that read decorations flake under load. Build the state again until
+  `syntaxTree(state).length >= doc.length` (see `mkstate` in `ui/test/editor.lp-extras.test.ts`).
+- **Late CodeMirror timers.** A timer can fire after its test's happy-dom window is gone
+  (`requestAnimationFrame is not a function`). `vite.config.ts` ignores exactly that error, and sessions detach
+  their leaves in `dispose()` so most timers never fire.
+- **happy-dom gaps.** `WheelEvent` ignores `ctrlKey`/`metaKey` in its init dict (define them on the event by
+  hand), `posAtCoords` returns 0 (stub it), and there is no `indexedDB` (the "file recovery unavailable" line in
+  test output is expected). `Proxy` objects in the app graph break vitest's deep equality, so use a `Map`
+  subclass instead.
+- **Layout saves are debounced.** Waiting for `workspace.json` needs `vi.waitFor(..., { timeout: 8000 })`.
+- **Performance guards.** The graph timing test takes the best of several batches, because one slow batch on a
+  loaded machine is not a regression.
+
 Compatibility bugs are the most valuable contributions: a vault that behaves differently, or a
 community plugin that fails to load. Include the plugin id/version and a minimal vault if you can.
