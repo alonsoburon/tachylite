@@ -560,6 +560,14 @@ fn set_zoom(window: tauri::WebviewWindow, factor: f64) -> Result<(), String> {
     window.set_zoom(factor.clamp(0.3, 4.0)).map_err(|e| e.to_string())
 }
 
+/// Keep the calling window above all others, or stop doing so. Returns the new state.
+#[tauri::command]
+fn toggle_always_on_top(window: tauri::WebviewWindow) -> Result<bool, String> {
+    let on = !window.is_always_on_top().map_err(|e| e.to_string())?;
+    window.set_always_on_top(on).map_err(|e| e.to_string())?;
+    Ok(on)
+}
+
 /// Exit the application (called by the frontend once it has flushed pending saves).
 #[tauri::command]
 fn quit_app(app: AppHandle) {
@@ -709,6 +717,7 @@ fn main() {
             platform::deep_link_take,
             quit_app,
             set_zoom,
+            toggle_always_on_top,
             open_in_system,
             read_primary_selection,
             dev_screenshot,

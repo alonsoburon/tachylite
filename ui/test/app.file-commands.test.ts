@@ -156,3 +156,30 @@ describe("table commands in the app", () => {
     expect(ed.getValue()).toBe("text\n\n| a   | b   |\n| --- | --- |\n| 1   | 2   |\n|     |     |\n");
   });
 });
+
+describe("app and window commands", () => {
+  it("toggles the default mode for new tabs and the light/dark theme", async () => {
+    const app = await boot();
+    expect(app.vault.getConfig("defaultViewMode")).toBe("source");
+    app.commands.executeCommandById("app:toggle-default-new-pane-mode");
+    expect(app.vault.getConfig("defaultViewMode")).toBe("preview");
+    app.commands.executeCommandById("app:toggle-default-new-pane-mode");
+    expect(app.vault.getConfig("defaultViewMode")).toBe("source");
+
+    const theme = () => JSON.parse(fs.readFileSync(path.join(v.root, ".obsidian/appearance.json"), "utf8")).theme;
+    const was = app.isDarkMode();
+    app.commands.executeCommandById("theme:toggle-light-dark");
+    await vi.waitFor(() => expect(theme()).toBe(was ? "moonstone" : "obsidian"));
+    await vi.waitFor(() => expect(app.isDarkMode()).toBe(!was));
+  });
+
+  it("shows debug info, the editor context menu under the cursor, and registers the always-on-top toggle", async () => {
+    const app = await boot();
+    app.commands.executeCommandById("app:show-debug-info");
+    expect(document.querySelector(".modal")?.textContent).toMatch(/Vault: .*\(\d+ files\)/);
+    document.querySelectorAll(".modal-container").forEach((m) => m.remove());
+    app.commands.executeCommandById("editor:context-menu");
+    expect([...document.querySelectorAll(".menu-item-title")].map((e) => e.textContent)).toEqual(expect.arrayContaining(["Add link", "Cut", "Paste"]));
+    for (const id of ["window:toggle-always-on-top", "app:open-vault"]) expect(app.commands.commands[id], id).toBeTruthy();
+  });
+});

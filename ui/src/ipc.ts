@@ -130,6 +130,7 @@ export const ipc = {
   // launch / diagnostics
   launchArgs: () => call<{ vault: string | null; script: string | null }>("launch_args"),
   quitApp: () => call<void>("quit_app"),
+  toggleAlwaysOnTop: () => call<boolean>("toggle_always_on_top"),
   /** Open a vault file with the default app, or reveal it in the system file manager. */
   openInSystem: (path: string, reveal: boolean) => call<void>("open_in_system", { path, reveal }),
   setZoom: (factor: number) => call<void>("set_zoom", { factor }),

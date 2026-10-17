@@ -1,5 +1,5 @@
 // Core commands (ids follow Obsidian's public command ids) and their default hotkeys.
-import { FileView, FuzzySuggestModal, MarkdownView, Notice, Platform, TFile, TFolder, WorkspaceTabs, WorkspaceWindow, type App, type Command, type Hotkey, type WorkspaceLeaf } from "../obsidian";
+import { FileView, FuzzySuggestModal, MarkdownView, Modal, Notice, Platform, TFile, TFolder, WorkspaceTabs, WorkspaceWindow, type App, type Command, type Hotkey, type WorkspaceLeaf } from "../obsidian";
 import {
   indentListLess, indentListMore, insertLink, toggleBold, toggleChecklist, toggleTask, toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough,
 } from "../editor";
@@ -15,7 +15,7 @@ import { openSearchPanel } from "@codemirror/search";
 import type { EditorView } from "@codemirror/view";
 import { copyText, deleteWithPrompt, duplicateFile, FolderPicker, newNote, promptRename, revealInExplorer } from "./files";
 import { commitConfig } from "./settings/util";
-import { adjustFontSize } from "./settings/appearanceApply";
+import { adjustFontSize, updateAppearance } from "./settings/appearanceApply";
 import type { History } from "./history";
 import { coreEnabled, whileCoreEnabled } from "./core/util";
 import { TachyMarkdownView } from "./markdownView";
@@ -71,6 +71,29 @@ export function installCommands(app: App, history: History): () => void {
   add({ id: "app:toggle-left-sidebar", name: "Toggle left sidebar", callback: () => ws.leftSplit.toggle() });
   add({ id: "app:toggle-right-sidebar", name: "Toggle right sidebar", callback: () => ws.rightSplit.toggle() });
   add({ id: "app:switch-vault", name: "Change vault...", callback: openVaultSwitcher });
+  add({ id: "app:open-vault", name: "Manage vaults", callback: openVaultSwitcher });
+  add({ id: "window:toggle-always-on-top", name: "Toggle window always on top", callback: () => { void ipc.toggleAlwaysOnTop().catch((e) => new Notice(String(e?.message ?? e))); } });
+  add({ id: "theme:toggle-light-dark", name: "Toggle light/dark mode", callback: () => { void updateAppearance(app, { theme: app.isDarkMode() ? "moonstone" : "obsidian" }); } });
+  add({ id: "app:toggle-default-new-pane-mode", name: "Toggle default mode for new tabs", callback: () => {
+    const reading = app.vault.getConfig("defaultViewMode") === "preview";
+    commitConfig(app, "defaultViewMode", reading ? "source" : "preview");
+    new Notice(`New tabs open in ${reading ? "editing" : "reading"} view`);
+  } });
+  add({ id: "app:show-debug-info", name: "Show debug info", callback: () => {
+    const m = new Modal(app);
+    m.setTitle("Debug info");
+    const mods = Object.keys(app.plugins.manifests ?? {}).length;
+    const lines = [
+      `Vault: ${app.vault.getName()} (${app.vault.getFiles().length} files)`,
+      `Platform: ${Platform.isMacOS ? "macOS" : Platform.isWin ? "Windows" : "Linux"}${Platform.isMobile ? " (mobile)" : ""}`,
+      `Community plugins installed: ${mods}${app.plugins.restrictedMode ? " (restricted mode)" : ""}`,
+      `Core plugins on: ${Object.values(app.internalPlugins.plugins).filter((p: any) => p.enabled).length}`,
+      `Theme: ${app.isDarkMode() ? "dark" : "light"}`,
+      `User agent: ${navigator.userAgent}`,
+    ];
+    for (const l of lines) m.contentEl.createDiv({ text: l });
+    m.open();
+  } });
   add({ id: "app:reload", name: "Reload app without saving", callback: () => location.reload() });
   add({ id: "app:open-help", name: "Open help", hotkeys: [{ modifiers: [], key: "F1" }], callback: () => { void ipc.openUrl(HELP_URL).catch((e) => new Notice(String(e.message ?? e))); } });
   add({ id: "workspace:copy-url", name: "Copy Obsidian URL for current file", checkCallback: (c) => { const f = ws.getActiveFile(); if (!f) return false; if (!c) { copyText(uriForFile(app, f)); new Notice("URL copied to clipboard"); } return true; } });
@@ -204,6 +227,12 @@ export function installCommands(app: App, history: History): () => void {
       return true;
     } });
   }
+  // Open the editor's right-click menu at the cursor.
+  add({ id: "editor:context-menu", name: "Show context menu under cursor", editorCallback: (editor) => {
+    const view = cm(editor as any);
+    const r = view.coordsAtPos(view.state.selection.main.head);
+    view.contentDOM.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: r?.left ?? 0, clientY: r?.bottom ?? 0 }));
+  } });
   ed("editor:swap-line-up", "Move line up", moveLineUp);
   ed("editor:swap-line-down", "Move line down", moveLineDown);
   add({
