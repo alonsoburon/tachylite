@@ -125,3 +125,11 @@ jobs:
         run: cargo build --workspace --locked
       - name: cargo test (core)
         run: cargo test -p tachylite-core -p tachylite-plugins
+      # The same UI gate as on Linux: the tests run the real Rust parser (built by the vitest global setup), so paths,
+      # line endings and file names on macOS and Windows are exercised too.
+      - name: UI typecheck
+        working-directory: ui
+        run: bun run typecheck
+      - name: UI tests
+        working-directory: ui
+        run: bun run test
