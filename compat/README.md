@@ -59,3 +59,11 @@ Corrections from people who compare against a real Obsidian install are the most
 Inline footnotes and footnote definitions, reference links (`[x][id]` / `[id]: url`), HTML blocks in
 detail, tables inside quotes, links in canvas files, `userIgnoreFilters`, and two files whose names differ
 only by case (behaviour depends on the file system).
+
+## Reference dump from a real Obsidian
+
+The fixtures above are hand-written expectations. For ground truth, `tools/obsidian-dump/` has a small Obsidian
+plugin that records command ids and default hotkeys, core plugins, config values, context-menu entries and the
+`metadataCache` output for a corpus of odd notes. Put its output at `compat/obsidian-reference.json` and run
+`scripts/compare-reference.sh` for a readable list of differences (`TACHYLITE_STRICT_REFERENCE=1` makes any
+difference fail). Without that file the comparison tests skip. Steps are in `tools/obsidian-dump/README.md`.

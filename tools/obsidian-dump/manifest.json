@@ -1,0 +1,9 @@
+{
+  "id": "tachylite-reference-dump",
+  "name": "Tachylite reference dump",
+  "version": "0.1.0",
+  "minAppVersion": "1.0.0",
+  "description": "Writes command ids, hotkeys, menu entries, core plugins, config and metadata-cache output to a JSON file, so Tachylite can be compared with this app.",
+  "author": "Tachylite contributors",
+  "isDesktopOnly": true
+}

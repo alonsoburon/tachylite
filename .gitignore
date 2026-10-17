@@ -3,3 +3,5 @@ node_modules/
 .env*
 /ui/dist/
 /ui/.cache/
+/compat/reference-report.txt
+/compat/reference-report-cache.txt
