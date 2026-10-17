@@ -444,8 +444,8 @@ function backlinkStatus(app: App): () => void {
     const file = app.workspace.getActiveFile();
     item.toggle(!!file && file.extension === "md");
     if (!file) return;
-    let n = 0;
-    for (const refs of app.metadataCache.getBacklinksForFile(file).data.values()) n += refs.length;
+    // How many notes link here (a note that links twice counts once).
+    const n = app.metadataCache.getBacklinksForFile(file).data.size;
     item.setText(`${n.toLocaleString()} backlink${n === 1 ? "" : "s"}`);
   };
   item.addEventListener("click", () => { void activateView(app, BACKLINK_VIEW, "right"); });

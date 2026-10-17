@@ -14,37 +14,30 @@ dump plugin in `tools/obsidian-dump/` run inside a real Obsidian (steps in its R
 
 ## Ready
 
-### 1. Real-window smoke test in CI
-- Accept: a Linux CI job runs the built app under xvfb against a fixture vault with a `TACHYLITE_SCRIPT`, and
-  checks via the log file that the vault opens, a note opens in Live Preview, Ctrl+P opens the palette, typing
-  reaches the document, a rename rewrites a link, and the app exits cleanly.
-- Verified how: the job is green in CI, and a deliberately broken build turns it red.
-
-### 2. Stacked tabs
+### 1. Stacked tabs
 - Accept: the tab group menu has "Stack tabs"; `workspace:toggle-stacked-tabs` toggles it; the choice is saved in
   `workspace.json` (`stacked: true` on the tab group); tab headers rotate and panes slide as in Obsidian.
-- Verified how: unit tests for state and layout round-trip; a screenshot from `scripts/screenshot.sh` (needs the
-  real-window harness first).
+- Verified how: unit tests for state and layout round-trip; a screenshot from `scripts/screenshot.sh` and a step added to `scripts/smoke.sh`.
 
-### 3. Fold more / Fold less
+### 2. Fold more / Fold less
 - Accept: `editor:fold-more` and `editor:fold-less` fold and unfold one heading/list level across the note.
 - Verified how: editor unit tests. The exact semantics are **blocked: needs reference data** until confirmed.
 
-### 4. Persisted reading-view folds
+### 3. Persisted reading-view folds
 - Accept: folds on headings and lists in the reading view are remembered per note across closing and reopening,
   and stored where Obsidian stores them (confirm first).
 - Verified how: unit tests; storage format **blocked: needs reference data**.
 
-### 5. Export to PDF
+### 4. Export to PDF
 - Accept: `workspace:export-pdf` and the More options entry produce a PDF of the reading view with the note's
   theme applied.
 - Verified how: a real-window run that writes a file and opens it. happy-dom can't show this.
 
-### 6. Graph bookmarks
+### 5. Graph bookmarks
 - Accept: a graph view with its settings can be bookmarked (`type: "graph"`) and reopened.
 - Verified how: unit tests plus a `bookmarks.json` round-trip.
 
-### 7. Web viewer and Format converter core plugins
+### 6. Web viewer and Format converter core plugins
 - Accept: the Core plugins list can enable them; they do something useful (open a page in a tab; import Markdown
   from other apps). Until then they stay marked unavailable.
 - Verified how: unit tests, then a real-window run.

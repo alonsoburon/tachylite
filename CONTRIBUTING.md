@@ -37,6 +37,25 @@ calls `tachy parse-json` (one note on stdin) and `tachy <vault> links-json`. So 
 and a behavior that only exists in Rust (UTF-16 offsets, Unicode link matching, sections, list items) is visible
 to them. `ui/test/helpers.real-core.test.ts` proves it.
 
+### Real-window smoke test and screenshots
+
+The DOM tests run in happy-dom; `scripts/smoke.sh` runs the built app in a real WebKitGTK window. It starts a private
+X server (`xvfb-run`) with a window manager, opens a fixture vault, and checks, through a script running inside the
+app (`TACHYLITE_SCRIPT`) and real key presses from `xdotool`, that: a note opens in Live Preview, the status bar shows
+one backlinks item and the editor mode, Ctrl+P opens the command palette and Escape closes it, typed text reaches the
+note, renaming a note rewrites a link to it, and the app exits cleanly. CI runs it against the release binary in the
+Linux packages job. Locally:
+
+```
+(cd ui && bun run build) && touch crates/tachylite-app/src/main.rs && cargo build -p tachylite-app
+scripts/smoke.sh                 # needs xvfb, openbox, xdotool
+```
+
+`scripts/screenshot.sh out.png [script.js] [vault]` captures the webview the same way (debug build only). Both scripts
+share `scripts/lib/isolated.sh`, which keeps the app away from your session: own X server, `GDK_BACKEND=x11` (a
+Wayland session that exports `GDK_BACKEND=wayland` would otherwise open the window on your real desktop), no
+Wayland socket or session bus, private config and data directories, and single-instance forwarding off.
+
 ### Seeing console output in tests
 
 Vitest hides console output from passing tests in some environments (it does so when it detects an automated

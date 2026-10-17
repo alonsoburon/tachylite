@@ -17,6 +17,10 @@ These are the working conventions for this repo. [CONTRIBUTING.md](CONTRIBUTING.
 - `bun run test:debug <file>` shows console output from tests (Vitest hides it for passing tests in some
   environments).
 - Cargo may not be on a non-login shell's PATH: `export PATH="$HOME/.cargo/bin:$PATH"` (the scripts do it).
+- `scripts/smoke.sh` and `scripts/screenshot.sh` run the real app, always on a private X server through
+  `scripts/lib/isolated.sh` (see CONTRIBUTING.md). Never run the app any other way from a script: this machine's session
+  exports `GDK_BACKEND=wayland`, which opens windows on the real desktop. Never `pkill` by a pattern that can match your
+  own command line, and never kill processes by name that the user may be running themselves.
 - Do not capture or touch the user's desktop. Anything that needs a display uses its own Xvfb or headless compositor.
 
 ## Honesty
