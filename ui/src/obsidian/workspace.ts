@@ -163,14 +163,14 @@ export class WorkspaceTabs extends WorkspaceParent {
       leaf.tabHeaderEl.toggleClass("is-active", on);
       leaf.containerEl.style.display = "";
       leaf.containerEl.removeClass("mod-hidden");
-      leaf.containerEl.style.minWidth = "300px";
-      leaf.containerEl.style.maxWidth = "600px";
+      leaf.containerEl.style.minWidth = "130px"; // pane widths as measured in Obsidian 1.14.4
+      leaf.containerEl.style.maxWidth = "520px";
     });
     // Bring the active pane into view: panes sit side by side after their header strips; the strips before it stay stuck on
     // the left, so pane i is visible when the container is scrolled past i panes.
     const i = this.currentTab, active = this.children[i] as WorkspaceLeaf | undefined;
     if (active) {
-      const w = active.containerEl.getBoundingClientRect().width || 600;
+      const w = active.containerEl.getBoundingClientRect().width || 520;
       this.tabContainerEl.scrollLeft = i * w;
     }
   }

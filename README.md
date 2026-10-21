@@ -125,10 +125,11 @@ completing tasks), Kanban (boards, adding cards), QuickAdd (capture choices) and
 - Audio recorder is written and tested against a fake recorder, but I haven't tried it with a real
   microphone, and I haven't checked that the webview is allowed to open one. Format converter and
   Web viewer don't exist yet.
-- Newer features were built from a real Obsidian's menus and DOM but have only been tested in a headless DOM, not
-  clicked through in a Tachylite window: stacked tabs, export to PDF, linked tabs, backlinks in document, canvas image
-  export, the graph time-lapse and the file-dialog commands. Reading-view folds don't survive closing a note. Some
-  guesses are listed in `ROADMAP.md`.
+- Newer features (stacked tabs, linked tabs, backlinks in document, table and highlight commands, Rename this heading,
+  the Export to PDF dialog, canvas jump to group and convert to file, the graph time-lapse and graph bookmarks, remembered
+  folds) have been driven in a real Tachylite window on Linux by `scripts/smoke.sh`, and stacked tabs, fold storage and graph
+  bookmarks were measured against Obsidian 1.14.4. Not seen yet: the printed PDF, what canvas image export draws, what Bases
+  "copy table" puts on the clipboard, and all of it on macOS and Windows. Some guesses are listed in `ROADMAP.md`.
 - Sync and Publish are out of scope. They show up as unavailable in the Core plugins list.
 
 ## License

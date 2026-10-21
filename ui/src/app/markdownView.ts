@@ -222,9 +222,9 @@ export class TachyMarkdownView extends MarkdownView {
     const reading = this.getMode() === "preview";
     // Entries and order follow Obsidian 1.14.4's menu (compat/obsidian-reference.json); the file entries come from buildFileMenu.
     this.addModeItems(menu);
-    menu.addItem((i) => i.setSection("pane").setTitle("Split right").setIcon("lucide-separator-vertical").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "vertical"); }));
-    menu.addItem((i) => i.setSection("pane").setTitle("Split down").setIcon("lucide-separator-horizontal").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "horizontal"); }));
-    menu.addItem((i) => i.setSection("pane").setTitle("Open in new window").setIcon("lucide-app-window").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "window"); }));
+    menu.addItem((i) => i.setSection("window").setTitle("Split right").setIcon("lucide-separator-vertical").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "vertical"); }));
+    menu.addItem((i) => i.setSection("window").setTitle("Split down").setIcon("lucide-separator-horizontal").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "horizontal"); }));
+    menu.addItem((i) => i.setSection("window").setTitle("Open in new window").setIcon("lucide-app-window").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "window"); }));
     void reading;
     if (this.file) buildFileMenu(this.app, this.file, "more-options", menu);
     this.onPaneMenu(menu, "more-options");

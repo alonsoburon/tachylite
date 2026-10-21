@@ -26,5 +26,5 @@ it("keeps panes in normal flow and only the header strips sticky", () => {
 it("writes only the title vertically, so the flex axis of the header stays a column", () => {
   const inner = rule(".workspace-tabs.mod-stacked > .workspace-tab-container > .workspace-tab-header .workspace-tab-header-inner");
   expect(inner).not.toContain("writing-mode");
-  expect(rule(".workspace-tabs.mod-stacked > .workspace-tab-container > .workspace-tab-header .workspace-tab-header-inner-title")).toContain("writing-mode: vertical-rl");
+  expect(rule(".workspace-tabs.mod-stacked > .workspace-tab-container > .workspace-tab-header .workspace-tab-header-inner-title")).toContain("writing-mode: vertical-lr");
 });

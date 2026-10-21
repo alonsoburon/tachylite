@@ -77,8 +77,8 @@ export abstract class BaseGraphView extends PanelView {
     this.queries = new QueryCache(() => this.requestRefresh(0));
     this.addAction("lucide-more-vertical", "More options", (evt) => {
       const m = new Menu();
-      m.addItem((i) => i.setSection("pane").setTitle("Split right").setIcon("lucide-separator-vertical").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "vertical"); }));
-      m.addItem((i) => i.setSection("pane").setTitle("Split down").setIcon("lucide-separator-horizontal").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "horizontal"); }));
+      m.addItem((i) => i.setSection("window").setTitle("Split right").setIcon("lucide-separator-vertical").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "vertical"); }));
+      m.addItem((i) => i.setSection("window").setTitle("Split down").setIcon("lucide-separator-horizontal").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "horizontal"); }));
       this.onPaneMenu(m, "more-options");
       m.showAtMouseEvent(evt);
     });

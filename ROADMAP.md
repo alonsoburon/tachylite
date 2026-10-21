@@ -39,10 +39,19 @@ dump plugin in `tools/obsidian-dump/` run inside a real Obsidian (steps in its R
   other apps). Until then they stay marked unavailable. (The reference has `webviewer` but no Format converter in 1.14.4.)
 - Verified how: unit tests, then a real-window run (`scripts/smoke.sh` step).
 
-### 4. Verify the new features in the real window
-- Stacked tabs, export to PDF, linked tabs, backlinks in document, canvas export, graph time-lapse and the dialog-based
-  commands were built from the real app's DOM and menus and tested in happy-dom. None has been looked at in a Tachylite
-  window yet. Add steps to `scripts/smoke.sh` and screenshots with `scripts/screenshot.sh`.
+### 4. Verify the new features in the real window (done, with gaps)
+- `scripts/smoke.sh` now drives the real window through: table commands, coloured highlights, Rename this heading, the
+  editor context menu, Fold more/less, persisted folds, Backlinks in document (editing and reading view), stacked tabs
+  (with a layout check), linked tabs, the Export to PDF dialog, canvas Jump to group and Convert to file, Bases copy,
+  graph time-lapse and graph bookmarks. Screenshots go to `/tmp/tachylite-smoke-shots` (or `$SMOKE_SHOTS`) on a debug build.
+- What the window showed and was fixed: stacked tabs laid their panes out vertically, off screen (now a flex row like
+  Obsidian's, panes 130 to 520 px wide, close button, icon and vertical title as measured in Obsidian 1.14.4), and the
+  canvas "Convert to file" name box was a small default textarea. "More options" listed its split entries before
+  Reading view; it now follows Obsidian's order.
+- **Still not seen:** the printed PDF itself (the test stops at the options dialog, there is no printer), what the canvas image
+  export draws, what `bases:copy-table` puts on the clipboard (the private display refuses clipboard writes without a
+  user gesture, so the test only sees "Unable to copy"), and any of this on macOS or Windows.
+- The graph's "Copy screenshot" menu entry does not exist here.
 
 ## What the reference comparison still lists (run `scripts/compare-reference.sh`)
 
@@ -53,9 +62,12 @@ dump plugin in `tools/obsidian-dump/` run inside a real Obsidian (steps in its R
   Electron menu, not as commands); the tab menu keeps "Close others", "Close tabs to the right", "Close all" and
   "Duplicate tab"; the Tags view has a context menu here (Require/Exclude tag in search, Rename tag...) where Obsidian
   has none; bookmarks have Move up/down.
-- **Guesses to re-check against the real app:** the pane widths in stacked mode, the image drawn by canvas export, the
-  clipboard format of `bases:copy-table`, the margins in the PDF dialog, how a linked tab follows navigation, and the
-  three outside-vault commands (`app:open-another-vault`, `app:open-sandbox-vault`, `app:open-file`).
+- **Checked against the real app since:** pane widths and header layout in stacked mode, fold storage, the graph bookmark
+  shape, and where Backlinks in document sits in the editing view.
+- **Guesses still to re-check:** the image drawn by canvas export, the clipboard format of `bases:copy-table`, the margins
+  in the PDF dialog, how a linked tab follows navigation, and the three outside-vault commands (`app:open-another-vault`,
+  `app:open-sandbox-vault`, `app:open-file`).
+- Cosmetic: the folder menu has an empty section in Obsidian (two separators in a row) where Tachylite has one.
 
 ## Needs a person at a keyboard
 
