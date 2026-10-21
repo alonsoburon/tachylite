@@ -160,11 +160,14 @@ function sectionClass(first: Token): string {
  * Fold arrows on reading-view headings: folding a heading hides the sections after it up to the next heading of the
  * same or a higher level (`.heading-collapse-indicator` and `.is-collapsed`, the classes themes style).
  */
-function installHeadingFolds(sections: HTMLElement[]): void {
-  const level = (sec: HTMLElement): { h: HTMLElement; n: number } | null => {
+function installHeadingFolds(sections: HTMLElement[], ctx: RenderContext): void {
+  const level = (sec: HTMLElement): { h: HTMLElement; n: number; line: number; to: number } | null => {
     const h = sec.firstElementChild;
     const m = h && /^H([1-6])$/.exec(h.tagName);
-    return m ? { h: h as HTMLElement, n: Number(m[1]) } : null;
+    if (!m) return null;
+    const info = sectionInfoMap.get(sec);
+    // a heading's own block: one line (two for a setext heading), like Obsidian's reading-view fold info
+    return { h: h as HTMLElement, n: Number(m[1]), line: info?.lineStart ?? -1, to: (info?.lineEnd ?? -1) + 1 };
   };
   const apply = () => {
     let hideBelow = 0; // level of the folded heading currently swallowing sections (0 = none)
@@ -182,18 +185,24 @@ function installHeadingFolds(sections: HTMLElement[]): void {
     arrow.className = "heading-collapse-indicator collapse-indicator collapse-icon";
     arrow.appendChild(chevronIcon());
     hd.h.insertBefore(arrow, hd.h.firstChild);
+    if (hd.line >= 0) {
+      ctx.folds?.known("heading", hd.line, hd.to);
+      if (ctx.folds?.has("heading", hd.line)) { hd.h.classList.add("is-collapsed"); arrow.classList.add("is-collapsed"); }
+    }
     arrow.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       hd.h.classList.toggle("is-collapsed");
       arrow.classList.toggle("is-collapsed", hd.h.classList.contains("is-collapsed"));
       apply();
+      if (hd.line >= 0) ctx.folds?.toggled("heading", hd.line, hd.to, hd.h.classList.contains("is-collapsed"));
     });
   }
+  apply();
 }
 
 /** Fold arrows on list items that have a sub-list (`.list-collapse-indicator`); folding hides the sub-list (CSS keys on `.is-collapsed`). */
-function installListFolds(sections: HTMLElement[]): void {
+function installListFolds(sections: HTMLElement[], ctx: RenderContext): void {
   for (const sec of sections) {
     for (const li of sec.querySelectorAll<HTMLElement>("li")) {
       if (!li.querySelector(":scope > ul, :scope > ol")) continue;
@@ -201,11 +210,19 @@ function installListFolds(sections: HTMLElement[]): void {
       arrow.className = "list-collapse-indicator collapse-indicator collapse-icon";
       arrow.appendChild(chevronIcon());
       li.insertBefore(arrow, li.firstChild);
+      const line = Number(li.dataset.line ?? NaN);
+      // the item's line plus one per nested item, ending one past the last (Obsidian's `to` for a folded list item)
+      const to = line + 1 + li.querySelectorAll("li").length;
+      if (Number.isFinite(line)) {
+        ctx.folds?.known("item", line, to);
+        if (ctx.folds?.has("item", line)) { li.classList.add("is-collapsed"); arrow.classList.add("is-collapsed"); }
+      }
       arrow.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         const folded = li.classList.toggle("is-collapsed");
         arrow.classList.toggle("is-collapsed", folded);
+        if (Number.isFinite(line)) ctx.folds?.toggled("item", line, to, folded);
       });
     }
   }
@@ -306,8 +323,8 @@ async function renderInternal(md: string, el: HTMLElement, ctx: RenderContext, s
     sizer.appendChild(sec);
   }
 
-  if (ctx.foldHeading) installHeadingFolds(sections);
-  if (ctx.foldIndent) installListFolds(sections);
+  if (ctx.foldHeading) installHeadingFolds(sections, ctx);
+  if (ctx.foldIndent) installListFolds(sections, ctx);
 
   const pctx: PostProcessorContext = {
     docId: "doc-" + ++docCounter,

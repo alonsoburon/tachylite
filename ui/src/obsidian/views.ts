@@ -8,6 +8,7 @@ import { type Menu } from "./ui";
 import { debounce, resolveSubpath, type Debouncer } from "./util";
 import { clearEditorHistory, CMEditor, Editor, editorEditorField, editorInfoField, editorLivePreviewField, getEditorFactory, setEditorInfo, setEditorView } from "./editor";
 import { installPreviewTaskToggle } from "./previewTasks";
+import { applyEditorFolds, changesFolds, countLines, editorFoldInfo, parseFoldInfo, ReadingFoldState, type FoldInfo } from "./foldInfo";
 import { MarkdownRenderer } from "./markdown";
 import type { App } from "./app";
 import type { WorkspaceLeaf } from "./workspace";
@@ -250,14 +251,16 @@ export class MarkdownEditView {
   getSelection(): string { return this.view.editor.getSelection(); }
   getScroll(): number { return this.view.editor.getScrollInfo().top; }
   applyScroll(n: number): void { this.view.editor.scrollTo(null, n); }
-  getFoldInfo(): { folds: { from: number; to: number }[]; lines: number } | null { return { folds: [], lines: this.view.editor.lineCount() }; }
-  applyFoldInfo(_info: unknown): void {}
+  getFoldInfo(): FoldInfo { return editorFoldInfo(this.view.cm); }
+  applyFoldInfo(info: FoldInfo | null): void { if (info) this.view.withFoldsApplied(() => applyEditorFolds(this.view.cm, info)); }
 }
 
 export class MarkdownPreviewView extends MarkdownRenderer {
   type = "preview" as const;
-  getFoldInfo(): null { return null; }
-  applyFoldInfo(_info: unknown): void {}
+  /** Folds of the reading view; the renderer reads them and reports the reader's clicks (see ReadingFolds). */
+  foldState = new ReadingFoldState(() => this.view.foldsChanged());
+  getFoldInfo(): FoldInfo { return this.foldState.info(countLines(this.text)); }
+  applyFoldInfo(info: FoldInfo | null): void { this.foldState.load(info); }
   constructor(public view: MarkdownView) {
     super(view.previewEl);
     this.app = view.app;
@@ -274,6 +277,7 @@ export class MarkdownPreviewView extends MarkdownRenderer {
     // Render children that post-processors attached (ctx.addChild) belong to the previous render.
     for (const c of this._children.slice()) this.removeChild(c);
     el.empty();
+    this.foldState.resetKnown();
     const holder = el.createDiv({ cls: "markdown-preview-view markdown-rendered" });
     const sizer = holder.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
     (this.view as any).decoratePreview?.(sizer);
@@ -297,6 +301,13 @@ export class MarkdownView extends TextFileView {
   private mode: MarkdownViewModeType = "source";
   private extCompartment = new Compartment();
   private muted = false;
+  /** Fold state shared by both modes (see foldInfo.ts): what was last restored or changed, saved through app.foldManager. */
+  private foldInfo: FoldInfo | null = null;
+  private foldsDirty = false;
+  private foldsReady = false;
+  private restoreFolds = false;
+  private applyingFolds = false;
+  private saveFoldsSoon = debounce(() => this.flushFolds(), 500, true);
 
   constructor(leaf: WorkspaceLeaf) {
     super(leaf);
@@ -316,6 +327,7 @@ export class MarkdownView extends TextFileView {
             this.app.workspace.trigger("editor-change", this.editor, this);
             this.app.workspace.trigger("quick-preview", this.file, this.editor.getValue());
           }
+          if (!this.muted && !this.applyingFolds && changesFolds(u.transactions)) this.foldsChanged();
           if (u.docChanged || u.selectionSet) this.app.workspace.editorSuggestManager?.update(this);
           if (u.selectionSet && !this.muted) this.app.workspace.trigger("editor-selection-change", this.editor, this);
         }),
@@ -337,20 +349,54 @@ export class MarkdownView extends TextFileView {
   getMode(): MarkdownViewModeType { return this.mode; }
   setMode(mode: MarkdownViewModeType): void {
     if (mode === this.mode) return;
+    // Carry the folds over: what the mode we leave shows is what the other one should show.
+    const folds = this.foldsReady ? this.currentMode.getFoldInfo() : null;
     this.mode = mode;
     this.sourceEl.toggle(mode === "source");
     this.previewEl.toggle(mode === "preview");
     this.currentMode = mode === "preview" ? this.previewMode : this.editMode;
+    if (folds) { this.foldInfo = folds; this.currentMode.applyFoldInfo(folds); }
     if (mode === "preview") { this.previewMode.set(this.getViewData(), false); this.previewMode.rerender(true); }
+  }
+  /** The reader or editor folded or unfolded something: remember it (a moment later, and when the note closes). */
+  foldsChanged(): void {
+    if (this.applyingFolds || !this.foldsReady || !this.file) return;
+    this.foldsDirty = true;
+    this.saveFoldsSoon();
+  }
+  withFoldsApplied(fn: () => void): void {
+    const was = this.applyingFolds;
+    this.applyingFolds = true;
+    try { fn(); } finally { this.applyingFolds = was; }
+  }
+  private flushFolds(file: TFile | null = this.file): void {
+    this.saveFoldsSoon.cancel();
+    if (!file || !this.foldsDirty || !this.foldsReady) return;
+    this.foldsDirty = false;
+    const info = this.currentMode.getFoldInfo();
+    this.foldInfo = info;
+    this.app.foldManager.save(file, info.folds.length ? info : null);
   }
   getViewData(): string { return this.editor.getValue(); }
   setViewData(data: string, clear: boolean): void {
+    // A freshly loaded note gets its saved folds back (unless its length changed since they were saved).
+    let restored: FoldInfo | null = null;
+    const restore = clear && this.restoreFolds && !!this.file;
+    if (restore) {
+      this.restoreFolds = false;
+      restored = parseFoldInfo(this.app.foldManager.load(this.file as TFile), countLines(data));
+      this.foldInfo = restored;
+      this.foldsDirty = false;
+      this.foldsReady = true;
+      this.previewMode.applyFoldInfo(restored);
+    }
     this.muted = true;
     try {
       const cm = this.cm;
       if (cm.state.doc.toString() !== data) cm.dispatch({ changes: { from: 0, to: cm.state.doc.length, insert: data }, selection: clear ? { anchor: 0 } : undefined });
       if (clear) clearEditorHistory(cm);
     } finally { this.muted = false; }
+    if (restored) this.editMode.applyFoldInfo(restored);
     this.previewMode.set(data, clear);
   }
   clear(): void { this.setViewData("", true); }
@@ -390,8 +436,19 @@ export class MarkdownView extends TextFileView {
     if (state.focus) ed.focus();
   }
   async onLoadFile(file: TFile): Promise<void> {
+    this.restoreFolds = true;
     await super.onLoadFile(file);
+    this.restoreFolds = false;
+    this.foldsReady = true;
     this.app.workspace.trigger("quick-preview", file, this.data);
+  }
+  async onUnloadFile(file: TFile): Promise<void> {
+    this.flushFolds(file);
+    this.foldsReady = false;
+    this.foldsDirty = false;
+    this.foldInfo = null;
+    this.previewMode.applyFoldInfo(null);
+    await super.onUnloadFile(file);
   }
   onunload(): void {
     this.cm.destroy();

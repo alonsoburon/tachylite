@@ -124,6 +124,28 @@ await step("fold-more-less", async () => {
   await until("fold less showed them again", () => lines() >= before);
 });
 
+await step("persisted-folds", async () => {
+  // Fold a reading-view heading, close the tab, open the note again: the fold comes back (stored like Obsidian does).
+  const first = await open("Doc.md");
+  await first.view.setState({ ...first.view.getState(), mode: "preview" }, { history: false });
+  const arrow = await until("reading view heading arrows", () => first.view.previewEl.querySelector(".heading-collapse-indicator"));
+  arrow.click();
+  await until("heading collapsed", () => first.view.previewEl.querySelector("h1.is-collapsed"));
+  first.detach();
+  await sleep(200);
+  const key = app.appId + "-note-fold-Doc.md";
+  const saved = JSON.parse(localStorage.getItem(key) ?? "null");
+  if (!saved || saved.folds.length !== 1 || saved.folds[0].from !== 0) { log("FAIL fold not stored in Obsidian's shape: " + localStorage.getItem(key)); await ipc.quitApp(); throw new Error("smoke: folds"); }
+  const again = await open("Doc.md");
+  await again.view.setState({ ...again.view.getState(), mode: "preview" }, { history: false });
+  await until("fold restored in the reading view", () => again.view.previewEl.querySelector("h1.is-collapsed"));
+  await shot("persisted-folds");
+  await again.view.setState({ ...again.view.getState(), mode: "source" }, { history: false });
+  await until("fold restored in the editor", () => document.querySelectorAll(".cm-fold-indicator.is-collapsed").length >= 1);
+  app.commands.executeCommandById("editor:unfold-all");
+  await sleep(100);
+});
+
 await step("backlinks-in-document", async () => {
   const view = (await open("Doc.md")).view;
   cmd("backlink:toggle-backlinks-in-document");

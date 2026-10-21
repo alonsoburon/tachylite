@@ -54,6 +54,18 @@ export interface RenderContext {
   foldHeading?: boolean;
   /** Show fold arrows on list items that have sub-lists (same scope as `foldHeading`). */
   foldIndent?: boolean;
+  /**
+   * Fold state of the note's own reading view, keyed on 0-based source lines. `has` says whether the heading or list item
+   * starting on `line` starts folded; `toggled` reports a fold or unfold by the reader (`to` is the line after the
+   * folded block). Every foldable element reports itself through `known`.
+   */
+  folds?: ReadingFolds;
+}
+
+export interface ReadingFolds {
+  has(kind: "heading" | "item", line: number): boolean;
+  known(kind: "heading" | "item", line: number, to: number): void;
+  toggled(kind: "heading" | "item", line: number, to: number, folded: boolean): void;
 }
 
 export interface RenderViewOptions {

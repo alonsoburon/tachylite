@@ -6,14 +6,14 @@ import { installLinkedTabs } from "./linked/linkedTabs";
 import {
   indentListLess, indentListMore, insertLink, toggleBold, toggleChecklist, toggleTask, toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough,
 } from "../editor";
-import { coloredHighlight, foldLess, foldMore, HIGHLIGHT_COLORS, linkAt, TABLE_COMMANDS, tableTransaction } from "../editor";
+import { coloredHighlight, foldEverything, foldLess, foldMore, HIGHLIGHT_COLORS, linkAt, TABLE_COMMANDS, tableTransaction } from "../editor";
 import { openExternal } from "./bridge";
 import { registerEditorExtras } from "./editorExtraCommands";
 import {
   deleteParagraph, insertCallout, insertCodeBlock, insertEmbed, insertHorizontalRule, insertMathBlock, insertTable, insertTag, insertWikilink,
   clearFormatting, cycleListChecklist, toggleWrap, insertFootnote, setHeading, toggleBlockquote, toggleBulletList, toggleNumberedList,
 } from "../editor";
-import { foldAll, toggleFold, unfoldAll } from "@codemirror/language";
+import { toggleFold, unfoldAll } from "@codemirror/language";
 import { addCursorAbove, addCursorBelow, moveLineDown, moveLineUp } from "@codemirror/commands";
 import { openSearchPanel } from "@codemirror/search";
 import type { EditorView } from "@codemirror/view";
@@ -208,7 +208,7 @@ export function installCommands(app: App, history: History): () => void {
   ed("editor:toggle-checklist-status", "Toggle checkbox status", toggleChecklist, mod("l"));
   ed("editor:indent-list", "Indent list item", indentListMore);
   ed("editor:unindent-list", "Unindent list item", indentListLess);
-  ed("editor:fold-all", "Fold all headings and lists", foldAll);
+  ed("editor:fold-all", "Fold all headings and lists", foldEverything);
   ed("editor:unfold-all", "Unfold all headings and lists", unfoldAll);
   ed("editor:toggle-fold", "Toggle fold on the current line", toggleFold);
   ed("editor:fold-more", "Fold more", foldMore);

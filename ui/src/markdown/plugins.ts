@@ -265,6 +265,11 @@ function headingRule(state: StateCore): void {
   }
 }
 
+/** `data-line` (0-based source line) on list items, as Obsidian's reading view has; the fold state is keyed on it. */
+function listLineRule(state: StateCore): void {
+  for (const t of state.tokens) if (t.type === "list_item_open" && t.map) t.attrSet("data-line", String(t.map[0]));
+}
+
 function taskRule(state: StateCore): void {
   const toks = state.tokens;
   for (let i = 2; i < toks.length; i++) {
@@ -344,6 +349,7 @@ export function createMarkdownIt(opts: { strictLineBreaks: boolean }): MdType {
   md.block.ruler.before("fence", "math_block", mathBlockRule, { alt: ["paragraph", "reference", "blockquote", "list"] });
 
   md.core.ruler.push("tachylite_headings", headingRule);
+  md.core.ruler.push("tachylite_list_lines", listLineRule);
   md.core.ruler.push("tachylite_tasks", taskRule);
   md.core.ruler.push("tachylite_blockids", blockIdRule);
 

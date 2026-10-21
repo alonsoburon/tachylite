@@ -73,3 +73,20 @@ export const foldLess = (view: EditorView): boolean => {
   view.dispatch({ effects: unfoldEffect.of(outer) });
   return true;
 };
+
+/**
+ * "Fold all headings and lists": every foldable line, nested ones included (CodeMirror's own foldAll skips what lies
+ * inside an outer fold, so unfolding the outer one would show everything open; Obsidian keeps the inner folds).
+ */
+export const foldEverything = (view: EditorView): boolean => {
+  const { state } = view;
+  const effects = [];
+  for (let n = 1; n <= state.doc.lines; n++) {
+    const line = state.doc.line(n);
+    const r = foldable(state, line.from, line.to);
+    if (r && !isFolded(view, r.from)) effects.push(foldEffect.of(r));
+  }
+  if (!effects.length) return false;
+  view.dispatch({ effects });
+  return true;
+};

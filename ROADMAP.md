@@ -14,10 +14,15 @@ dump plugin in `tools/obsidian-dump/` run inside a real Obsidian (steps in its R
 
 ## Ready
 
-### 1. Persisted reading-view folds
-- Accept: folds on headings and lists in the reading view are remembered per note across closing and reopening, and stored
-  where Obsidian stores them (check the real app: run the fold, read `app.workspace.getLayout()`).
-- Verified how: unit tests; storage format against the real app (`scripts/obsidian-reference.sh` with `OBSIDIAN_EVAL`).
+### 1. Persisted reading-view folds (done)
+- Stored like Obsidian 1.14.4 does (read from the real app with `OBSIDIAN_EVAL`): `localStorage["<appId>-note-fold-<path>"]` =
+  `{"folds":[{"from","to"}],"lines":N}`, saved a moment after a fold changes and when the note closes, removed when no fold
+  is left, ignored when the note's line count changed. `from` is the 0-based header line. Editor `to` = last hidden line
+  (blank lines after the block included); reading-view `to` = `from + 1` for a heading and the line after the item and its
+  sub-items for a list item. Restoring only uses `from`, so both modes read each other's saves, and switching mode carries
+  the folds over. Not copied: Obsidian wrote `to: 2` for the first list item of one test note, which looks like a quirk.
+- "Fold all headings and lists" now folds nested blocks too, like Obsidian (CodeMirror's own skips them).
+- Seen in the real window by `scripts/smoke.sh` (step persisted-folds).
 
 ### 2. Graph bookmarks
 - Accept: a graph view with its settings can be bookmarked (`type: "graph"`) and reopened.
