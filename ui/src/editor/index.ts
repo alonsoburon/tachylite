@@ -21,3 +21,4 @@ export * from "./blockCommands";
 export { linkAt, type LinkAt } from "./linkAt";
 
 export { TABLE_COMMANDS, tableAt, tableTransaction, type TableOp } from "./tableCommands";
+export { coloredHighlight, foldLess, foldMore, HIGHLIGHT_COLORS } from "./editorExtras";

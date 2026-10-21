@@ -5,3 +5,4 @@ node_modules/
 /ui/.cache/
 /compat/reference-report.txt
 /compat/reference-report-cache.txt
+/.claude/

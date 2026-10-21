@@ -81,3 +81,33 @@ describe("Bookmark current heading", () => {
     await vi.waitFor(() => expect(saved().map((i: any) => i.subpath)).toEqual(["#Second part"]));
   });
 });
+
+describe("Bookmark block under cursor", () => {
+  it("gives the block an id when it has none, bookmarks it, and reuses an existing id", async () => {
+    v.cleanup();
+    v = makeVault({ "Blk.md": "# Head\n\nplain paragraph\n\nowned paragraph ^own1\n" });
+    setBackend(async (cmd, a) => {
+      switch (cmd) {
+        case "meta_backlinks": case "meta_tags": return {};
+        case "vault_search": return [];
+        case "launch_args": return { vault: null, script: null };
+        case "log_frontend": return null;
+        default: return v.backend(cmd, a);
+      }
+    });
+    const app = await boot();
+    await app.workspace.openLinkText("Blk", "", false);
+    const view = app.workspace.activeLeaf!.view as any;
+    await vi.waitFor(() => expect(app.metadataCache.getFileCache(app.vault.getFileByPath("Blk.md")!)?.sections?.length).toBe(3));
+    view.editor.setCursor({ line: 0, ch: 1 });
+    expect(app.commands.executeCommandById("bookmarks:bookmark-current-section")).toBe(false); // a heading is not a block
+    view.editor.setCursor({ line: 2, ch: 3 });
+    expect(app.commands.executeCommandById("bookmarks:bookmark-current-section")).toBe(true);
+    expect(view.editor.getLine(2)).toMatch(/^plain paragraph \^[a-z0-9]{6}$/);
+    await vi.waitFor(() => expect(saved().length).toBe(1));
+    expect(saved()[0].subpath).toBe("#^" + /\^([a-z0-9]{6})$/.exec(view.editor.getLine(2))![1]);
+    view.editor.setCursor({ line: 4, ch: 2 });
+    app.commands.executeCommandById("bookmarks:bookmark-current-section");
+    await vi.waitFor(() => expect(saved().map((i: any) => i.subpath)).toContain("#^own1"));
+  });
+});

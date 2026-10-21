@@ -325,6 +325,29 @@ export const bookmarks: CoreModule = {
           },
         }),
         addCommand(app, {
+          id: "bookmarks:bookmark-current-section", name: "Bookmarks: Bookmark block under cursor...", icon: "lucide-bookmark-plus",
+          editorCheckCallback: (checking, editor, ctx) => {
+            const f = (ctx as any).file as TFile | null;
+            if (!f || f.extension !== "md") return false;
+            const cache = app.metadataCache.getFileCache(f);
+            const line = editor.getCursor().line;
+            const sec = (cache?.sections ?? []).find((s) => s.position.start.line <= line && line <= s.position.end.line && s.type !== "yaml" && s.type !== "heading" && s.type !== "thematicBreak");
+            if (!sec) return false;
+            if (!checking) {
+              // The id the block already has, else give it one at the end of the block (the cursor's item inside a list).
+              const own = Object.values(cache?.blocks ?? {}).find((b) => b.position.end.line === (sec.type === "list" ? line : sec.position.end.line));
+              let id = sec.id ?? own?.id;
+              if (!id) {
+                id = Math.random().toString(36).slice(2, 8);
+                const at = sec.type === "list" ? line : sec.position.end.line;
+                editor.replaceRange(` ^${id}`, { line: at, ch: editor.getLine(at).length });
+              }
+              store.toggleFile(f, "#^" + id);
+            }
+            return true;
+          },
+        }),
+        addCommand(app, {
           id: "bookmarks:bookmark-current-heading", name: "Bookmarks: Bookmark heading under cursor...", icon: "lucide-bookmark-plus",
           editorCheckCallback: (checking, editor, ctx) => {
             const f = (ctx as any).file as TFile | null;

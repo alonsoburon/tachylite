@@ -3,8 +3,9 @@ import { FileView, FuzzySuggestModal, MarkdownView, Modal, Notice, Platform, TFi
 import {
   indentListLess, indentListMore, insertLink, toggleBold, toggleChecklist, toggleTask, toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough,
 } from "../editor";
-import { linkAt, TABLE_COMMANDS, tableTransaction } from "../editor";
+import { coloredHighlight, foldLess, foldMore, HIGHLIGHT_COLORS, linkAt, TABLE_COMMANDS, tableTransaction } from "../editor";
 import { openExternal } from "./bridge";
+import { registerEditorExtras } from "./editorExtraCommands";
 import {
   deleteParagraph, insertCallout, insertCodeBlock, insertEmbed, insertHorizontalRule, insertMathBlock, insertTable, insertTag, insertWikilink,
   clearFormatting, cycleListChecklist, toggleWrap, insertFootnote, setHeading, toggleBlockquote, toggleBulletList, toggleNumberedList,
@@ -196,6 +197,9 @@ export function installCommands(app: App, history: History): () => void {
   ed("editor:fold-all", "Fold all headings and lists", foldAll);
   ed("editor:unfold-all", "Unfold all headings and lists", unfoldAll);
   ed("editor:toggle-fold", "Toggle fold on the current line", toggleFold);
+  ed("editor:fold-more", "Fold more", foldMore);
+  ed("editor:fold-less", "Fold less", foldLess);
+  for (const [color, emoji] of Object.entries(HIGHLIGHT_COLORS)) ed(`editor:toggle-highlight-${color}`, `Toggle ${color} highlight`, (v) => coloredHighlight(emoji)({ state: v.state, dispatch: v.dispatch.bind(v) }));
   ed("editor:toggle-bullet-list", "Toggle bullet list", toggleBulletList);
   ed("editor:toggle-numbered-list", "Toggle numbered list", toggleNumberedList);
   ed("editor:toggle-blockquote", "Toggle blockquote", toggleBlockquote);
@@ -217,6 +221,7 @@ export function installCommands(app: App, history: History): () => void {
   ed("editor:toggle-comments", "Toggle comment", toggleWrap("%%"), mod("/"));
   ed("editor:add-cursor-above", "Add cursor above", addCursorAbove);
   ed("editor:add-cursor-below", "Add cursor below", addCursorBelow);
+  registerEditorExtras(app, add);
   // Table commands are offered only while the cursor is in a Markdown table.
   for (const t of TABLE_COMMANDS) {
     add({ id: t.id, name: t.name, editorCheckCallback: (checking, editor) => {
