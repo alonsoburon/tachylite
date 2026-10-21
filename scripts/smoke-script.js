@@ -184,14 +184,34 @@ await step("stacked-tabs", async () => {
 });
 
 await step("linked-tabs", async () => {
+  // "Link with tab..." from the tab header's real context menu, then a click on the other tab; then "Open linked view".
+  const menuItem = async (leaf, title) => {
+    leaf.tabHeaderEl.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 300, clientY: 20 }));
+    await until("tab menu opens", () => document.querySelector(".menu .menu-item"));
+    const item = [...document.querySelectorAll(".menu .menu-item")].find((i) => i.querySelector(".menu-item-title")?.textContent === title);
+    if (!item) { log("FAIL tab menu has no '" + title + "': " + [...document.querySelectorAll(".menu-item-title")].map((e) => e.textContent).join(" | ")); await ipc.quitApp(); throw new Error("smoke: tab menu"); }
+    return item;
+  };
   const a = await open("Doc.md", true);
   const b = await open("Other.md", true);
-  a.setGroupMember(b);
+  (await menuItem(b, "Link with tab...")).click();
+  await until("link picking overlay", () => document.querySelector(".tachylite-link-picking"));
+  a.tabHeaderEl.click();
   await until("both tabs in one group", () => a.group && a.group === b.group);
   await until("linked marker in the tab header", () => b.tabHeaderEl.querySelector(".workspace-tab-header-status-icon.mod-linked") !== null);
   await sleep(300);
   await shot("linked-tabs-marked");
-  a.setGroup(null); b.setGroup(null);
+  (await menuItem(b, "Unlink tab")).click();
+  await until("unlinked", () => !a.group && !b.group);
+  const before = app.workspace.getLeavesOfType("outline").length;
+  const lv = await menuItem(a, "Open linked view");
+  lv.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true })); lv.click();
+  await sleep(400);
+  const sub = await until("linked view submenu", () => [...document.querySelectorAll(".menu .menu-item")].find((i) => i.querySelector(".menu-item-title")?.textContent === "Open outline"));
+  await shot("open-linked-view-menu");
+  sub.click();
+  await until("outline opened in a tab linked to the note", () => app.workspace.getLeavesOfType("outline").length > before && app.workspace.getLeavesOfType("outline").some((o) => o.group && app.workspace.getLeavesOfType("markdown").some((m) => m.group === o.group)));
+  document.querySelector(".menu")?.remove();
 });
 
 await step("export-pdf-modal", async () => {
@@ -248,10 +268,17 @@ await step("graph-animation", async () => {
   await app.commands.executeCommandById("graph:open");
   const view = await until("graph view", () => app.workspace.getLeavesOfType("graph")[0]?.view);
   await until("graph canvas", () => view.containerEl.querySelector("canvas"));
+  // The time-lapse needs notes created at different times.
+  await mk("Old.md", "old\n");
+  await sleep(1300);
+  await mk("New.md", "new [[Old]]\n");
   cmd("graph:animate");
-  await sleep(600);
+  const first = await until("time-lapse started (cutoff set)", () => view.animCutoff);
+  await sleep(1500);
   await shot("graph-animating");
+  if (!(view.animCutoff > first)) { log("FAIL time-lapse cutoff did not advance " + first + " -> " + view.animCutoff); await ipc.quitApp(); throw new Error("smoke: animation"); }
   view.stopAnimation?.(false);
+  await until("time-lapse stopped", () => view.animCutoff === null);
 });
 
 await step("graph-bookmark", async () => {
