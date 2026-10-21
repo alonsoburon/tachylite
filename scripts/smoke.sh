@@ -19,7 +19,9 @@ log="$work/frontend.log"
 mkdir -p "$vault/.obsidian"
 printf '# Smoke\nSee [[Target]]\n' > "$vault/Note.md"
 printf '# Target\n' > "$vault/Target.md"
-cp scripts/smoke-script.js "$work/script.js"
+shots="${SMOKE_SHOTS:-/tmp/tachylite-smoke-shots}"
+mkdir -p "$shots"
+{ printf 'const SMOKE_SHOTS = %s;\n' "\"$shots\""; cat scripts/smoke-script.js; } > "$work/script.js"
 
 trap isolated_cleanup EXIT
 
@@ -77,12 +79,14 @@ focus
 xdotool type --delay 40 " hello smoke"
 wait_for "SMOKE OK typing" 15
 wait_for "SMOKE OK rename" 15
-wait_for "SMOKE DONE" 15
+wait_for "SMOKE OK stacked-tabs" 90
+wait_for "SMOKE DONE" 90
 
 # The app must exit by itself after quitApp.
 for _ in $(seq 1 100); do kill -0 "$app" 2>/dev/null || break; sleep 0.1; done
 if kill -0 "$app" 2>/dev/null; then fail "the app did not exit after quit"; fi
 wait "$app" 2>/dev/null || fail "the app exited with an error"
 
-echo "SMOKE PASSED (note opened, Live Preview, status bar, Ctrl+P palette, typing, rename rewrote the link, clean exit)"
+echo "screenshots: $shots"
+echo "SMOKE PASSED (features: tables, highlights, rename heading, menu, backlinks, stacked and linked tabs, PDF modal, canvas, bases, graph; note opened, Live Preview, status bar, Ctrl+P palette, typing, rename rewrote the link, clean exit)"
 grep '^\[warn\] SMOKE' "$log" || true

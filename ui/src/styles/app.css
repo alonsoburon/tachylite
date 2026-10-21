@@ -387,3 +387,6 @@ body.is-ribbon-hidden .workspace-ribbon.side-dock-ribbon { display: none; }
 
 /* Audio recorder core plugin: the recording indicator */
 .status-bar-item.plugin-audio-recorder.mod-recording { color: var(--text-error); }
+
+/* Name prompt (canvas "Convert to file"): one full-width line, not a default-sized textarea. */
+.modal.mod-file-rename .rename-textarea { display: block; width: 100%; height: calc(var(--input-height, 30px) + 2px); min-height: 0; resize: none; overflow: hidden; line-height: 1.4; }

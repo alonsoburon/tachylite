@@ -130,7 +130,7 @@ export class WorkspaceTabs extends WorkspaceParent {
       for (const c of this.children as WorkspaceLeaf[]) {
         this.tabHeaderContainerEl.appendChild(c.tabHeaderEl);
         c.tabHeaderEl.style.left = c.tabHeaderEl.style.right = "";
-        c.containerEl.style.left = c.containerEl.style.minWidth = c.containerEl.style.maxWidth = "";
+        c.containerEl.style.minWidth = c.containerEl.style.maxWidth = "";
       }
     }
     this.refreshTabs();
@@ -163,10 +163,16 @@ export class WorkspaceTabs extends WorkspaceParent {
       leaf.tabHeaderEl.toggleClass("is-active", on);
       leaf.containerEl.style.display = "";
       leaf.containerEl.removeClass("mod-hidden");
-      leaf.containerEl.style.left = `${(i + 1) * strip}px`;
       leaf.containerEl.style.minWidth = "300px";
       leaf.containerEl.style.maxWidth = "600px";
     });
+    // Bring the active pane into view: panes sit side by side after their header strips; the strips before it stay stuck on
+    // the left, so pane i is visible when the container is scrolled past i panes.
+    const i = this.currentTab, active = this.children[i] as WorkspaceLeaf | undefined;
+    if (active) {
+      const w = active.containerEl.getBoundingClientRect().width || 600;
+      this.tabContainerEl.scrollLeft = i * w;
+    }
   }
   refreshTabs(): void {
     if (this.isStacked) { this.layoutStacked(); return; }

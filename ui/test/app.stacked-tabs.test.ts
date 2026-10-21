@@ -31,7 +31,8 @@ it("the command toggles mod-stacked, moves headers next to their panes and seria
   expect(kids.map((k) => k.classList.contains("workspace-tab-header"))).toEqual(Array.from({ length: n * 2 }, (_, i) => i % 2 === 0));
   expect(kids[0].style.left).toBe("0px");
   expect(kids[0].style.right).toBe(`${(n - 1) * 40}px`);
-  expect(kids[1].style.left).toBe("40px");
+  expect(kids[1].style.left).toBe(""); // panes stay in normal flow; only the header strips are sticky
+  expect(kids[2].style.left).toBe("40px");
   expect(kids.filter((k) => k.classList.contains("workspace-leaf")).every((k) => k.style.display === "")).toBe(true);
   const saved = (s.app.workspace.getLayout() as any).main.children.find((c: any) => c.type === "tabs");
   expect(saved.stacked).toBe(true);
