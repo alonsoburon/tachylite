@@ -269,10 +269,4 @@ describe("make a copy (names and behaviour recorded from Obsidian 1.14.4)", () =
     expect(c.app.workspace.getActiveFile()?.path).toBe("Alpha 1.md");
   });
 
-  it("Show deleted files only exists with the local trash", async () => {
-    const cmd = c.app.commands.commands["workspace:show-trash"];
-    expect(cmd.checkCallback!(true)).toBe(false);
-    c.app.vault.setConfig("trashOption", "local");
-    expect(cmd.checkCallback!(true)).toBe(true);
-  });
 });

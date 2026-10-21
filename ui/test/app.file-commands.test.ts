@@ -182,4 +182,13 @@ describe("app and window commands", () => {
     expect([...document.querySelectorAll(".menu-item-title")].map((e) => e.textContent)).toEqual(expect.arrayContaining(["Add link", "Cut", "Paste"]));
     for (const id of ["window:toggle-always-on-top", "app:open-vault"]) expect(app.commands.commands[id], id).toBeTruthy();
   });
+
+  it("Show deleted files needs the local trash; the outside-vault commands exist", async () => {
+    const app = await boot();
+    for (const id of ["app:open-sandbox-vault", "app:open-another-vault", "app:open-file"]) expect(app.commands.commands[id], id).toBeTruthy();
+    const cmd = app.commands.commands["workspace:show-trash"];
+    expect(cmd.checkCallback!(true)).toBe(false);
+    app.vault.setConfig("trashOption", "local");
+    expect(cmd.checkCallback!(true)).toBe(true);
+  });
 });
