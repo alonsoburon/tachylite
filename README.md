@@ -125,9 +125,10 @@ completing tasks), Kanban (boards, adding cards), QuickAdd (capture choices) and
 - Audio recorder is written and tested against a fake recorder, but I haven't tried it with a real
   microphone, and I haven't checked that the webview is allowed to open one. Format converter and
   Web viewer don't exist yet.
-- A handful of Obsidian commands and features don't exist yet: stacked tabs, "Fold more/less", "Export to
-  PDF" and heading folds that survive closing a note. Some command ids and default hotkeys here are written
-  from memory of Obsidian's, not checked against it, so a plugin that calls one by id may not find it.
+- Newer features were built from a real Obsidian's menus and DOM but have only been tested in a headless DOM, not
+  clicked through in a Tachylite window: stacked tabs, export to PDF, linked tabs, backlinks in document, canvas image
+  export, the graph time-lapse and the file-dialog commands. Reading-view folds don't survive closing a note. Some
+  guesses are listed in `ROADMAP.md`.
 - Sync and Publish are out of scope. They show up as unavailable in the Core plugins list.
 
 ## License

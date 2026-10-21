@@ -192,3 +192,25 @@ describe("app and window commands", () => {
     expect(cmd.checkCallback!(true)).toBe(true);
   });
 });
+
+describe("theme:switch", () => {
+  it("lists Default and the installed themes and applies the chosen one", async () => {
+    v.cleanup();
+    v = makeVault({ "Note.md": "x\n", ".obsidian/themes/Zed/theme.css": "body{--x:1}", ".obsidian/themes/Alpha/theme.css": "body{--y:2}", ".obsidian/themes/Alpha/manifest.json": "{\"name\":\"Alpha\"}" });
+    setBackend(async (cmd, a) => {
+      switch (cmd) {
+        case "meta_backlinks": case "meta_tags": return {};
+        case "vault_search": return [];
+        case "launch_args": return { vault: null, script: null };
+        case "log_frontend": return null;
+        default: return v.backend(cmd, a);
+      }
+    });
+    const app = await boot();
+    expect(app.commands.executeCommandById("theme:switch")).toBe(true);
+    await vi.waitFor(() => expect([...document.querySelectorAll(".suggestion-item")].map((e) => e.textContent)).toEqual(["Default", "Alpha", "Zed"]));
+    (document.querySelectorAll(".suggestion-item")[1] as HTMLElement).click();
+    await vi.waitFor(() => expect(app.customCss.theme).toBe("Alpha"));
+    await vi.waitFor(() => expect(JSON.parse(fs.readFileSync(path.join(v.root, ".obsidian/appearance.json"), "utf8")).cssTheme).toBe("Alpha"));
+  });
+});

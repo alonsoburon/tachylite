@@ -80,6 +80,15 @@ export function installCommands(app: App, history: History): () => void {
   add({ id: "app:open-vault", name: "Manage vaults", callback: openVaultSwitcher });
   add({ id: "window:toggle-always-on-top", name: "Toggle window always on top", callback: () => { void ipc.toggleAlwaysOnTop().catch((e) => new Notice(String(e?.message ?? e))); } });
   add({ id: "theme:toggle-light-dark", name: "Toggle light/dark mode", callback: () => { void updateAppearance(app, { theme: app.isDarkMode() ? "moonstone" : "obsidian" }); } });
+  add({ id: "theme:switch", name: "Change theme...", callback: () => {
+    class ThemePicker extends FuzzySuggestModal<string> {
+      constructor() { super(app); this.setPlaceholder("Change theme..."); }
+      getItems(): string[] { return ["Default", ...Object.keys(app.customCss.themes).sort((a, b) => a.localeCompare(b))]; }
+      getItemText(name: string): string { return name; }
+      onChooseItem(name: string): void { void app.customCss.setTheme(name); }
+    }
+    new ThemePicker().open();
+  } });
   add({ id: "app:toggle-default-new-pane-mode", name: "Toggle default mode for new tabs", callback: () => {
     const reading = app.vault.getConfig("defaultViewMode") === "preview";
     commitConfig(app, "defaultViewMode", reading ? "source" : "preview");
