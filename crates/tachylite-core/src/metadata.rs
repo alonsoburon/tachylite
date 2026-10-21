@@ -106,7 +106,7 @@ impl MetadataCache {
                 .iter()
                 .map(|l| l.link.as_str())
                 .chain(meta.embeds.iter().map(|l| l.link.as_str()))
-                .chain(meta.frontmatter_links.iter().map(|l| l.link.as_str()))
+                .chain(meta.frontmatter_links.iter().flatten().map(|l| l.link.as_str()))
                 .collect();
             (src, refs)
         });
