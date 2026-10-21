@@ -367,6 +367,7 @@ export class WorkspaceLeaf extends WorkspaceItem {
     const inner = this.tabHeaderEl.createDiv({ cls: "workspace-tab-header-inner" });
     this.tabHeaderIconEl = inner.createDiv({ cls: "workspace-tab-header-inner-icon" });
     this.tabHeaderTitleEl = inner.createDiv({ cls: "workspace-tab-header-inner-title" });
+    inner.createDiv({ cls: "workspace-tab-header-status-container" });
     this.tabHeaderEl.addEventListener("click", () => { this.app.workspace.setActiveLeaf(this, { focus: true }); });
     this.view = new EmptyView(this);
     this.mountView(this.view);
@@ -470,7 +471,12 @@ export class WorkspaceLeaf extends WorkspaceItem {
     this.trigger("pinned-change", p);
   }
   setGroupMember(other: WorkspaceLeaf): void { this.setGroup(other.group ?? other.id); if (!other.group) other.setGroup(other.id); }
-  setGroup(group: string): void { this.group = group; this.trigger("group-change", group); }
+  setGroup(group: string | null): void {
+    this.group = group;
+    this.trigger("group-change", group);
+    this.app.workspace?.trigger("layout-change");
+    this.app.workspace?.requestSaveLayout();
+  }
   getIcon(): string { return this.view.getIcon(); }
   getDisplayText(): string { return this.view.getDisplayText(); }
   onResize(): void { this.view.onResize(); }
@@ -940,6 +946,7 @@ export class Workspace extends Events {
           for (const l of c.children ?? []) {
             const leaf = new WorkspaceLeaf(this.app);
             if (l.id) leaf.id = l.id;
+            if (typeof l.group === "string") leaf.group = l.group;
             tabs.insertChild(tabs.children.length, leaf);
             this.recent.push(leaf);
             await leaf.setViewState(l.state ?? { type: "empty" });

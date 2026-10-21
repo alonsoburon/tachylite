@@ -9,3 +9,4 @@ import "./app-settings.css";
 import "./canvas.css";
 import "./bases.css";
 import "./properties.css";
+import "./print.css";

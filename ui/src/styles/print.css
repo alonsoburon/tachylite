@@ -1,0 +1,21 @@
+/* Export to PDF: the print-only container is hidden on screen; when printing, everything but it is hidden. */
+.print { display: none; }
+@media print {
+  body.is-printing > *:not(.print) { display: none !important; }
+  body.is-printing { overflow: visible !important; height: auto !important; background: #fff; }
+  body.is-printing > .print { display: block; position: static; }
+  body.is-printing .print .markdown-preview-view { height: auto; overflow: visible; padding: 0; }
+  body.is-printing .print .markdown-preview-sizer { max-width: none; margin: 0; }
+}
+
+/* Backlinks in document */
+.embedded-backlinks { max-width: var(--file-line-width, 700px); margin: 0 auto; padding: var(--size-4-4) var(--size-4-2); }
+.markdown-preview-sizer > .mod-footer { margin-top: var(--size-4-8); }
+
+/* Linked tabs: the dim layer while picking a tab to link with must let clicks through to the tabs underneath. */
+.suggestion-bg.tachylite-link-picking { position: fixed; inset: 0; pointer-events: none; background: var(--background-modifier-cover, rgba(0, 0, 0, 0.4)); opacity: 0.5; z-index: var(--layer-cover, 10); }
+.workspace-tab-header-status-icon.mod-linked { display: flex; align-items: center; color: var(--text-muted); cursor: pointer; }
+.workspace-tab-header-status-icon.mod-linked svg { width: var(--icon-xs, 14px); height: var(--icon-xs, 14px); }
+/* In the editor the panel is the last child of the scroller: wrap it onto its own line below the text. */
+.cm-scroller:has(> .embedded-backlinks) { flex-wrap: wrap; }
+.cm-scroller > .embedded-backlinks { flex: 0 0 100%; box-sizing: border-box; }

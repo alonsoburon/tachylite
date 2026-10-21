@@ -8,6 +8,7 @@ import { setIcon } from "../obsidian/icons";
 import { editorHandles, openExternal } from "./bridge";
 import { buildFileMenu, copyText, renameTo } from "./files";
 import { metadataEditorIn } from "./properties/embed";
+import { addBacklinksMenuItem, applyBacklinksState, backlinksState, placeBacklinks } from "./linked/backlinksInDocument";
 
 function titleEl(view: TachyMarkdownView): HTMLElement {
   const el = createDiv({ cls: "inline-title", attr: { contenteditable: "true", spellcheck: "false", "data-placeholder": "Untitled" } });
@@ -100,6 +101,7 @@ export class TachyMarkdownView extends MarkdownView {
   setMode(mode: "source" | "preview"): void {
     super.setMode(mode);
     this.updateModeAction();
+    placeBacklinks(this);
     this.app.workspace.trigger("layout-change");
     if (mode === "source" && this.leaf === this.app.workspace.activeLeaf) setTimeout(() => this.editor.focus(), 0);
   }
@@ -158,7 +160,7 @@ export class TachyMarkdownView extends MarkdownView {
     this.modeActionEl.setAttribute("aria-label", reading ? "Current view: reading\nClick to edit" : `Current view: ${this.editMode.sourceMode ? "source" : "live preview"}\nClick to read`);
   }
 
-  getState(): Record<string, unknown> { return { ...super.getState(), source: this.editMode.sourceMode }; }
+  getState(): Record<string, unknown> { return { ...super.getState(), source: this.editMode.sourceMode, ...backlinksState(this) }; }
   async setState(state: any, result: { history: boolean }): Promise<void> {
     if (typeof state?.source === "boolean") this.setSourceMode(state.source);
     if (!this.modeInitialised) {
@@ -166,11 +168,13 @@ export class TachyMarkdownView extends MarkdownView {
       if (state?.mode === undefined && this.app.vault.getConfig("defaultViewMode") === "preview") this.setMode("preview");
     }
     await super.setState(state, result);
+    applyBacklinksState(this, state);
     this.updateModeAction();
   }
   async onLoadFile(file: any): Promise<void> {
     editorHandles.get(this.cm)?.setSourcePath(file.path);
     await super.onLoadFile(file);
+    placeBacklinks(this);
     // A fresh note opens with the caret after the properties block so Live Preview shows them as a table, not raw YAML.
     const fm = FRONTMATTER_RE.exec(this.data);
     if (fm && !this.editMode.sourceMode && this.cm.state.selection.main.head < fm[0].length) {
@@ -201,6 +205,7 @@ export class TachyMarkdownView extends MarkdownView {
     const el = titleEl(this);
     (this.inlineTitleEls ??= new Set()).add(el);
     sizer.appendChild(el);
+    queueMicrotask(() => { void this.previewMode.whenRendered().then(() => placeBacklinks(this)); });
   }
 
   focusInlineTitle(): void {
@@ -229,6 +234,7 @@ export class TachyMarkdownView extends MarkdownView {
   /** "Reading view" (or "Editing view") and "Source mode" entries, shared by the tab header and More options menus. */
   addModeItems(menu: Menu): void {
     const reading = this.getMode() === "preview";
+    addBacklinksMenuItem(menu, this);
     menu.addItem((i) => i.setSection("view").setTitle(reading ? "Editing view" : "Reading view").setIcon(reading ? "lucide-edit-3" : "lucide-book-open").onClick(() => this.toggleReading()));
     if (!reading) menu.addItem((i) => i.setSection("view").setTitle("Source mode").setIcon("lucide-code-2").setChecked(this.editMode.sourceMode).onClick(() => this.toggleSource()));
   }

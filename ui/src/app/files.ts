@@ -1,5 +1,6 @@
 // File-level operations shared by the explorer, commands and views (create / rename / delete / move / menus).
 import { ipc } from "../ipc";
+import { addLinkedViewItem } from "./linked/linkedTabs";
 import { FuzzySuggestModal, MarkdownView, Menu, Notice, Platform, TFile, TFolder, type App, type TAbstractFile } from "../obsidian";
 import { confirmDialog, promptText } from "./dialogs";
 
@@ -128,12 +129,14 @@ function buildViewFileMenu(app: App, file: TFile, source: string, menu: Menu): M
   // Plugins (Bookmarks, Note composer) add their entries here, between Move and Add file property.
   app.workspace.trigger("file-menu", menu, file, source, app.workspace.activeLeaf);
   menu.addItem((i) => i.setSection("action").setTitle("Add file property").setIcon("lucide-archive").onClick(run("markdown:add-metadata-property")));
+  if (file.extension === "md") menu.addItem((i) => i.setSection("action").setTitle("Export to PDF...").setIcon("lucide-file-down").onClick(run("workspace:export-pdf")));
   const editing = app.workspace.getActiveViewOfType(MarkdownView)?.getMode() === "source";
   if (editing) {
     menu.addItem((i) => i.setSection("find").setTitle("Find...").setIcon("lucide-search").onClick(run("editor:open-search")));
     menu.addItem((i) => i.setSection("find").setTitle("Replace...").setIcon("lucide-replace").onClick(run("editor:open-search-replace")));
   }
   copyPathItem(app, file, menu);
+  addLinkedViewItem(menu, app, [app.workspace.activeLeaf, ...app.workspace.allLeaves()].find((l) => (l?.view as { file?: TFile } | undefined)?.file === file) ?? null);
   const sys = (reveal: boolean) => () => { void ipc.openInSystem(file.path, reveal).catch((e) => new Notice(String(e?.message ?? e))); };
   menu.addItem((i) => i.setSection("system").setTitle("Open in default app").setIcon("lucide-external-link").onClick(sys(false)));
   menu.addItem((i) => i.setSection("system").setTitle(Platform.isMacOS ? "Reveal in Finder" : "Show in system explorer").setIcon("lucide-folder-open").onClick(sys(true)));
