@@ -256,6 +256,7 @@ export class Shell implements LayoutHost {
       setIcon(list, "lucide-chevron-down");
       list.addEventListener("click", (e) => {
         const m = new Menu();
+        m.addItem((i) => i.setSection("stack").setTitle(tabs.isStacked ? "Unstack tabs" : "Stack tabs").setIcon("lucide-layers").onClick(() => tabs.toggleStacked()));
         for (const l of tabs.children as WorkspaceLeaf[]) m.addItem((i) => i.setTitle(l.getDisplayText()).setIcon(l.getIcon()).onClick(() => this.app.workspace.setActiveLeaf(l, { focus: true })));
         m.showAtMouseEvent(e);
       });
