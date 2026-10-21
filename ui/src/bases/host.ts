@@ -251,11 +251,25 @@ export class BasesController extends QueryController {
   }
   private resultsMenu(): Menu {
     const m = new Menu();
-    m.addItem((it) => it.setTitle("Copy to clipboard").setIcon("lucide-copy").onClick(() => {
-      void navigator.clipboard?.writeText(this.asTable("\t")).then(() => new Notice("Copied to clipboard"), () => {});
-    }));
+    m.addItem((it) => it.setTitle("Copy to clipboard").setIcon("lucide-copy").onClick(() => { void this.copyTable(); }));
     m.addItem((it) => it.setTitle("Export CSV").setIcon("lucide-download").onClick(() => { void this.exportCsv(); }));
     return m;
+  }
+  /** Put the current results on the clipboard as tab-separated text. */
+  async copyTable(): Promise<boolean> {
+    const text = this.asTable("\t");
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch { ok = false; }
+    if (!ok) {
+      // WebKit refuses the async API without a user gesture; a selected textarea and execCommand still work.
+      const ta = document.body.createEl("textarea", { attr: { "aria-hidden": "true" } });
+      ta.value = text;
+      ta.select();
+      try { ok = document.execCommand("copy"); } catch { ok = false; }
+      ta.remove();
+    }
+    new Notice(ok ? "Copied to clipboard" : "Unable to copy to your clipboard");
+    return ok;
   }
   /** Current results as delimited text (header row of display names). */
   asTable(sep: string): string {

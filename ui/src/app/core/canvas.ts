@@ -1,6 +1,7 @@
 // Core plugin "canvas": .canvas files (JSON Canvas) open in the canvas view, embed as previews, and can be created
 // from the ribbon, the command palette and folder menus. Cards follow renamed files, also in canvases that are closed.
 import { Menu, Notice, TFile, TFolder, type App, type TAbstractFile, type WorkspaceLeaf } from "../../obsidian";
+import { ExportImageModal, canvasGroups, convertToFile, openGroupPicker, selectedTextCard } from "../../canvas/commands";
 import { CanvasEmbed } from "../../canvas/embed";
 import { parseCanvas, serializeCanvas } from "../../canvas/model";
 import { CANVAS_VIEW, CanvasView, setCanvasUrlOpener } from "../../canvas/view";
@@ -48,6 +49,31 @@ async function followRenames(app: App, renames: Map<string, string>): Promise<vo
   }
 }
 
+/** Commands that need the active canvas view (checkCallback: only offered while one is active). */
+function viewCommands(app: App): (() => void)[] {
+  const active = () => app.workspace.getActiveViewOfType(CanvasView);
+  return [
+    addCommand(app, { id: "canvas:convert-to-file", name: "Canvas: Convert to file...", icon: "lucide-file-plus", checkCallback: (checking) => {
+      const v = active();
+      if (!v || v.canvas.readonly || !selectedTextCard(v.canvas)) return false;
+      if (!checking) void convertToFile(app, v.canvas).catch((e) => new Notice(String(e?.message ?? e)));
+      return true;
+    } }),
+    addCommand(app, { id: "canvas:export-as-image", name: "Canvas: Export as image", icon: "lucide-image-down", checkCallback: (checking) => {
+      const v = active();
+      if (!v) return false;
+      if (!checking) new ExportImageModal(app, v).open();
+      return true;
+    } }),
+    addCommand(app, { id: "canvas:jump-to-group", name: "Canvas: Jump to group", icon: "lucide-group", checkCallback: (checking) => {
+      const v = active();
+      if (!v || !canvasGroups(v.canvas).length) return false;
+      if (!checking) openGroupPicker(app, v.canvas);
+      return true;
+    } }),
+  ];
+}
+
 export const canvas: CoreModule = {
   id: "canvas",
   install(app: App) {
@@ -77,6 +103,7 @@ export const canvas: CoreModule = {
       const offs = [
         addCommand(app, { id: "canvas:new-file", name: "Canvas: Create new canvas", icon: "lucide-layout-dashboard", callback: () => create() }),
         addRibbon(app, "lucide-layout-dashboard", "Create new canvas", () => create()),
+        ...viewCommands(app),
       ];
       return () => {
         offs.forEach((o) => o());
