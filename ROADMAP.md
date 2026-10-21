@@ -52,6 +52,9 @@ dump plugin in `tools/obsidian-dump/` run inside a real Obsidian (steps in its R
   CSS, `is-printing`) with `window.print` replaced by a recorder, since there is no printer; the canvas image export writes a
   real PNG (700x600 for the test board, checked by decoding it, `canvas-export.png` in the screenshots); `bases:copy-table`
   run with real key presses puts the table text on the real X clipboard (read back with `xclip`).
+- **Tried against the real Obsidian 1.14.4 and could not determine:** the clipboard format of `bases:copy-table`. Twice (with
+  `OBSIDIAN_EVAL`, reading `electron.clipboard`, then intercepting `navigator.clipboard.writeText` and the `copy` event) the
+  command reported success but the clipboard stayed unchanged and neither hook fired, so what it copies is still a guess here.
 - **Still not seen:** an actual printed PDF page, how any of this looks next to Obsidian's own output (the PDF margins, the
   canvas image and the Bases clipboard format are still guesses), and any of it on macOS or Windows.
 - The graph's "Copy screenshot" menu entry does not exist here.
