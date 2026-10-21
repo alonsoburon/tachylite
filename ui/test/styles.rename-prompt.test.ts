@@ -11,3 +11,11 @@ it("styles the name prompt's textarea as a single full-width line", () => {
   expect(rule).toContain("width: 100%");
   expect(rule).toContain("resize: none");
 });
+
+it("menus taller than the window scroll instead of running off it (seen in the real window with the 30-entry tab menu)", () => {
+  const css = readFileSync(resolve(process.cwd(), "src/styles/app.css"), "utf8");
+  const i = css.indexOf("\n.menu {");
+  const rule = css.slice(i, css.indexOf("}", i));
+  expect(rule).toContain("max-height: calc(100vh");
+  expect(rule).toContain("overflow-y: auto");
+});

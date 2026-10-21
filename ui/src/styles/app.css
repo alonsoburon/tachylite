@@ -337,7 +337,7 @@ kbd, .setting-hotkey { padding: 1px 6px; border-radius: var(--hotkey-radius, var
 .suggestion-container { position: absolute; z-index: var(--layer-popover); min-width: 220px; max-width: 420px; max-height: 280px; overflow: auto; background: var(--background-secondary-alt); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); box-shadow: var(--shadow-l); padding: var(--size-2-3); }
 
 /* ---------------------------------------------------------------- menus, notices, tooltips, popovers */
-.menu { position: fixed; z-index: var(--layer-menu); min-width: 180px; max-width: 320px; padding: var(--menu-padding); background: var(--menu-background); border: var(--menu-border-width) solid var(--menu-border-color); border-radius: var(--menu-radius); box-shadow: var(--menu-shadow); font-size: var(--font-ui-small); }
+.menu { position: fixed; z-index: var(--layer-menu); min-width: 180px; max-width: 320px; max-height: calc(100vh - 8px); overflow-y: auto; overscroll-behavior: contain; padding: var(--menu-padding); background: var(--menu-background); border: var(--menu-border-width) solid var(--menu-border-color); border-radius: var(--menu-radius); box-shadow: var(--menu-shadow); font-size: var(--font-ui-small); }
 .menu-item { display: flex; align-items: center; gap: var(--size-4-2); padding: var(--size-4-1) var(--size-4-3) var(--size-4-1) var(--size-4-2); border-radius: var(--radius-s); cursor: var(--cursor); position: relative; }
 .menu-item:hover, .menu-item.selected { background: var(--background-modifier-hover); }
 .menu-item.is-disabled { opacity: 0.45; pointer-events: none; }

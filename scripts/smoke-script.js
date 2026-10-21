@@ -190,6 +190,8 @@ await step("linked-tabs", async () => {
     leaf.tabHeaderEl.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 300, clientY: 20 }));
     await until("tab menu opens", () => document.querySelector(".menu .menu-item"));
     const menus = document.querySelectorAll(".menu");
+    const mb = menus[menus.length - 1].getBoundingClientRect();
+    if (mb.top < 0 || mb.bottom > window.innerHeight + 1) { log("FAIL tab menu does not fit the window: " + JSON.stringify([mb.top, mb.bottom, window.innerHeight])); await ipc.quitApp(); throw new Error("smoke: menu overflow"); }
     const item = [...menus[menus.length - 1].querySelectorAll(".menu-item")].find((i) => i.querySelector(".menu-item-title")?.textContent === title);
     if (!item) { log("FAIL tab menu has no '" + title + "': " + [...document.querySelectorAll(".menu-item-title")].map((e) => e.textContent).join(" | ")); await ipc.quitApp(); throw new Error("smoke: tab menu"); }
     return item;
