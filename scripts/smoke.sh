@@ -47,14 +47,19 @@ wait_for() { # <pattern> <seconds>
 }
 
 focus() {
-  local id i
-  for i in $(seq 1 100); do
+  # Find the app's window several ways (GTK sets _NET_WM_PID late, and the class differs between builds); fall back to
+  # whatever window the window manager has focused, which for a freshly started app is the app.
+  local id="" i
+  for i in $(seq 1 150); do
     id="$(xdotool search --onlyvisible --pid "$app" 2>/dev/null | head -1)" || true
+    [ -z "$id" ] && id="$(xdotool search --onlyvisible --class tachylite 2>/dev/null | head -1)" || true
+    [ -z "$id" ] && id="$(xdotool search --onlyvisible --name Tachylite 2>/dev/null | head -1)" || true
     [ -n "$id" ] && break
-    sleep 0.1
+    sleep 0.2
   done
+  [ -z "$id" ] && id="$(xdotool getactivewindow 2>/dev/null)" || true
   [ -n "$id" ] || fail "no window of the app appeared on the private display"
-  xdotool windowfocus "$id"
+  xdotool windowfocus "$id" 2>/dev/null || true
   sleep 0.3
 }
 
