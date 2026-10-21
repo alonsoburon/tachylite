@@ -139,7 +139,7 @@ await step("persisted-folds", async () => {
   const again = await open("Doc.md");
   await again.view.setState({ ...again.view.getState(), mode: "preview" }, { history: false });
   await until("fold restored in the reading view", () => again.view.previewEl.querySelector("h1.is-collapsed"));
-  await shot("persisted-folds");
+  await shot("persisted-folds-restored");
   await again.view.setState({ ...again.view.getState(), mode: "source" }, { history: false });
   await until("fold restored in the editor", () => document.querySelectorAll(".cm-fold-indicator.is-collapsed").length >= 1);
   app.commands.executeCommandById("editor:unfold-all");
@@ -186,9 +186,11 @@ await step("stacked-tabs", async () => {
 await step("linked-tabs", async () => {
   // "Link with tab..." from the tab header's real context menu, then a click on the other tab; then "Open linked view".
   const menuItem = async (leaf, title) => {
+    document.querySelectorAll(".menu").forEach((m) => m.remove()); // no stale menu can answer for this one
     leaf.tabHeaderEl.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 300, clientY: 20 }));
     await until("tab menu opens", () => document.querySelector(".menu .menu-item"));
-    const item = [...document.querySelectorAll(".menu .menu-item")].find((i) => i.querySelector(".menu-item-title")?.textContent === title);
+    const menus = document.querySelectorAll(".menu");
+    const item = [...menus[menus.length - 1].querySelectorAll(".menu-item")].find((i) => i.querySelector(".menu-item-title")?.textContent === title);
     if (!item) { log("FAIL tab menu has no '" + title + "': " + [...document.querySelectorAll(".menu-item-title")].map((e) => e.textContent).join(" | ")); await ipc.quitApp(); throw new Error("smoke: tab menu"); }
     return item;
   };
@@ -207,10 +209,10 @@ await step("linked-tabs", async () => {
   const lv = await menuItem(a, "Open linked view");
   lv.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true })); lv.click();
   await sleep(400);
-  const sub = await until("linked view submenu", () => [...document.querySelectorAll(".menu .menu-item")].find((i) => i.querySelector(".menu-item-title")?.textContent === "Open outline"));
+  const sub = await until("linked view submenu", () => [...[...document.querySelectorAll(".menu")].pop().querySelectorAll(".menu-item")].find((i) => i.querySelector(".menu-item-title")?.textContent === "Open outline"));
   await shot("open-linked-view-menu");
   sub.click();
-  await until("outline opened in a tab linked to the note", () => app.workspace.getLeavesOfType("outline").length > before && app.workspace.getLeavesOfType("outline").some((o) => o.group && app.workspace.getLeavesOfType("markdown").some((m) => m.group === o.group)));
+  await until("outline opened in a tab linked to the note", () => app.workspace.getLeavesOfType("outline").length > before && app.workspace.getLeavesOfType("outline").some((o) => o.group && o.group === a.group));
   document.querySelector(".menu")?.remove();
 });
 
@@ -258,10 +260,13 @@ await step("bases-copy-table", async () => {
   await until("base view rendered", () => leaf.view.containerEl.querySelector(".bases-view, .bases-table-container, table"));
   const view = leaf.view;
   const host = view.host ?? view.controller ?? view;
-  if (typeof host.copyTable === "function") {
-    const copied = await host.copyTable();
-    if (!copied) log("WARN bases copy-table: clipboard refused in the private display");
-  } else cmd("bases:copy-table");
+  const table = host.asTable("\t");
+  if (!/file name/.test(table) || !/Doc/.test(table) || !table.includes("\t") && table.split("\n").length < 3) { log("FAIL bases table text is wrong: " + JSON.stringify(table.slice(0, 200))); await ipc.quitApp(); throw new Error("smoke: bases table"); }
+  cmd("bases:copy-table");
+  // The webview only allows clipboard writes after a user gesture, which an in-app script does not have, so the notice may
+  // say "Unable to copy" here; either way the command ran. The text it would copy was checked above.
+  const note = await until("copy notice shown", () => [...document.querySelectorAll(".notice")].map((n) => n.textContent).find((t) => /Copied to clipboard|Unable to copy/.test(t)));
+  log("bases copy-table notice: " + note);
 });
 
 await step("graph-animation", async () => {

@@ -349,7 +349,7 @@ export class Shell implements LayoutHost {
     const v = view;
     if (v instanceof FileView && v.file) {
       const f = v.file;
-      buildFileMenu(this.app, f, "tab-header", menu);
+      buildFileMenu(this.app, f, "tab-header", menu, leaf);
     }
     v.onPaneMenu(menu, "tab-header");
     menu.showAtMouseEvent(e);

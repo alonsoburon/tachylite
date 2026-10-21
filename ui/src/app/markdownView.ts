@@ -226,7 +226,7 @@ export class TachyMarkdownView extends MarkdownView {
     menu.addItem((i) => i.setSection("window").setTitle("Split down").setIcon("lucide-separator-horizontal").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "horizontal"); }));
     menu.addItem((i) => i.setSection("window").setTitle("Open in new window").setIcon("lucide-app-window").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "window"); }));
     void reading;
-    if (this.file) buildFileMenu(this.app, this.file, "more-options", menu);
+    if (this.file) buildFileMenu(this.app, this.file, "more-options", menu, this.leaf);
     this.onPaneMenu(menu, "more-options");
     menu.showAtMouseEvent(evt);
   }

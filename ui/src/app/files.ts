@@ -1,7 +1,7 @@
 // File-level operations shared by the explorer, commands and views (create / rename / delete / move / menus).
 import { ipc } from "../ipc";
 import { addLinkedViewItem } from "./linked/linkedTabs";
-import { FuzzySuggestModal, MarkdownView, Menu, Notice, Platform, TFile, TFolder, type App, type TAbstractFile } from "../obsidian";
+import { FuzzySuggestModal, MarkdownView, Menu, Notice, Platform, TFile, TFolder, type App, type TAbstractFile, type WorkspaceLeaf } from "../obsidian";
 import { confirmDialog, promptText } from "./dialogs";
 
 const ILLEGAL = /[\\/:*?"<>|]/;
@@ -127,7 +127,7 @@ export function revealInExplorer(app: App, file: TAbstractFile): void {
 
 /** Standard file/folder context menu; plugins extend it through the `file-menu` workspace event. */
 /** The file entries of the tab header and "More options" menus, in the order Obsidian 1.14.4 lists them (compat/obsidian-reference.json). */
-function buildViewFileMenu(app: App, file: TFile, source: string, menu: Menu): Menu {
+function buildViewFileMenu(app: App, file: TFile, source: string, menu: Menu, leaf: WorkspaceLeaf | null = null): Menu {
   const run = (id: string) => () => { app.commands.executeCommandById(id); };
   menu.addItem((i) => i.setSection("action").setTitle("Rename...").setIcon("lucide-pencil").onClick(() => { void promptRename(app, file); }));
   menu.addItem((i) => i.setSection("action").setTitle("Move file to...").setIcon("lucide-folder-tree").onClick(() => new FolderPicker(app, file).open()));
@@ -141,7 +141,7 @@ function buildViewFileMenu(app: App, file: TFile, source: string, menu: Menu): M
     menu.addItem((i) => i.setSection("find").setTitle("Replace...").setIcon("lucide-replace").onClick(run("editor:open-search-replace")));
   }
   copyPathItem(app, file, menu);
-  addLinkedViewItem(menu, app, [app.workspace.activeLeaf, ...app.workspace.allLeaves()].find((l) => (l?.view as { file?: TFile } | undefined)?.file === file) ?? null);
+  addLinkedViewItem(menu, app, leaf ?? [app.workspace.activeLeaf, ...app.workspace.allLeaves()].find((l) => (l?.view as { file?: TFile } | undefined)?.file === file) ?? null);
   const sys = (reveal: boolean) => () => { void ipc.openInSystem(file.path, reveal).catch((e) => new Notice(String(e?.message ?? e))); };
   menu.addItem((i) => i.setSection("system").setTitle("Open in default app").setIcon("lucide-external-link").onClick(sys(false)));
   menu.addItem((i) => i.setSection("system").setTitle(Platform.isMacOS ? "Reveal in Finder" : "Show in system explorer").setIcon("lucide-folder-open").onClick(sys(true)));
@@ -161,9 +161,10 @@ function copyPathItem(app: App, file: TAbstractFile, menu: Menu): void {
   });
 }
 
-export function buildFileMenu(app: App, file: TAbstractFile, source: string, menu = new Menu()): Menu {
+/** `leaf` is the tab a "tab-header" or "more-options" menu belongs to (the same note can be open in several tabs). */
+export function buildFileMenu(app: App, file: TAbstractFile, source: string, menu = new Menu(), leaf: WorkspaceLeaf | null = null): Menu {
   const isFile = file instanceof TFile;
-  if (isFile && (source === "tab-header" || source === "more-options")) return buildViewFileMenu(app, file, source, menu);
+  if (isFile && (source === "tab-header" || source === "more-options")) return buildViewFileMenu(app, file, source, menu, leaf);
   if (isFile && source !== "more-options") {
     menu.addItem((i) => i.setSection("open").setTitle("Open in new tab").setIcon("lucide-file-plus").onClick(() => { void app.workspace.getLeaf("tab").openFile(file, { active: true }); }));
     menu.addItem((i) => i.setSection("open").setTitle("Open to the right").setIcon("lucide-separator-vertical").onClick(() => { void app.workspace.getLeaf("split").openFile(file, { active: true }); }));

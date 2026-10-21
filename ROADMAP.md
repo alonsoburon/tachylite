@@ -52,6 +52,12 @@ dump plugin in `tools/obsidian-dump/` run inside a real Obsidian (steps in its R
   export draws, what `bases:copy-table` puts on the clipboard (the private display refuses clipboard writes without a
   user gesture, so the test only sees "Unable to copy"), and any of this on macOS or Windows.
 - The graph's "Copy screenshot" menu entry does not exist here.
+- Seen in `/tmp/tachylite-smoke-shots/open-linked-view-menu.png`: the tab menu of a note has about 30 entries and runs past
+  the bottom of an 800 px window; Obsidian's menus scroll when they are taller than the window, ours do not yet.
+- Bases "Copy table": the test checks the table text and that the command answers ("Copied to clipboard" in the real
+  window), but it does not read the clipboard back.
+- Found by the stricter smoke check: "Open linked view" in a tab menu linked the first tab showing the same note instead of
+  the tab the menu belonged to. Fixed (`buildFileMenu` takes the leaf).
 
 ## What the reference comparison still lists (run `scripts/compare-reference.sh`)
 
