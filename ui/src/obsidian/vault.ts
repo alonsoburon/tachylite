@@ -45,8 +45,8 @@ export const DEFAULT_CONFIG: Record<string, any> = {
   tabSize: 4, useTab: true, spellcheck: true, vimMode: false, autoPairBrackets: true, autoPairMarkdown: true,
   smartIndentList: true, promptDelete: true, trashOption: "system", alwaysUpdateLinks: false,
   newFileLocation: "root", newFileFolderPath: "/", attachmentFolderPath: "/", useMarkdownLinks: false,
-  newLinkFormat: "shortest", showUnsupportedFiles: false, userIgnoreFilters: [], showViewHeader: true,
-  theme: "system", cssTheme: "", enabledCssSnippets: [], baseFontSize: 16, nativeMenus: null,
+  newLinkFormat: "shortest", showUnsupportedFiles: false, userIgnoreFilters: null, showViewHeader: true,
+  theme: "system", cssTheme: "", enabledCssSnippets: [], nativeMenus: null,
   // Recorded from Obsidian 1.14.4 on a fresh vault (compat/obsidian-reference.json).
   accentColor: "",
   autoFullScreen: true,

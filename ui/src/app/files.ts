@@ -93,9 +93,14 @@ export async function moveInto(app: App, file: TAbstractFile, folder: TFolder): 
   await app.fileManager.renameFile(file, dest);
 }
 
-export async function duplicateFile(app: App, file: TFile): Promise<TFile> {
-  const name = uniqueName(app, file.parent, file.basename + " copy", file.extension);
-  return app.vault.copy(file, joinPath(file.parent, name));
+/** "Make a copy" (files and folders): Obsidian 1.14.4 names the copy `name 1`, `name 2`..., opens a copied note and starts the inline rename. */
+export async function duplicateFile<T extends TAbstractFile>(app: App, file: T): Promise<T> {
+  const isFile = file instanceof TFile;
+  const name = uniqueName(app, file.parent, isFile ? file.basename : file.name, isFile ? file.extension : "");
+  const copy = await app.vault.copy(file, joinPath(file.parent, name));
+  if (copy instanceof TFile && copy.extension === "md") await app.workspace.getLeaf(false).openFile(copy, { active: true });
+  for (const leaf of app.workspace.getLeavesOfType("file-explorer")) (leaf.view as any).startRename?.(copy);
+  return copy;
 }
 
 export function copyText(text: string): void {
@@ -160,11 +165,11 @@ export function buildFileMenu(app: App, file: TAbstractFile, source: string, men
     menu.addItem((i) => i.setSection("open").setTitle("Open in new tab").setIcon("lucide-file-plus").onClick(() => { void app.workspace.getLeaf("tab").openFile(file, { active: true }); }));
     menu.addItem((i) => i.setSection("open").setTitle("Open to the right").setIcon("lucide-separator-vertical").onClick(() => { void app.workspace.getLeaf("split").openFile(file, { active: true }); }));
   } else if (!isFile) {
-    menu.addItem((i) => i.setSection("action").setTitle("New note").setIcon("lucide-edit").onClick(() => { void newNote(app, { folder: file as TFolder }); }));
-    menu.addItem((i) => i.setSection("action").setTitle("New folder").setIcon("lucide-folder-plus").onClick(() => { void newFolder(app, file as TFolder); }));
+    menu.addItem((i) => i.setSection("action-primary").setTitle("New note").setIcon("lucide-edit").onClick(() => { void newNote(app, { folder: file as TFolder }); }));
+    menu.addItem((i) => i.setSection("action-primary").setTitle("New folder").setIcon("lucide-folder-plus").onClick(() => { void newFolder(app, file as TFolder); }));
   }
   if (isFile && source !== "tab-header") menu.addItem((i) => i.setSection("open").setTitle("Open in new window").setIcon("lucide-app-window").onClick(() => { void app.workspace.openPopoutLeaf().openFile(file, { active: true }); }));
-  if (isFile) menu.addItem((i) => i.setSection("action").setTitle("Make a copy").setIcon("lucide-copy").onClick(() => { void duplicateFile(app, file).catch((e) => new Notice(String(e.message ?? e))); }));
+  menu.addItem((i) => i.setSection("action").setTitle("Make a copy").setIcon("lucide-copy").onClick(() => { void duplicateFile(app, file).catch((e) => new Notice(String(e.message ?? e))); }));
   menu.addItem((i) => i.setSection("action").setTitle(isFile ? "Move file to..." : "Move folder to...").setIcon("lucide-folder-tree").onClick(() => new FolderPicker(app, file).open()));
   if (!isFile) {
     menu.addItem((i) => i.setSection("action").setTitle("Search in folder").setIcon("lucide-search").onClick(() => {

@@ -21,6 +21,7 @@ import { coreEnabled, whileCoreEnabled } from "./core/util";
 import { TachyMarkdownView } from "./markdownView";
 import { ipc } from "../ipc";
 import { uriForFile } from "./uri";
+import { registerOutsideVaultCommands } from "./outsideVault";
 
 const HELP_URL = "https://github.com/alonsoburon/tachylite#readme";
 const mod = (key: string, ...more: Hotkey["modifiers"]): Hotkey[] => [{ modifiers: ["Mod", ...more], key }];
@@ -295,7 +296,7 @@ export function installCommands(app: App, history: History): () => void {
   // [feature:stacked-tabs]
   // [feature:export-pdf-and-linked-views]
   // [feature:canvas-bases-graph]
-  // [feature:folders-trash-misc]
+  registerOutsideVaultCommands(app, add);
 
   const disposers: (() => void)[] = [
     // core plugins whose commands live here

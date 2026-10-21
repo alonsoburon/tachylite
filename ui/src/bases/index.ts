@@ -58,7 +58,7 @@ export const bases: CoreModule = {
       cleanups.push(() => app.workspace.leftRibbon.removeRibbonItemButton(rib));
       const ref = app.workspace.on("file-menu", (menu: Menu, file: TAbstractFile) => {
         if (!(file instanceof TFolder)) return;
-        menu.addItem((i) => i.setSection("action").setTitle("New base").setIcon("lucide-table").onClick(() => { void createBase(app, file).then(open); }));
+        menu.addItem((i) => i.setSection("action-primary").setTitle("New base").setIcon("lucide-table").onClick(() => { void createBase(app, file).then(open); }));
       });
       cleanups.push(() => app.workspace.offref(ref));
       return () => { for (const c of cleanups.reverse()) c(); };
