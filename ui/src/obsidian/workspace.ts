@@ -295,6 +295,12 @@ export class WorkspaceSidedock extends WorkspaceSplit {
   expand(): void { this.set(false); }
 }
 
+const RIBBON_ORDER = ["switcher:", "core:Open graph view", "core:Create new canvas", "daily-notes:", "templates:", "command-palette:", "bases"];
+function ribbonRank(id: string): number {
+  const i = RIBBON_ORDER.findIndex((p) => id === p || (p.endsWith(":") && id.startsWith(p)));
+  return i < 0 ? RIBBON_ORDER.length : i;
+}
+
 export class WorkspaceRibbon {
   containerEl: HTMLElement;
   ribbonEl: HTMLElement;
@@ -338,7 +344,11 @@ export class WorkspaceRibbon {
     setIcon(el, icon);
     el.addEventListener("click", callback);
     const item = { id, icon, title, callback, buttonEl: el };
-    this.items.push(item);
+    // Core plugins sit in Obsidian 1.14.4's ribbon order whatever order they were enabled in; anything else goes last.
+    const rank = ribbonRank(id);
+    const next = rank < RIBBON_ORDER.length ? this.items.find((i) => ribbonRank(i.id) > rank) : undefined;
+    if (next) { this.items.splice(this.items.indexOf(next), 0, item); this.ribbonEl.insertBefore(el, next.buttonEl); }
+    else this.items.push(item);
     this.applyHidden(item);
     return el;
   }

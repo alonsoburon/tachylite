@@ -107,8 +107,9 @@ pub struct CachedMetadata {
     pub frontmatter: Option<Map<String, Value>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub frontmatter_position: Option<Pos>,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub frontmatter_links: Vec<FrontmatterLinkCache>,
+    /// `Some` (possibly empty) whenever the note has properties, as Obsidian reports it.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub frontmatter_links: Option<Vec<FrontmatterLinkCache>>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub footnotes: Vec<FootnoteCache>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
@@ -329,7 +330,11 @@ pub fn parse(text: &str) -> CachedMetadata {
         meta.frontmatter_position = Some(idx.pos(0, end));
         meta.sections.push(SectionCache { id: None, kind: "yaml".into(), position: idx.pos(0, end) });
         if let Ok(Value::Object(m)) = serde_yaml::from_str::<Value>(yaml) {
-            collect_frontmatter_links(&m, &mut meta.frontmatter_links);
+            let mut links = Vec::new();
+            collect_frontmatter_links(&m, &mut links);
+            if !m.is_empty() {
+                meta.frontmatter_links = Some(links);
+            }
             meta.frontmatter = Some(m);
         } else if yaml.trim().is_empty() {
             meta.frontmatter = Some(Map::new());
@@ -380,6 +385,9 @@ pub fn parse(text: &str) -> CachedMetadata {
     let mut doc_list = ListState::default();
     let mut quote_list = ListState::default();
     let mut prev_blank = true;
+    // Start of the line after the last non-blank line seen (where a spread list item ends).
+    let mut content_next = 0usize;
+    let mut prev_content_next = 0usize;
 
     let mut i = 0;
     while i < lines.len() {
@@ -388,6 +396,10 @@ pub fn parse(text: &str) -> CachedMetadata {
         let t = ln.text;
         let end = ln.start + t.len();
         let blank = t.trim().is_empty();
+        if !blank {
+            prev_content_next = content_next;
+            content_next = lines.get(i + 1).map_or(text.len(), |l| l.start);
+        }
 
         match mode {
             Mode::Fence(ch, len) => {
@@ -527,6 +539,12 @@ pub fn parse(text: &str) -> CachedMetadata {
                 doc_list = ListState { first_line: line_no, marker: Some(marker), ..Default::default() };
                 cur = Some(Sec { kind: "list", start: ln.start, end, id: None });
             }
+            // An item followed by a blank line and then a sibling ends at the start of the line after its text (recorded from Obsidian).
+            if in_list && prev_blank && doc_list.stack.last().is_some_and(|(ind, _)| *ind == indent) {
+                if let Some(last) = meta.list_items.last_mut() {
+                    last.position.end = idx.loc(prev_content_next);
+                }
+            }
             doc_list.push_item(&mut meta, &idx, &c, line_no, ln.start, 0, t, root);
             if let Some(s) = cur.as_mut() {
                 s.end = end;
@@ -538,9 +556,16 @@ pub fn parse(text: &str) -> CachedMetadata {
         }
 
         // Block id alone on its own line names the quote, callout, table or list just above it.
-        if cur.is_none() && prev_blank {
+        // A table takes a lone id on the very next line too (it never swallows a line without a pipe).
+        // (a lone id is a one-line paragraph: the next line must be blank)
+        let alone = lines.get(i + 1).is_none_or(|l| l.text.trim().is_empty());
+        let after_table = alone && cur.as_ref().is_some_and(|s| s.kind == "table") && re_lone_block_id().is_match(t);
+        if after_table {
+            flush(&mut cur, &mut sections);
+        }
+        if cur.is_none() && (prev_blank || after_table) && alone {
             if let Some(b) = re_lone_block_id().captures(t) {
-                if let Some(last) = sections.last_mut().filter(|l| matches!(l.kind, "blockquote" | "callout" | "table" | "list")) {
+                if let Some(last) = sections.last_mut().filter(|l| matches!(l.kind, "blockquote" | "callout" | "table" | "list" | "paragraph")) {
                     last.id = Some(b[1].to_string());
                     prev_blank = false;
                     i += 1;
@@ -574,7 +599,7 @@ pub fn parse(text: &str) -> CachedMetadata {
             Some(_) if prev_blank => false,
             Some("paragraph") => kind == "paragraph",
             Some(k) if is_quote_kind(k) => quote || kind == "paragraph",
-            Some("table") => !quote && !table_here,
+            Some("table") => !quote && !table_here && t.contains('|'),
             Some("html") => true,
             Some("footnoteDefinition") => kind == "paragraph",
             _ => false,
@@ -622,6 +647,12 @@ pub fn parse(text: &str) -> CachedMetadata {
         prev_blank = false;
         i += 1;
     }
+    // A math block that is never closed runs to the end of the file, trailing line breaks included (recorded from Obsidian).
+    if mode == Mode::Math {
+        if let Some(s) = cur.as_mut() {
+            s.end = text.len();
+        }
+    }
     flush(&mut cur, &mut sections);
 
     for mut s in sections {
@@ -645,6 +676,15 @@ pub fn parse(text: &str) -> CachedMetadata {
     }
     meta.sections.sort_by_key(|s| s.position.start.offset);
     footnotes::collect(text, body_from, &idx, &mut meta);
+    // A note with an inline footnote gets two empty `text` and `element` sections at its end (recorded from Obsidian).
+    if meta.footnotes.iter().any(|f| f.id.starts_with("[inline")) {
+        if let Some(end) = meta.sections.iter().map(|s| s.position.end.offset).max() {
+            let at = Loc { line: idx.loc(text.len()).line, col: 0, offset: end };
+            for kind in ["text", "element"] {
+                meta.sections.push(SectionCache { id: None, kind: kind.into(), position: Pos { start: at, end: at } });
+            }
+        }
+    }
     meta
 }
 
@@ -1050,7 +1090,7 @@ mod tests {
     fn frontmatter_and_positions() {
         let m = parse("---\ntitle: x\ntags: [a, b]\nup: \"[[Parent]]\"\n---\nbody [[Z]]\n");
         assert_eq!(m.frontmatter.as_ref().unwrap()["title"], "x");
-        assert_eq!(m.frontmatter_links[0].link, "Parent");
+        assert_eq!(m.frontmatter_links.as_ref().unwrap()[0].link, "Parent");
         assert_eq!(m.links[0].position.start.line, 5);
         assert_eq!(m.links[0].position.start.col, 5);
     }
@@ -1108,5 +1148,66 @@ mod tests {
         let m = parse("| a |\n|---|\n| [[X\\|y]] |\n");
         assert_eq!(m.links[0].link, "X");
         assert_eq!(m.links[0].display_text.as_deref(), Some("y"));
+    }
+
+    // The cases below were recorded from Obsidian 1.14.4 with small probe notes (positions are line:col:offset).
+    fn pos(p: &Pos) -> String {
+        format!("{}:{}:{}-{}:{}:{}", p.start.line, p.start.col, p.start.offset, p.end.line, p.end.col, p.end.offset)
+    }
+    fn items(t: &str) -> Vec<String> {
+        parse(t).list_items.iter().map(|i| pos(&i.position)).collect()
+    }
+    fn secs(t: &str) -> Vec<String> {
+        parse(t).sections.iter().map(|s| format!("{} {}{}", s.kind, pos(&s.position), s.id.as_ref().map_or(String::new(), |i| format!(" ^{i}")))).collect()
+    }
+
+    #[test]
+    fn an_item_before_a_sibling_across_a_blank_line_ends_on_the_next_line() {
+        assert_eq!(items("- a\n\n- b\n\n- c\n"), ["0:0:0-1:0:4", "2:0:5-3:0:9", "4:0:10-4:3:13"]);
+        assert_eq!(
+            items("1. x\n\n2. y\n   continued\n\n3. z\n   - n1\n\n   - n2\n\n4. w\n"),
+            ["0:0:0-1:0:5", "2:0:6-4:0:24", "5:0:25-5:4:29", "6:3:33-7:0:38", "8:3:42-8:7:46", "10:0:48-10:4:52"]
+        );
+        assert_eq!(items("- a\n- b\n"), ["0:0:0-0:3:3", "1:0:4-1:3:7"]);
+        assert_eq!(items("- a\n\n- b\n\n\n"), ["0:0:0-1:0:4", "2:0:5-2:3:8"]);
+    }
+
+    #[test]
+    fn an_unclosed_math_block_runs_to_the_end_of_the_file() {
+        assert_eq!(secs("$$\nx\n"), ["math 0:0:0-2:0:5"]);
+        assert_eq!(secs("$$\nx"), ["math 0:0:0-1:1:4"]);
+        assert_eq!(secs("$$\nx\n\n\n"), ["math 0:0:0-4:0:7"]);
+        assert_eq!(secs("$$\nx\n$$\n"), ["math 0:0:0-2:2:7"]);
+    }
+
+    #[test]
+    fn tables_and_lone_block_ids() {
+        assert_eq!(
+            secs("| a | b |\n|---|---|\n| c | d |\nplain text\n\nafter\n"),
+            ["table 0:0:0-2:9:29", "paragraph 3:0:30-3:10:40", "paragraph 5:0:42-5:5:47"]
+        );
+        let m = parse("| a | b |\n|---|---|\n| c | d |\n^t1\n\nnext para\n");
+        assert_eq!(secs("| a | b |\n|---|---|\n| c | d |\n^t1\n\nnext para\n"), ["table 0:0:0-2:9:29 ^t1", "paragraph 5:0:35-5:9:44"]);
+        assert!(m.blocks.contains_key("t1"));
+        assert_eq!(secs("para\n^x1\n\nq\n\n^x2\n\n- item\n\n^x3\n"), ["paragraph 0:0:0-1:3:8 ^x1", "paragraph 3:0:10-3:1:11 ^x2", "list 7:0:18-7:6:24 ^x3"]);
+        assert_eq!(secs("para\n\n^x1\n^x2\n\nq\n"), ["paragraph 0:0:0-0:4:4", "paragraph 2:0:6-3:3:13 ^x2", "paragraph 5:0:15-5:1:16"]);
+    }
+
+    #[test]
+    fn inline_footnotes_number_themselves_and_add_empty_trailing_sections() {
+        let m = parse("a^[one] b^[two] c[^r] d^[three]\n\n[^r]: def\n");
+        let ids: Vec<_> = m.footnotes.iter().map(|f| f.id.as_str()).collect();
+        assert_eq!(ids, ["[inline0", "[inline1", "[inline3", "r"]);
+        let kinds: Vec<_> = m.sections.iter().map(|s| format!("{} {}", s.kind, pos(&s.position))).collect();
+        assert_eq!(kinds, ["paragraph 0:0:0-0:31:31", "footnoteDefinition 2:0:33-2:9:42", "text 3:0:42-3:0:42", "element 3:0:42-3:0:42"]);
+        assert_eq!(secs("inline^[note text].\n\nlast\n").len(), 4);
+        assert_eq!(secs("para\n\nx\n").len(), 2);
+    }
+
+    #[test]
+    fn frontmatter_links_is_an_empty_list_when_there_are_properties() {
+        assert_eq!(parse("---\ntags: [a]\n---\ntext\n").frontmatter_links, Some(vec![]));
+        assert_eq!(parse("---\nkey: [[Foo]]\n---\n").frontmatter_links, Some(vec![]));
+        assert_eq!(parse("text\n").frontmatter_links, None);
     }
 }

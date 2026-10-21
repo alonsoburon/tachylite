@@ -92,7 +92,7 @@ export const canvas: CoreModule = {
       app.embedRegistry.registerExtension("canvas", (ctx, file, subpath) => new CanvasEmbed(ctx, file, subpath));
       const create = (folder?: TFolder) => { void newCanvas(app, folder).catch((e) => new Notice(String(e.message ?? e))); };
       const menuRef = app.workspace.on("file-menu", (menu: Menu, file: TAbstractFile) => {
-        if (file instanceof TFolder) menu.addItem((i) => i.setSection("action").setTitle("New canvas").setIcon("lucide-layout-dashboard").onClick(() => create(file)));
+        if (file instanceof TFolder) menu.addItem((i) => i.setSection("action-primary").setTitle("New canvas").setIcon("lucide-layout-dashboard").onClick(() => create(file)));
       });
       const renameRef = app.vault.on("rename", (f: TAbstractFile, old: string) => {
         if (!(f instanceof TFile)) return;

@@ -162,7 +162,7 @@ fn link_refs(text: &str) -> Vec<LinkRef> {
     if let Some(fm) = parsed.frontmatter_position {
         let fm_end = to_byte(fm.end.offset);
         let mut from = 0;
-        for l in &parsed.frontmatter_links {
+        for l in parsed.frontmatter_links.iter().flatten() {
             if let Some(i) = text[from..fm_end].find(&l.original) {
                 let s = from + i;
                 out.push(LinkRef {

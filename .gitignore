@@ -6,3 +6,4 @@ node_modules/
 /compat/reference-report.txt
 /compat/reference-report-cache.txt
 /.claude/
+node_modules

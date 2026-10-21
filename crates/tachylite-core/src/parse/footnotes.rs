@@ -104,7 +104,9 @@ pub(super) fn collect(text: &str, body_from: usize, idx: &Index, meta: &mut Cach
         // continuation lines are scanned for references below like any other line
     }
 
-    // References `[^id]` and inline footnotes `^[text]`.
+    // References `[^id]` and inline footnotes `^[text]`. An inline footnote's id is `[inline` plus its 0-based place among all
+    // references and inline footnotes of the note (recorded from Obsidian: `a^[x] b[^r] c^[y]` gives `[inline0`, `[inline2`).
+    let mut ordinal = 0usize;
     for &(start, t, code) in &lines {
         if code {
             continue;
@@ -130,6 +132,7 @@ pub(super) fn collect(text: &str, body_from: usize, idx: &Index, meta: &mut Cach
                         let id = normalize(label);
                         if !labels.contains(&(start + k)) && defs.contains(&id) {
                             meta.footnote_refs.push(FootnoteRefCache { id, position: idx.pos(start + k, start + e + 1) });
+                            ordinal += 1;
                         }
                         k = e + 1;
                         continue;
@@ -156,7 +159,8 @@ pub(super) fn collect(text: &str, body_from: usize, idx: &Index, meta: &mut Cach
                     m += 1;
                 }
                 if let Some(e) = e.filter(|e| *e > k + 2) {
-                    meta.footnotes.push(FootnoteCache { id: String::new(), position: idx.pos(start + k + 2, start + e) });
+                    meta.footnotes.push(FootnoteCache { id: format!("[inline{ordinal}"), position: idx.pos(start + k + 2, start + e) });
+                    ordinal += 1;
                     k = e + 1;
                     continue;
                 }
@@ -175,7 +179,7 @@ mod tests {
     fn definitions_refs_and_inline() {
         let m = parse("Text[^1] and [^Qux] and [^none] and ^[inline [[L]] note].\n\n[^1]: bar\n    more\n\n[^qux]: quux\n`[^1]` ^[]\n");
         let ids: Vec<_> = m.footnotes.iter().map(|f| f.id.as_str()).collect();
-        assert_eq!(ids, ["", "1", "qux"]);
+        assert_eq!(ids, ["[inline2", "1", "qux"]);
         let inline = &m.footnotes[0];
         assert_eq!((inline.position.start.col, inline.position.end.col), (38, 55));
         assert_eq!(m.footnotes[1].position.start.line, 2);

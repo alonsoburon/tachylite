@@ -255,3 +255,18 @@ describe("file menu extras", () => {
     expect(titles(folder)).not.toContain("Open in new window");
   });
 });
+
+describe("make a copy (names and behaviour recorded from Obsidian 1.14.4)", () => {
+  it("copies a folder with its contents as 'name 1', 'name 2' and files likewise", async () => {
+    const { duplicateFile } = await import("../src/app/files");
+    const folder = c.app.vault.getFolderByPath("docs")!;
+    await duplicateFile(c.app, folder);
+    await duplicateFile(c.app, folder);
+    for (const p of ["docs 1/Guide.md", "docs 1/deep/Note.md", "docs 2/Guide.md"]) expect(c.app.vault.getAbstractFileByPath(p), p).toBeTruthy();
+    expect(await c.app.vault.read(c.app.vault.getFileByPath("docs 1/deep/Note.md")!)).toBe("# N");
+    const copy = await duplicateFile(c.app, c.app.vault.getFileByPath("Alpha.md")!);
+    expect(copy.path).toBe("Alpha 1.md");
+    expect(c.app.workspace.getActiveFile()?.path).toBe("Alpha 1.md");
+  });
+
+});
