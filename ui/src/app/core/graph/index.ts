@@ -1,7 +1,7 @@
 // Graph view core plugin ("graph"): the global graph and the local graph of the active file.
 import type { App } from "../../../obsidian";
 import { addCommand, addRibbon, whileCoreEnabled, type CoreModule } from "../util";
-import { GRAPH_VIEW, GraphView, LOCAL_GRAPH_VIEW, LocalGraphView, openGraph, openLocalGraph } from "./view";
+import { BaseGraphView, GRAPH_VIEW, GraphView, LOCAL_GRAPH_VIEW, LocalGraphView, openGraph, openLocalGraph } from "./view";
 
 export * from "./model";
 export * from "./sim";
@@ -18,6 +18,12 @@ export const graph: CoreModule = {
         addCommand(app, { id: "graph:open-local", name: "Graph view: Open local graph", icon: "lucide-git-fork", checkCallback: (checking) => {
           if (!app.workspace.getActiveFile()) return false;
           if (!checking) void openLocalGraph(app);
+          return true;
+        } }),
+        addCommand(app, { id: "graph:animate", name: "Graph view: Start graph time-lapse animation", icon: "lucide-play", checkCallback: (checking) => {
+          const v = app.workspace.getActiveViewOfType(BaseGraphView);
+          if (!v) return false;
+          if (!checking) v.startAnimation();
           return true;
         } }),
         addRibbon(app, "lucide-git-fork", "Open graph view", () => { void openGraph(app); }),

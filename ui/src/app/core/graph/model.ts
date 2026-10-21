@@ -242,3 +242,35 @@ export function applyGroups(nodes: GraphNode[], groups: { color: number; files: 
     for (const g of groups) if (g.files?.has(n.id)) { n.color = g.color; break; }
   }
 }
+
+/**
+ * Time-lapse: when each node of `data` appears. A note appears at its creation time; a node without a file of its own
+ * (tag, unresolved link) appears with its earliest neighbour. `ctimeOf` gives the creation time of a path, or undefined.
+ */
+export function appearTimes(data: GraphData, ctimeOf: (id: string) => number | undefined): number[] {
+  const own = data.nodes.map((n) => ctimeOf(n.id));
+  const out: (number | undefined)[] = [...own];
+  for (const l of data.links) {
+    for (const [i, j] of [[l.source, l.target], [l.target, l.source]]) {
+      if (own[i] !== undefined || own[j] === undefined) continue;
+      out[i] = out[i] === undefined ? own[j] : Math.min(out[i]!, own[j]!);
+    }
+  }
+  const known = out.filter((x): x is number => x !== undefined);
+  const fallback = known.length ? Math.min(...known) : 0;
+  return out.map((x) => x ?? fallback);
+}
+
+/** The part of `data` made of the nodes whose index passes `keep` (edges between kept nodes only). */
+export function subGraph(data: GraphData, keep: (i: number) => boolean): GraphData {
+  const map = new Map<number, number>();
+  const nodes: GraphNode[] = [];
+  data.nodes.forEach((n, i) => { if (keep(i)) { map.set(i, nodes.length); nodes.push({ ...n, degree: 0 }); } });
+  const links: GraphLink[] = [];
+  for (const l of data.links) {
+    const a = map.get(l.source), b = map.get(l.target);
+    if (a !== undefined && b !== undefined) { links.push({ source: a, target: b }); nodes[a].degree++; nodes[b].degree++; }
+  }
+  for (const n of nodes) n.r = nodeRadius(n.degree);
+  return { nodes, links };
+}

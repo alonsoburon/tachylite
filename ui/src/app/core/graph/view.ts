@@ -7,7 +7,7 @@ import { buildFileMenu } from "../../files";
 import { PanelView } from "../util";
 import { collapseIcon } from "../panel";
 import {
-  DEFAULT_LOCAL, applyGroups, buildGraph, normalizeLocal, normalizeOptions,
+  DEFAULT_LOCAL, appearTimes, applyGroups, buildGraph, subGraph, normalizeLocal, normalizeOptions,
   type GraphNode, type GraphOptions, type LocalOptions, type NodeKind,
 } from "./model";
 import { bounds, createSimulation, forcesFrom, hitTest, isSettled, reheat, stepSimulation, type SimState } from "./sim";
@@ -66,6 +66,9 @@ export abstract class BaseGraphView extends PanelView {
   private searchToken = "";
   /** Frames drawn (tests and profiling). */
   frames = 0;
+  /** While the time-lapse runs: the cutoff time (ms since epoch); nodes created later are left out. */
+  animCutoff: number | null = null;
+  private animTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(leaf: WorkspaceLeaf) {
     super(leaf);
@@ -106,7 +109,7 @@ export abstract class BaseGraphView extends PanelView {
     this.rebuild();
   }
   protected async loadOptions(): Promise<void> {}
-  async onClose(): Promise<void> { if (this.raf) cancelAnimationFrame(this.raf); this.raf = 0; }
+  async onClose(): Promise<void> { this.stopAnimation(); if (this.raf) cancelAnimationFrame(this.raf); this.raf = 0; }
 
   protected onActiveFileChange(): void {
     const p = this.app.workspace.getActiveFile()?.path ?? null;
@@ -139,7 +142,46 @@ export abstract class BaseGraphView extends PanelView {
       resolved: mc.resolvedLinks, unresolved: mc.unresolvedLinks, files,
       tagsOf: (p) => { const f = this.app.vault.getFileByPath(p); const c = f ? mc.getFileCache(f) : null; return c ? tagsOfCache(c) : []; },
     }, { showTags: o.showTags, showAttachments: o.showAttachments, hideUnresolved: o.hideUnresolved, showOrphans: o.showOrphans, match, local });
-    this.setData(data);
+    this.setData(this.animCutoff === null ? data : this.animated(data, this.animCutoff));
+  }
+
+  private creationTimes(data: { nodes: GraphNode[]; links: { source: number; target: number }[] }): number[] {
+    return appearTimes(data, (id) => this.app.vault.getFileByPath(id)?.stat.ctime);
+  }
+  private animated(data: { nodes: GraphNode[]; links: { source: number; target: number }[] }, cutoff: number): { nodes: GraphNode[]; links: { source: number; target: number }[] } {
+    const t = this.creationTimes(data);
+    return subGraph(data, (i) => t[i] <= cutoff);
+  }
+
+  get isAnimating(): boolean { return this.animCutoff !== null; }
+  /** Replay the graph growing by note creation time over `durationMs`; calling it again restarts. */
+  startAnimation(durationMs = 6000, stepMs = 100): void {
+    this.stopAnimation(false);
+    const mc = this.app.metadataCache;
+    const data = buildGraph({ resolved: mc.resolvedLinks, unresolved: mc.unresolvedLinks, files: this.app.vault.getFiles().map((f) => f.path) }, { showTags: this.options.showTags, showAttachments: this.options.showAttachments, hideUnresolved: this.options.hideUnresolved, showOrphans: this.options.showOrphans });
+    const times = this.creationTimes(data);
+    const lo = Math.min(...times, Infinity), hi = Math.max(...times, -Infinity);
+    if (!times.length || lo === hi) { this.animCutoff = null; this.rebuild(); return; }
+    const t0 = Date.now();
+    // Start from the oldest nodes only, so the first frame already shows the beginning.
+    this.animCutoff = lo;
+    this.setData({ nodes: [], links: [] });
+    this.autoFit = true;
+    const tick = () => {
+      const f = Math.min(1, (Date.now() - t0) / durationMs);
+      if (f >= 1) { this.stopAnimation(); return; }
+      this.animCutoff = lo + (hi - lo) * f;
+      this.rebuild();
+      this.animTimer = setTimeout(tick, stepMs);
+    };
+    tick();
+  }
+  /** Stop the time-lapse; the full graph comes back (unless `restore` is false). */
+  stopAnimation(restore = true): void {
+    if (this.animTimer) { clearTimeout(this.animTimer); this.animTimer = null; }
+    if (this.animCutoff === null) return;
+    this.animCutoff = null;
+    if (restore) this.rebuild();
   }
   protected localOptions(): LocalOptions { return DEFAULT_LOCAL; }
 
