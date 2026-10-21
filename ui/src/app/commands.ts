@@ -1,5 +1,8 @@
 // Core commands (ids follow Obsidian's public command ids) and their default hotkeys.
 import { FileView, FuzzySuggestModal, MarkdownView, Modal, Notice, Platform, TFile, TFolder, WorkspaceTabs, WorkspaceWindow, type App, type Command, type Hotkey, type WorkspaceLeaf } from "../obsidian";
+import { installPdfExport } from "./export/pdf";
+import { installBacklinksCommand } from "./linked/backlinksInDocument";
+import { installLinkedTabs } from "./linked/linkedTabs";
 import {
   indentListLess, indentListMore, insertLink, toggleBold, toggleChecklist, toggleTask, toggleHighlight, toggleInlineCode, toggleItalic, toggleStrikethrough,
 } from "../editor";
@@ -293,7 +296,7 @@ export function installCommands(app: App, history: History): () => void {
 
   // Insertion points for parallel feature work: each owner replaces ONLY its own line (and adds its code in its own module).
   // [feature:stacked-tabs]
-  // [feature:export-pdf-and-linked-views]
+  void [installPdfExport(app), installBacklinksCommand(app, MarkdownView), installLinkedTabs(app)]; // export to PDF, backlinks in document, linked tabs (they live as long as the session)
   // [feature:canvas-bases-graph]
   // [feature:folders-trash-misc]
 

@@ -1,6 +1,7 @@
 // The application shell: mounts the workspace model into the page and implements LayoutHost —
 // tab chrome (close, pin, drag-reorder, drop-to-split), resize handles, sidebar toggles, layout persistence.
 import { ipc } from "../ipc";
+import { addLinkMenuItem, installLinkedTabs } from "./linked/linkedTabs";
 import {
   FileView, MarkdownView, Menu, Notice, Tasks, TextFileView, WorkspaceParent, WorkspaceSidedock, WorkspaceSplit, WorkspaceTabs, WorkspaceWindow,
   type App, type LayoutHost, type View, type WorkspaceItem, type WorkspaceLeaf, type WorkspaceWindowInitData,
@@ -331,6 +332,7 @@ export class Shell implements LayoutHost {
     menu.addItem((i) => i.setSection("close").setTitle("Close all").onClick(() => { for (const l of [...tabs.children] as WorkspaceLeaf[]) if (!l.pinned) l.detach(); }));
     menu.addItem((i) => i.setSection("pin").setTitle(leaf.pinned ? "Unpin" : "Pin").setIcon("lucide-pin").onClick(() => leaf.togglePinned()));
     const view = leaf.view;
+    addLinkMenuItem(menu, this.app, leaf);
     if (view instanceof MarkdownView) (view as unknown as { addModeItems(m: Menu): void }).addModeItems?.(menu);
     // Entries and order follow Obsidian 1.14.4's menu (compat/obsidian-reference.json). Close others, Close tabs to the
     // right, Close all and Duplicate tab are Tachylite's own extras.

@@ -1,5 +1,5 @@
 // Small DOM helpers shared by the side-panel views.
-import { setIcon, type TFile } from "../../obsidian";
+import { MarkdownView, setIcon, type TFile } from "../../obsidian";
 import { PanelView } from "./util";
 
 /** Collapse chevron used by every tree-like panel (rotated by CSS when `.is-collapsed`). */
@@ -54,16 +54,31 @@ export function fileLabel(f: { basename: string; name: string; extension: string
 /** Panel that follows the active file and refreshes when metadata is (re)resolved. */
 export abstract class FollowView extends PanelView {
   file: TFile | null = null;
+  /** Set by hosts that embed the panel (backlinks in a note): the file to show instead of the active one. */
+  fileSource: (() => TFile | null) | null = null;
+  /** The file this panel shows: its host's, else that of a note in its linked group, else the active file. */
+  protected followedFile(): TFile | null {
+    if (this.fileSource) return this.fileSource();
+    const g = this.leaf.group;
+    if (g) {
+      for (const l of this.app.workspace.getGroupLeaves(g)) if (l !== this.leaf && l.view instanceof MarkdownView && l.view.file) return l.view.file;
+    }
+    return this.app.workspace.getActiveFile();
+  }
+  /** Re-read the followed file and refresh if it changed. */
+  syncFile(): void {
+    const f = this.followedFile();
+    if (f !== this.file) { this.file = f; this.requestRefresh(30); }
+  }
   /** Subscribe to active-file and metadata events; call once from onOpen, before the first refresh. */
   protected follow(metadataEvents: ("resolved" | "changed" | "deleted")[] = ["resolved", "changed"]): void {
     const { workspace, metadataCache } = this.app;
-    this.file = workspace.getActiveFile();
-    const sync = () => {
-      const f = workspace.getActiveFile();
-      if (f !== this.file) { this.file = f; this.requestRefresh(30); }
-    };
+    this.file = this.followedFile();
+    const sync = () => this.syncFile();
     this.registerEvent(workspace.on("file-open", sync));
     this.registerEvent(workspace.on("active-leaf-change", sync));
+    this.registerEvent(workspace.on("layout-change", sync));
+    this.registerEvent((this.leaf as any).on("group-change", sync));
     for (const ev of metadataEvents) this.registerEvent((metadataCache as any).on(ev, () => this.requestRefresh(150)));
   }
 }
