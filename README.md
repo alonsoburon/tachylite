@@ -128,8 +128,9 @@ completing tasks), Kanban (boards, adding cards), QuickAdd (capture choices) and
 - Newer features (stacked tabs, linked tabs, backlinks in document, table and highlight commands, Rename this heading,
   the Export to PDF dialog, canvas jump to group and convert to file, the graph time-lapse and graph bookmarks, remembered
   folds) have been driven in a real Tachylite window on Linux by `scripts/smoke.sh`, and stacked tabs, fold storage and graph
-  bookmarks were measured against Obsidian 1.14.4. Not seen yet: the printed PDF, what canvas image export draws, what Bases
-  "copy table" puts on the clipboard, and all of it on macOS and Windows. Some guesses are listed in `ROADMAP.md`.
+  bookmarks were measured against Obsidian 1.14.4. The print container for PDF export, the canvas image export and the clipboard text of Bases "copy table" are
+  checked there too (no real printed page, and their formats are not compared with Obsidian's). Not seen yet: all of it on
+  macOS and Windows. Some guesses are listed in `ROADMAP.md`.
 - Sync and Publish are out of scope. They show up as unavailable in the Core plugins list.
 
 ## License

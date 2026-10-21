@@ -79,6 +79,21 @@ focus
 xdotool type --delay 40 " hello smoke"
 wait_for "SMOKE OK typing" 15
 wait_for "SMOKE OK rename" 15
+wait_for "SMOKE READY copy-table" 90
+focus
+xdotool key ctrl+p
+sleep 0.8
+xdotool type --delay 60 "Copy table"
+sleep 0.8
+xdotool key Return
+wait_for "SMOKE READY clipboard" 30
+if command -v xclip >/dev/null; then
+  sleep 0.5
+  xclip -selection clipboard -o > "$vault/clip-check.txt" 2>/dev/null || printf '(xclip could not read the clipboard)' > "$vault/clip-check.txt"
+else
+  fail "xclip is needed to read the clipboard back (apt: xclip)"
+fi
+wait_for "SMOKE OK clipboard" 30
 wait_for "SMOKE OK stacked-tabs" 90
 wait_for "SMOKE DONE" 90
 
@@ -87,6 +102,7 @@ for _ in $(seq 1 100); do kill -0 "$app" 2>/dev/null || break; sleep 0.1; done
 if kill -0 "$app" 2>/dev/null; then fail "the app did not exit after quit"; fi
 wait "$app" 2>/dev/null || fail "the app exited with an error"
 
+[ -f "$vault/Board.png" ] && cp "$vault/Board.png" "$shots/canvas-export.png" || true
 echo "screenshots: $shots"
 echo "SMOKE PASSED (features: tables, highlights, rename heading, menu, backlinks, stacked and linked tabs, PDF modal, canvas, bases, graph; note opened, Live Preview, status bar, Ctrl+P palette, typing, rename rewrote the link, clean exit)"
 grep '^\[warn\] SMOKE' "$log" || true

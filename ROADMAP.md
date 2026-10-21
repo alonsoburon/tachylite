@@ -48,14 +48,15 @@ dump plugin in `tools/obsidian-dump/` run inside a real Obsidian (steps in its R
   Obsidian's, panes 130 to 520 px wide, close button, icon and vertical title as measured in Obsidian 1.14.4), and the
   canvas "Convert to file" name box was a small default textarea. "More options" listed its split entries before
   Reading view; it now follows Obsidian's order.
-- **Still not seen:** the printed PDF itself (the test stops at the options dialog, there is no printer), what the canvas image
-  export draws, what `bases:copy-table` puts on the clipboard (the private display refuses clipboard writes without a
-  user gesture, so the test only sees "Unable to copy"), and any of this on macOS or Windows.
+- **Seen after all (later smoke steps):** the Export to PDF button builds the print container (headings, `@page` size and margin
+  CSS, `is-printing`) with `window.print` replaced by a recorder, since there is no printer; the canvas image export writes a
+  real PNG (700x600 for the test board, checked by decoding it, `canvas-export.png` in the screenshots); `bases:copy-table`
+  run with real key presses puts the table text on the real X clipboard (read back with `xclip`).
+- **Still not seen:** an actual printed PDF page, how any of this looks next to Obsidian's own output (the PDF margins, the
+  canvas image and the Bases clipboard format are still guesses), and any of it on macOS or Windows.
 - The graph's "Copy screenshot" menu entry does not exist here.
 - The tab menu of a note (about 30 entries) ran past the bottom of an 800 px window
   (`open-linked-view-menu.png`); menus now scroll when taller than the window, and the smoke test checks the menu fits.
-- Bases "Copy table": the test checks the table text and that the command answers ("Copied to clipboard" in the real
-  window), but it does not read the clipboard back.
 - Found by the stricter smoke check: "Open linked view" in a tab menu linked the first tab showing the same note instead of
   the tab the menu belonged to. Fixed (`buildFileMenu` takes the leaf).
 

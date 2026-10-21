@@ -225,9 +225,22 @@ await step("export-pdf-modal", async () => {
   const text = document.querySelector(".modal").textContent;
   if (!/Page size/.test(text) || !/Margin/.test(text)) { log("FAIL export-pdf modal lacks its options"); await ipc.quitApp(); throw new Error("smoke: pdf modal"); }
   await shot("export-pdf-modal-open");
-  closeModals();
-  [...document.querySelectorAll(".modal button")].find((b) => b.textContent === "Cancel")?.click();
-  await until("export modal closed", () => !document.querySelector(".modal"));
+  // Click the real Export button, with window.print replaced by a recorder (a print dialog would block the test and there is
+  // no printer): what matters is the document that would be printed.
+  let printed = null;
+  const realPrint = window.print;
+  window.print = () => {
+    const host = document.querySelector("body > .print");
+    printed = { text: host?.textContent ?? "", headings: [...(host?.querySelectorAll("h1, h2") ?? [])].map((h) => h.textContent), printing: document.body.classList.contains("is-printing"), css: [...document.querySelectorAll("style.tachylite-print-style")].map((e) => e.textContent).join("\n") };
+    window.dispatchEvent(new Event("afterprint"));
+  };
+  [...document.querySelectorAll(".modal button")].find((b) => b.textContent === "Export to PDF").click();
+  await until("print was requested", () => printed);
+  window.print = realPrint;
+  const ok = printed.printing && /Renamed heading/.test(printed.text) && /Second/.test(printed.text) && /@page/.test(printed.css);
+  if (!ok) { log("FAIL print container is wrong: " + JSON.stringify(printed).slice(0, 400)); await ipc.quitApp(); throw new Error("smoke: pdf content"); }
+  log("pdf print container: " + JSON.stringify(printed.headings) + " css " + printed.css.replace(/\s+/g, " ").slice(0, 120));
+  await until("print container removed again", () => !document.querySelector("body > .print") && !document.body.classList.contains("is-printing"));
 });
 
 await step("canvas", async () => {
@@ -256,6 +269,26 @@ await step("canvas", async () => {
   await until("canvas now holds a file node", async () => JSON.parse(await app.vault.read(app.vault.getFileByPath("Board.canvas"))).nodes.some((n) => n.type === "file" && n.file === "Converted card.md"));
 });
 
+await step("canvas-export-image", async () => {
+  const leaf = await open("Board.canvas");
+  await until("canvas has its nodes again", () => leaf.view.canvas && leaf.view.canvas.nodes.size === 2);
+  leaf.view.canvas.deselectAll(); // a selection exports only the selected cards
+  cmd("canvas:export-as-image");
+  await until("export image dialog", () => document.querySelector(".modal .setting-item"));
+  await shot("canvas-export-dialog");
+  [...document.querySelectorAll(".modal button")].find((b) => b.textContent === "Save").click();
+  const png = await until("exported png is in the vault", () => app.vault.getFileByPath("Board.png"));
+  const bytes = new Uint8Array(await app.vault.readBinary(png));
+  const bmp = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
+  const c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height;
+  const cx = c.getContext("2d"); cx.drawImage(bmp, 0, 0);
+  const px = cx.getImageData(0, 0, c.width, c.height).data;
+  let drawn = 0; for (let i = 3; i < px.length; i += 4) if (px[i] > 0) drawn++;
+  const magic = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+  if (!magic || bmp.width < 700 || bmp.height < 600 || drawn < 1000) { log("FAIL canvas export image: png=" + magic + " " + bmp.width + "x" + bmp.height + " drawn pixels " + drawn); await ipc.quitApp(); throw new Error("smoke: canvas export"); }
+  log("canvas export image: " + bmp.width + "x" + bmp.height + ", " + drawn + " non-transparent pixels");
+});
+
 await step("bases-copy-table", async () => {
   await mk("Things.base", "views:\n  - type: table\n    name: Table\n");
   const leaf = await open("Things.base");
@@ -264,11 +297,19 @@ await step("bases-copy-table", async () => {
   const host = view.host ?? view.controller ?? view;
   const table = host.asTable("\t");
   if (!/file name/.test(table) || !/Doc/.test(table) || !table.includes("\t") && table.split("\n").length < 3) { log("FAIL bases table text is wrong: " + JSON.stringify(table.slice(0, 200))); await ipc.quitApp(); throw new Error("smoke: bases table"); }
-  cmd("bases:copy-table");
-  // The webview only allows clipboard writes after a user gesture, which an in-app script does not have, so the notice may
-  // say "Unable to copy" here; either way the command ran. The text it would copy was checked above.
+  // The webview only allows clipboard writes after a user gesture, which an in-app script does not have: smoke.sh runs the
+  // command from the palette with real key presses (xdotool), then reads the clipboard back with xclip.
+  const expected = table;
+  document.querySelectorAll(".notice").forEach((n) => n.remove());
+  log("READY copy-table");
   const note = await until("copy notice shown", () => [...document.querySelectorAll(".notice")].map((n) => n.textContent).find((t) => /Copied to clipboard|Unable to copy/.test(t)));
+  if (!/Copied/.test(note)) { log("FAIL bases copy-table notice: " + note); await ipc.quitApp(); throw new Error("smoke: bases copy"); }
   log("bases copy-table notice: " + note);
+  // smoke.sh reads the real X clipboard with xclip and writes it to clip-check.txt in the vault.
+  log("READY clipboard");
+  const got = await until("clipboard text from xclip", async () => (await app.vault.adapter.exists("clip-check.txt")) && app.vault.adapter.read("clip-check.txt"));
+  if (got.replace(/\r?\n$/, "") !== expected.replace(/\r?\n$/, "")) { log("FAIL the clipboard holds something else: " + JSON.stringify(got.slice(0, 200)) + " expected " + JSON.stringify(expected.slice(0, 200))); await ipc.quitApp(); throw new Error("smoke: clipboard"); }
+  log("OK clipboard holds the table text (" + expected.split("\n").length + " lines)");
 });
 
 await step("graph-animation", async () => {
