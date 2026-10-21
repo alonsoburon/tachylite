@@ -1,6 +1,6 @@
 // Bookmarks core view ("bookmarks"): items persisted to .obsidian/bookmarks.json in Obsidian's format.
 import moment from "moment";
-import { Events, FileView, Menu, Notice, TFile, TFolder, WorkspaceWindow, type App, type TAbstractFile, type WorkspaceLeaf } from "../../obsidian";
+import { Events, FileView, Menu, Modal, Notice, Setting, TFile, TFolder, WorkspaceWindow, type App, type TAbstractFile, type WorkspaceLeaf } from "../../obsidian";
 import { ipc } from "../../ipc";
 import { promptText } from "../dialogs";
 import { revealInExplorer } from "../files";
@@ -103,6 +103,24 @@ export class BookmarksStore extends Events {
   setSubpath(item: BookmarkItem, subpath: string): void { if (subpath) item.subpath = subpath; else delete item.subpath; this.changed(); }
   newGroup(title: string, parent?: BookmarkItem | null): BookmarkItem { return this.addItem({ type: "group", title, items: [] }, parent); }
 
+  /** The groups a bookmark can be filed under, as `[path, group]`: "/" is the top level, nested groups read `A/B`. */
+  groupChoices(): [string, BookmarkItem | null][] {
+    const out: [string, BookmarkItem | null][] = [["/", null]];
+    const visit = (list: BookmarkItem[], prefix: string) => {
+      for (const g of list) if (g.type === "group") { const path = prefix + (g.title ?? ""); out.push([path, g]); visit(g.items ?? [], path + "/"); }
+    };
+    visit(this.items, "");
+    return out;
+  }
+
+  /**
+   * Bookmark a graph view with its current settings: `{ type: "graph", ctime, title, options }` (the shape Obsidian
+   * 1.14.4 writes; `options` is the graph's settings object, the same as graph.json holds).
+   */
+  bookmarkGraph(options: Record<string, unknown>, title: string, parent?: BookmarkItem | null): BookmarkItem {
+    return this.addItem({ type: "graph", ctime: Date.now(), title: title.trim() || GRAPH_BOOKMARK_TITLE, options: JSON.parse(JSON.stringify(options)) }, parent);
+  }
+
   findFileItem(file: TAbstractFile, subpath?: string): BookmarkItem | null {
     const type = file instanceof TFolder ? "folder" : "file";
     return this.findItem((i) => i.type === type && i.path === file.path && (i.subpath ?? "") === (subpath ?? ""));
@@ -144,7 +162,47 @@ function labelOf(i: BookmarkItem): string {
   if (i.type === "search") return String(i.query ?? "");
   return i.path ?? i.type;
 }
+export const GRAPH_BOOKMARK_TITLE = "Untitled Graph";
 const ICONS: Record<string, string> = { file: "lucide-file", folder: "lucide-folder", search: "lucide-search", graph: "lucide-git-fork" };
+
+/** Obsidian's "Add bookmark" dialog for a graph: a title (blank = "Untitled Graph") and the group to file it in. */
+export class AddGraphBookmarkModal extends Modal {
+  constructor(app: App, private store: BookmarksStore, private options: Record<string, unknown>) { super(app); }
+  onOpen(): void {
+    this.modalEl.addClass("mod-bookmark", "mod-lg");
+    this.setTitle("Add bookmark");
+    let title = "";
+    let group: BookmarkItem | null = null;
+    const choices = this.store.groupChoices();
+    const save = () => { this.store.bookmarkGraph(this.options, title, group); this.close(); };
+    new Setting(this.contentEl).setName("Title").addText((t) => {
+      t.setPlaceholder(GRAPH_BOOKMARK_TITLE).onChange((v) => { title = v; });
+      t.inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); save(); } });
+      setTimeout(() => t.inputEl.focus(), 0);
+    });
+    new Setting(this.contentEl).setName("Bookmark group").addDropdown((d) => {
+      choices.forEach(([path], i) => d.addOption(String(i), path));
+      d.setValue("0").onChange((v) => { group = choices[Number(v)]?.[1] ?? null; });
+    });
+    const bar = this.contentEl.createDiv({ cls: "modal-button-container" });
+    bar.createEl("button", { cls: "mod-cancel", text: "Cancel" }).addEventListener("click", () => this.close());
+    bar.createEl("button", { cls: "mod-cta", text: "Save" }).addEventListener("click", save);
+  }
+}
+
+/** Ask for a title and group, then bookmark the graph view's current settings. */
+export function bookmarkGraphView(app: App, options: Record<string, unknown>): void {
+  const store = getStore(app);
+  if (store) new AddGraphBookmarkModal(app, store, options).open();
+}
+
+/** Open a graph bookmark: the graph view (reusing the open one) with the bookmarked settings. */
+export async function openGraphBookmark(app: App, item: BookmarkItem, newLeaf: boolean | "tab" = false): Promise<void> {
+  let leaf = app.workspace.getLeavesOfType("graph")[0] ?? null;
+  if (!leaf) { leaf = app.workspace.getLeaf(newLeaf ? "tab" : false); await leaf.setViewState({ type: "graph", active: true }); }
+  await app.workspace.revealLeaf(leaf);
+  (leaf.view as { applyOptions?: (o: unknown) => void }).applyOptions?.(item.options);
+}
 
 export function getStore(app: App): BookmarksStore | null {
   const inst = app.internalPlugins.getPluginById("bookmarks")?.instance as unknown;
@@ -250,6 +308,8 @@ export class BookmarksView extends PanelView {
       if (f) revealInExplorer(app, f); else new Notice(`Folder not found: ${it.path}`);
     } else if (it.type === "search") {
       void activateView(app, "search", "left").then((l) => (l.view as any).setQuery?.(it.query ?? ""));
+    } else if (it.type === "graph") {
+      void openGraphBookmark(app, it, e.ctrlKey || e.metaKey || e.button === 1 ? "tab" : false);
     }
   }
 
@@ -309,6 +369,12 @@ export const bookmarks: CoreModule = {
         addCommand(app, {
           id: "bookmarks:bookmark-current-view", name: "Bookmarks: Bookmark...", icon: "lucide-bookmark-plus",
           checkCallback: (checking) => {
+            // A graph view bookmarks its settings; any other view bookmarks the active file.
+            const graph = app.workspace.activeLeaf?.view as { getViewType(): string; options?: Record<string, unknown> } | undefined;
+            if (graph?.getViewType() === "graph" && graph.options) {
+              if (!checking) bookmarkGraphView(app, graph.options);
+              return true;
+            }
             const f = app.workspace.getActiveFile();
             if (!f) return false;
             if (!checking) store.toggleFile(f);

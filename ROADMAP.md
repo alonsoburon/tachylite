@@ -24,9 +24,15 @@ dump plugin in `tools/obsidian-dump/` run inside a real Obsidian (steps in its R
 - "Fold all headings and lists" now folds nested blocks too, like Obsidian (CodeMirror's own skips them).
 - Seen in the real window by `scripts/smoke.sh` (step persisted-folds).
 
-### 2. Graph bookmarks
-- Accept: a graph view with its settings can be bookmarked (`type: "graph"`) and reopened.
-- Verified how: unit tests plus a `bookmarks.json` round-trip.
+### 2. Graph bookmarks (done)
+- `{ "type": "graph", "ctime", "title", "options" }` in `bookmarks.json`, exactly as Obsidian 1.14.4 wrote it (read with
+  `OBSIDIAN_EVAL`): `options` is the graph settings object (same keys as `graph.json`), a blank title becomes "Untitled Graph".
+  "Bookmarks: Bookmark..." on a graph view opens the "Add bookmark" dialog (Title, Bookmark group); the graph's tab menu and
+  its new More options menu have "Bookmark...". Opening the bookmark reuses the open graph view (Obsidian does too), applies
+  the options and writes them to `graph.json`. Seen in the real window by `scripts/smoke.sh` (step graph-bookmark).
+- Not done: the graph's "Copy screenshot" menu entry (Obsidian has it next to Bookmark...).
+- Checked against the real app while here: Backlinks in document in the editing view sits after the text and its bottom
+  padding (inside `.cm-sizer` there, directly in the scroller here), so the position is the same.
 
 ### 3. Web viewer and Format converter core plugins
 - Accept: the Core plugins list can enable them; they do something useful (open a page in a tab; import Markdown from

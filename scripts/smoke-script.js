@@ -254,5 +254,25 @@ await step("graph-animation", async () => {
   view.stopAnimation?.(false);
 });
 
+await step("graph-bookmark", async () => {
+  const leaf = app.workspace.getLeavesOfType("graph")[0];
+  app.workspace.setActiveLeaf(leaf, { focus: true });
+  leaf.view.options.search = "smoke";
+  cmd("bookmarks:bookmark-current-view");
+  await until("Add bookmark dialog", () => document.querySelector(".modal.mod-bookmark"));
+  await shot("graph-bookmark-dialog");
+  const t = document.querySelector(".modal.mod-bookmark input");
+  t.value = "Smoke graph"; t.dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelector(".modal.mod-bookmark button.mod-cta").click();
+  const store = app.internalPlugins.getPluginById("bookmarks").instance;
+  await until("graph bookmark stored", () => store.items.some((i) => i.type === "graph" && i.title === "Smoke graph" && i.options.search === "smoke"));
+  leaf.view.options.search = "";
+  cmd("bookmarks:open");
+  const row = await until("bookmark row in the Bookmarks view", () => document.querySelector(".bookmark-item.mod-graph .bookmark"));
+  await shot("graph-bookmark-row");
+  row.click();
+  await until("opening it restores the settings", () => app.workspace.getLeavesOfType("graph")[0].view.options.search === "smoke");
+});
+
 log("DONE");
 await ipc.quitApp();

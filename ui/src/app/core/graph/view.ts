@@ -1,10 +1,11 @@
 // Graph views: the global graph ("graph", options in .obsidian/graph.json) and the local graph ("localgraph", options in
 // its view state, following the active file). Canvas rendering batched per colour with viewport culling; the force
 // layout runs in requestAnimationFrame and stops once settled; redraws are coalesced to one per frame.
-import { Keymap, Setting, setIcon, TFile, debounce, type App, type WorkspaceLeaf } from "../../../obsidian";
+import { Keymap, Menu, Setting, setIcon, TFile, debounce, type App, type WorkspaceLeaf } from "../../../obsidian";
 import { ipc } from "../../../ipc";
 import { buildFileMenu } from "../../files";
 import { PanelView } from "../util";
+import { bookmarkGraphView, getStore } from "../bookmarks";
 import { collapseIcon } from "../panel";
 import {
   DEFAULT_LOCAL, appearTimes, applyGroups, buildGraph, subGraph, normalizeLocal, normalizeOptions,
@@ -74,6 +75,13 @@ export abstract class BaseGraphView extends PanelView {
     super(leaf);
     this.navigation = true;
     this.queries = new QueryCache(() => this.requestRefresh(0));
+    this.addAction("lucide-more-vertical", "More options", (evt) => {
+      const m = new Menu();
+      m.addItem((i) => i.setSection("pane").setTitle("Split right").setIcon("lucide-separator-vertical").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "vertical"); }));
+      m.addItem((i) => i.setSection("pane").setTitle("Split down").setIcon("lucide-separator-horizontal").onClick(() => { void this.app.workspace.duplicateLeaf(this.leaf, "split", "horizontal"); }));
+      this.onPaneMenu(m, "more-options");
+      m.showAtMouseEvent(evt);
+    });
   }
   getIcon(): string { return "lucide-git-fork"; }
   abstract get isLocal(): boolean;
@@ -109,6 +117,18 @@ export abstract class BaseGraphView extends PanelView {
     this.rebuild();
   }
   protected async loadOptions(): Promise<void> {}
+  /** Replace the settings (a bookmark's, say) and redraw; the global graph writes them to graph.json like a change made by hand. */
+  applyOptions(raw: unknown): void {
+    this.options = normalizeOptions(raw);
+    if (this.options.scale) this.view.k = this.options.scale;
+    if (this.canvas) { this.renderControls(); this.rebuild(); }
+    this.saveOptions();
+  }
+  /** Tab header and "More options" menus: bookmarking the graph with its settings (the global graph only). */
+  onPaneMenu(menu: Menu, _source: string): void {
+    if (this.isLocal || !getStore(this.app)) return;
+    menu.addItem((i) => i.setSection("action").setTitle("Bookmark...").setIcon("lucide-bookmark").onClick(() => bookmarkGraphView(this.app, this.options as unknown as Record<string, unknown>)));
+  }
   async onClose(): Promise<void> { this.stopAnimation(); if (this.raf) cancelAnimationFrame(this.raf); this.raf = 0; }
 
   protected onActiveFileChange(): void {
