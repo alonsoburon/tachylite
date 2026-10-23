@@ -25,7 +25,7 @@ vault format or the plugin ecosystem. So:
 
 ## Legal stuff, read this part
 
-Tachylite is an independent project. It is **not affiliated with, endorsed by, or sponsored by
+Tachylite is developed by Tucunar Labs. It is **not affiliated with, endorsed by, or sponsored by
 Obsidian / Dynalist Inc.** "Obsidian" is their trademark and I only use it to say what this is
 compatible with.
 
@@ -85,7 +85,7 @@ Community plugins start in restricted mode like in Obsidian, until you enable th
 `tachy <vault> plugin-search <query>` and `tachy <vault> plugin-install <id>` work headlessly.
 
 Prebuilt Linux AppImage and `.deb` builds are on the
-[releases page](https://github.com/alonsoburon/tachylite/releases).
+[releases page](https://github.com/tucunar-labs/tachylite/releases).
 
 ## Known gaps
 
